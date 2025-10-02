@@ -4,6 +4,7 @@ import ConnectButton from './components/ConnectButton';
 import ServerList from './components/ServerList';
 import StatusIndicator from './components/StatusIndicator';
 import LoginForm from './components/LoginForm';
+import SplashScreen from './components/SplashScreen';
 import TrafficMonitor from './components/TrafficMonitor';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionLog from './components/ConnectionLog';
@@ -50,6 +51,7 @@ import EdgeComputing from './components/EdgeComputing';
 import MobileOptimizations from './components/MobileOptimizations';
 
 function App() {
+  const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -178,6 +180,10 @@ function App() {
     }
   }, [settings.advancedKillSwitch, isConnected]);
 
+  const handleSplashComplete = () => {
+    setShowSplashScreen(false);
+  };
+
   const handleLogin = (credentials) => {
     // Simulate login
     setTimeout(() => {
@@ -214,6 +220,7 @@ function App() {
     setMultiHopServers([]);
     setSplitTunnelApps([]);
     setKillSwitchActive(false);
+    setShowSplashScreen(true); // Show splash screen again on logout
     addLog('User logged out', 'info');
   };
 
@@ -304,6 +311,11 @@ function App() {
     setSplitTunnelApps(apps);
     addLog(`Split tunneling configured for ${apps.length} applications`, 'info');
   };
+
+  // Show splash screen first
+  if (showSplashScreen) {
+    return <SplashScreen onComplete={handleSplashComplete} isDarkMode={isDarkMode} />;
+  }
 
   if (!isAuthenticated) {
     return <LoginForm onLogin={handleLogin} isDarkMode={isDarkMode} />;
