@@ -181,14 +181,17 @@ function App() {
   }, [settings.advancedKillSwitch, isConnected]);
 
   const handleSplashComplete = () => {
+    console.log('🚀 Splash screen completed, transitioning to login...');
     setShowSplashScreen(false);
   };
 
   const handleLogin = (credentials) => {
+    console.log('🔐 Login form submitted, authenticating...');
     // Simulate login
     setTimeout(() => {
       setUser({ email: credentials.email, plan: 'Premium' });
       setIsAuthenticated(true);
+      console.log('✅ Authentication successful, loading main app...');
       addLog('User logged in successfully', 'success');
       
       // Check for URL parameters for PWA shortcuts

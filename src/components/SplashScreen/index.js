@@ -15,6 +15,7 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
   ], []);
 
   useEffect(() => {
+    console.log('🌟 Splash screen initialized, starting loading animation...');
     // Simulate loading progress
     const interval = setInterval(() => {
       setProgress(prev => {
@@ -38,9 +39,11 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
     // Complete loading after reaching 100%
     const completeTimer = setTimeout(() => {
       setProgress(100);
+      console.log('📊 Progress complete, starting fade out...');
       setTimeout(() => {
         setIsVisible(false);
         setTimeout(() => {
+          console.log('💫 Splash screen fade out complete, calling onComplete...');
           onComplete();
         }, 500); // Allow fade out animation to complete
       }, 500);

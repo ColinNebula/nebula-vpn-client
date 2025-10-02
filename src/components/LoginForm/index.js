@@ -11,6 +11,7 @@ const LoginForm = ({ onLogin, isDarkMode }) => {
 
   // Apply dark mode to document even on login screen
   useEffect(() => {
+    console.log('🔑 Login form mounted and ready');
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula VPN - Flow Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .test-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            background: #f8f9ff;
+            border-radius: 5px;
+        }
+        .step-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .iframe-container {
+            margin: 20px 0;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .console-log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 20px 0;
+        }
+        .instructions {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🛡️ Nebula VPN Client - Flow Verification Test</h1>
+        
+        <div class="instructions">
+            <h3>📋 Test Instructions</h3>
+            <p>This test verifies that the splash screen properly transitions to the login form. Follow these steps:</p>
+            <ol>
+                <li>Watch for the splash screen to appear immediately</li>
+                <li>Observe the loading progress and animation (3 seconds)</li>
+                <li>Confirm the smooth transition to the login form</li>
+                <li>Test login with demo credentials: <code>demo@nebula.com</code> / <code>demo123</code></li>
+                <li>Check browser console for flow logging</li>
+            </ol>
+        </div>
+
+        <div class="test-step">
+            <div class="step-number">Step 1:</div>
+            <strong>Splash Screen Display</strong> - Should show animated logo, progress bar, and loading text
+        </div>
+
+        <div class="test-step">
+            <div class="step-number">Step 2:</div>
+            <strong>Loading Animation</strong> - Progress bar fills from 0-100% with dynamic text updates
+        </div>
+
+        <div class="test-step">
+            <div class="step-number">Step 3:</div>
+            <strong>Transition to Login</strong> - Smooth fade out to login form after 3 seconds
+        </div>
+
+        <div class="test-step">
+            <div class="step-number">Step 4:</div>
+            <strong>Login Form Ready</strong> - Form should be fully functional with demo credentials
+        </div>
+
+        <div class="iframe-container">
+            <iframe src="http://localhost:3001/nebula-vpn-client" title="Nebula VPN Client"></iframe>
+        </div>
+
+        <div class="console-log">
+            <strong>Expected Console Output:</strong><br>
+            🌟 Splash screen initialized, starting loading animation...<br>
+            📊 Progress complete, starting fade out...<br>
+            💫 Splash screen fade out complete, calling onComplete...<br>
+            🚀 Splash screen completed, transitioning to login...<br>
+            🔑 Login form mounted and ready<br>
+            🔐 Login form submitted, authenticating...<br>
+            ✅ Authentication successful, loading main app...
+        </div>
+
+        <div class="instructions">
+            <h3>✅ Success Criteria</h3>
+            <ul>
+                <li>Splash screen appears immediately on load</li>
+                <li>Loading animation runs for exactly 3 seconds</li>
+                <li>Smooth fade transition to login form</li>
+                <li>Login form is fully functional</li>
+                <li>Console shows proper flow logging</li>
+                <li>No JavaScript errors in console</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Add some client-side monitoring
+        console.log('🧪 Flow test page loaded - monitoring for proper sequence...');
+        
+        // Monitor for any errors
+        window.addEventListener('error', (e) => {
+            console.error('❌ Error detected:', e.error);
+        });
+        
+        // Timer to check if splash screen completes properly
+        setTimeout(() => {
+            console.log('⏰ 5 seconds elapsed - splash screen should have completed');
+        }, 5000);
+    </script>
+</body>
+</html>
