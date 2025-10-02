@@ -1,63 +1,86 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './SplashScreen.css';
 
 const SplashScreen = ({ onComplete, isDarkMode = false }) => {
   const [progress, setProgress] = useState(0);
   const [currentText, setCurrentText] = useState('Initializing Nebula VPN...');
   const [isFadingOut, setIsFadingOut] = useState(false);
+  
+  // Use refs to avoid dependency issues
+  const onCompleteRef = useRef(onComplete);
+  const isMountedRef = useRef(true);
 
-  const loadingTexts = useMemo(() => [
-    'Initializing Nebula VPN...',
-    'Securing connection protocols...',
-    'Loading server network...',
-    'Preparing dashboard...',
-    'Almost ready...'
-  ], []);
+  // Update ref when onComplete changes
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     console.log('🌟 Splash screen initialized, starting loading animation...');
-    let isMounted = true; // Flag to prevent state updates after unmount
     
-    // Simulate loading progress
+    const loadingMessages = [
+      'Initializing Nebula VPN...',
+      'Securing connection protocols...',
+      'Loading server network...',
+      'Preparing dashboard...',
+      'Almost ready...'
+    ];
+    
+    let currentProgress = 0;
+    let messageIndex = 0;
+    
+    // Progress animation
     const interval = setInterval(() => {
-      if (!isMounted) return;
-      setProgress(prev => {
-        const newProgress = prev + Math.random() * 15 + 5; // Random increment between 5-20
-        
-        // Update text based on progress
-        if (newProgress >= 80 && currentText !== loadingTexts[4]) {
-          setCurrentText(loadingTexts[4]);
-        } else if (newProgress >= 60 && currentText !== loadingTexts[3]) {
-          setCurrentText(loadingTexts[3]);
-        } else if (newProgress >= 40 && currentText !== loadingTexts[2]) {
-          setCurrentText(loadingTexts[2]);
-        } else if (newProgress >= 20 && currentText !== loadingTexts[1]) {
-          setCurrentText(loadingTexts[1]);
-        }
-        
-        return Math.min(newProgress, 100);
-      });
-    }, 200);
+      if (!isMountedRef.current) return;
+      
+      currentProgress += Math.random() * 12 + 8; // More consistent increment
+      if (currentProgress > 100) currentProgress = 100;
+      
+      setProgress(currentProgress);
+      
+      // Update message based on progress thresholds
+      const newMessageIndex = Math.min(
+        Math.floor((currentProgress / 100) * loadingMessages.length),
+        loadingMessages.length - 1
+      );
+      
+      if (newMessageIndex !== messageIndex) {
+        messageIndex = newMessageIndex;
+        setCurrentText(loadingMessages[messageIndex]);
+      }
+    }, 250);
 
-    // Complete loading after reaching 100%
+    // Guaranteed completion after exactly 3 seconds
     const completeTimer = setTimeout(() => {
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
+      
+      console.log('📊 3 seconds elapsed - completing splash screen...');
       setProgress(100);
-      console.log('📊 Progress complete, starting fade out...');
-      setIsFadingOut(true); // Start fade out animation
+      setCurrentText('Almost ready...');
+      setIsFadingOut(true);
+      
+      // Trigger completion after fade animation starts
       setTimeout(() => {
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
         console.log('💫 Calling onComplete to transition to login...');
-        onComplete(); // Call onComplete to change app state
-      }, 300); // Reduced delay for faster transition
-    }, 3000); // Total splash duration: 3 seconds
+        onCompleteRef.current();
+      }, 300);
+    }, 3000);
 
+    // Cleanup function
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       clearInterval(interval);
       clearTimeout(completeTimer);
     };
-  }, [onComplete, currentText, loadingTexts]); // Dependencies remain the same
+  }, []); // Empty dependency array - run only once on mount
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Always render the component, but use CSS classes for visibility
   return (
