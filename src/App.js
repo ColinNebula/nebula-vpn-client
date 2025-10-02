@@ -182,7 +182,9 @@ function App() {
 
   const handleSplashComplete = () => {
     console.log('🚀 Splash screen completed, transitioning to login...');
+    console.log('Current state - showSplashScreen:', showSplashScreen, 'isAuthenticated:', isAuthenticated);
     setShowSplashScreen(false);
+    console.log('State updated - showSplashScreen should now be false');
   };
 
   const handleLogin = (credentials) => {
@@ -317,12 +319,16 @@ function App() {
 
   // Show splash screen first
   if (showSplashScreen) {
+    console.log('🎬 Rendering splash screen...');
     return <SplashScreen onComplete={handleSplashComplete} isDarkMode={isDarkMode} />;
   }
 
   if (!isAuthenticated) {
+    console.log('🔑 Rendering login form...');
     return <LoginForm onLogin={handleLogin} isDarkMode={isDarkMode} />;
   }
+
+  console.log('🏠 Rendering main app...');
 
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>

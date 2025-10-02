@@ -4,7 +4,7 @@ import './SplashScreen.css';
 const SplashScreen = ({ onComplete, isDarkMode = false }) => {
   const [progress, setProgress] = useState(0);
   const [currentText, setCurrentText] = useState('Initializing Nebula VPN...');
-  const [isVisible, setIsVisible] = useState(true);
+  const [isFadingOut, setIsFadingOut] = useState(false);
 
   const loadingTexts = useMemo(() => [
     'Initializing Nebula VPN...',
@@ -16,8 +16,11 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
 
   useEffect(() => {
     console.log('🌟 Splash screen initialized, starting loading animation...');
+    let isMounted = true; // Flag to prevent state updates after unmount
+    
     // Simulate loading progress
     const interval = setInterval(() => {
+      if (!isMounted) return;
       setProgress(prev => {
         const newProgress = prev + Math.random() * 15 + 5; // Random increment between 5-20
         
@@ -38,29 +41,27 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
 
     // Complete loading after reaching 100%
     const completeTimer = setTimeout(() => {
+      if (!isMounted) return;
       setProgress(100);
       console.log('📊 Progress complete, starting fade out...');
+      setIsFadingOut(true); // Start fade out animation
       setTimeout(() => {
-        setIsVisible(false);
-        setTimeout(() => {
-          console.log('💫 Splash screen fade out complete, calling onComplete...');
-          onComplete();
-        }, 500); // Allow fade out animation to complete
-      }, 500);
+        if (!isMounted) return;
+        console.log('💫 Calling onComplete to transition to login...');
+        onComplete(); // Call onComplete to change app state
+      }, 300); // Reduced delay for faster transition
     }, 3000); // Total splash duration: 3 seconds
 
     return () => {
+      isMounted = false;
       clearInterval(interval);
       clearTimeout(completeTimer);
     };
-  }, [onComplete, currentText, loadingTexts]);
+  }, [onComplete, currentText, loadingTexts]); // Dependencies remain the same
 
-  if (!isVisible) {
-    return null;
-  }
-
+  // Always render the component, but use CSS classes for visibility
   return (
-    <div className={`splash-screen ${isDarkMode ? 'dark' : 'light'} ${!isVisible ? 'fade-out' : ''}`}>
+    <div className={`splash-screen ${isDarkMode ? 'dark' : 'light'} ${isFadingOut ? 'fade-out' : ''}`}>
       <div className="splash-content">
         {/* Logo and Branding */}
         <div className="splash-logo">
