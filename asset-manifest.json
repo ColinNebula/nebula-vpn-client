@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/nebula-vpn-client/static/css/main.0212a6e1.css",
-    "main.js": "/nebula-vpn-client/static/js/main.8fdbcc17.js",
+    "main.css": "/nebula-vpn-client/static/css/main.b56345b4.css",
+    "main.js": "/nebula-vpn-client/static/js/main.047a288c.js",
     "static/js/453.17bc673b.chunk.js": "/nebula-vpn-client/static/js/453.17bc673b.chunk.js",
     "index.html": "/nebula-vpn-client/index.html",
-    "main.0212a6e1.css.map": "/nebula-vpn-client/static/css/main.0212a6e1.css.map",
-    "main.8fdbcc17.js.map": "/nebula-vpn-client/static/js/main.8fdbcc17.js.map",
+    "main.b56345b4.css.map": "/nebula-vpn-client/static/css/main.b56345b4.css.map",
+    "main.047a288c.js.map": "/nebula-vpn-client/static/js/main.047a288c.js.map",
     "453.17bc673b.chunk.js.map": "/nebula-vpn-client/static/js/453.17bc673b.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.0212a6e1.css",
-    "static/js/main.8fdbcc17.js"
+    "static/css/main.b56345b4.css",
+    "static/js/main.047a288c.js"
   ]
 }
