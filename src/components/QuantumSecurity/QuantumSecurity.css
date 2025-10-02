@@ -1,0 +1,663 @@
+.quantum-security {
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: white;
+}
+
+.quantum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.quantum-header h3 {
+  font-size: 24px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quantum-status {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.threat-level {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.threat-level.low {
+  background: rgba(16, 185, 129, 0.3);
+  border: 2px solid #10b981;
+}
+
+.threat-level.moderate {
+  background: rgba(245, 158, 11, 0.3);
+  border: 2px solid #f59e0b;
+}
+
+.threat-level.high {
+  background: rgba(239, 68, 68, 0.3);
+  border: 2px solid #ef4444;
+}
+
+.quantum-score {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.quantum-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.post-quantum-overview {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.post-quantum-overview h4 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pqc-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.status-icon {
+  font-size: 20px;
+}
+
+.resistance-meter {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.meter-container {
+  width: 200px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.meter-label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.encryption-algorithms {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.encryption-algorithms h4 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.algorithms-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 15px;
+}
+
+.algorithm-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.algorithm-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.algorithm-card.quantum {
+  border-left: 4px solid #10b981;
+}
+
+.algorithm-card.classical {
+  border-left: 4px solid #ef4444;
+}
+
+.algorithm-card.active {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.algorithm-card.deprecated,
+.algorithm-card.legacy {
+  opacity: 0.6;
+}
+
+.algorithm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.algorithm-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.algorithm-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.algorithm-status.active {
+  color: #10b981;
+}
+
+.algorithm-status.standby {
+  color: #f59e0b;
+}
+
+.algorithm-status.testing {
+  color: #60a5fa;
+}
+
+.algorithm-status.deprecated {
+  color: #ef4444;
+}
+
+.algorithm-status.legacy {
+  color: #6b7280;
+}
+
+.algorithm-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.algorithm-type,
+.algorithm-strength {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.quantum-ready {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.quantum-ready.ready {
+  color: #10b981;
+}
+
+.quantum-ready.not-ready {
+  color: #ef4444;
+}
+
+.algorithm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.algo-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.algo-btn.activate {
+  background: #10b981;
+  color: white;
+}
+
+.algo-btn.activate:hover {
+  background: #059669;
+}
+
+.algo-btn.standby {
+  background: #f59e0b;
+  color: white;
+}
+
+.algo-btn.standby:hover {
+  background: #d97706;
+}
+
+.algo-btn.migrate {
+  background: #60a5fa;
+  color: white;
+}
+
+.algo-btn.migrate:hover {
+  background: #3b82f6;
+}
+
+.quantum-key-distribution {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quantum-key-distribution h4 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qkd-controls {
+  margin-bottom: 20px;
+}
+
+.qkd-toggle {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.qkd-toggle.active {
+  background: #10b981;
+  color: white;
+}
+
+.qkd-toggle.inactive {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.qkd-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.qkd-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.qkd-metric {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.metric-label {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #60a5fa;
+}
+
+.threat-assessment {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.threat-assessment h4 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.threats-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.threat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid;
+}
+
+.threat-card.high {
+  border-left-color: #ef4444;
+}
+
+.threat-card.medium {
+  border-left-color: #f59e0b;
+}
+
+.threat-card.low {
+  border-left-color: #10b981;
+}
+
+.threat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.threat-category {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.threat-probability {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.threat-description {
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.threat-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.threat-timeframe,
+.threat-mitigation {
+  flex: 1;
+}
+
+.quantum-protocols {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quantum-protocols h4 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.protocols-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+.protocol-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.protocol-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.protocol-card.active {
+  border-color: #10b981;
+}
+
+.protocol-card.testing {
+  border-color: #60a5fa;
+}
+
+.protocol-card.development {
+  border-color: #f59e0b;
+}
+
+.protocol-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.protocol-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.protocol-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.protocol-description {
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.protocol-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.protocol-security,
+.protocol-implementation {
+  flex: 1;
+}
+
+.migration-progress {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.migration-progress h4 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.migration-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.migration-category {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.migration-category h5 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  text-transform: capitalize;
+}
+
+.migration-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.migration-bar {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+
+.migrated {
+  background: #10b981;
+  height: 100%;
+}
+
+.in-progress {
+  background: #f59e0b;
+  height: 100%;
+}
+
+.migration-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-item.migrated {
+  color: #10b981;
+}
+
+.legend-item.in-progress {
+  color: #f59e0b;
+}
+
+.legend-item.pending {
+  color: #6b7280;
+}
+
+@media (max-width: 1024px) {
+  .algorithms-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .threats-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .protocols-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .qkd-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .quantum-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .quantum-status {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  
+  .pqc-status {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .resistance-meter {
+    width: 100%;
+  }
+  
+  .meter-container {
+    width: 100%;
+  }
+  
+  .migration-categories {
+    grid-template-columns: 1fr;
+  }
+  
+  .migration-legend {
+    flex-direction: column;
+    gap: 5px;
+  }
+}

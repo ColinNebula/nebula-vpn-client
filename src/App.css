@@ -1,0 +1,692 @@
+:root {
+  --bg-primary: #667eea;
+  --bg-secondary: #764ba2;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-header: rgba(255, 255, 255, 0.1);
+  --border-color: #eee;
+  --shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  --accent-color: #4CAF50;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --bg-card: rgba(30, 30, 50, 0.95);
+  --bg-header: rgba(0, 0, 0, 0.3);
+  --border-color: #333;
+  --shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  --accent-color: #66bb6a;
+}
+
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.App.dark-mode {
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+}
+
+/* Offline Banner */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(45deg, #ff9800, #f57c00);
+  color: white;
+  padding: 10px;
+  text-align: center;
+  font-weight: bold;
+  z-index: 1000;
+  animation: slideDown 0.5s ease;
+}
+
+/* Kill Switch Overlay */
+.kill-switch-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(244, 67, 54, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeIn 0.5s ease;
+}
+
+.kill-switch-message {
+  background: white;
+  color: #f44336;
+  padding: 30px;
+  border-radius: 15px;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  margin: 20px;
+}
+
+[data-theme="dark"] .kill-switch-message {
+  background: var(--bg-card);
+  color: #ff6b6b;
+}
+
+.App-header {
+  background: var(--bg-header);
+  backdrop-filter: blur(10px);
+  padding: 20px 30px;
+  color: white;
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.theme-toggle {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 16px;
+}
+
+.logout-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.tab-navigation {
+  display: flex;
+  justify-content: center;
+  background: var(--bg-header);
+  backdrop-filter: blur(10px);
+  padding: 0 20px;
+  margin-bottom: 30px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tab-navigation::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  min-width: fit-content;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.tab:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab.active {
+  color: white;
+  border-bottom-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.App-main {
+  padding: 0 20px 40px;
+}
+
+.vpn-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  align-items: center;
+}
+
+.server-section {
+  width: 100%;
+  max-width: 800px;
+}
+
+.control-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 120px;
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: var(--shadow);
+  min-width: 280px;
+  border: 1px solid var(--border-color);
+}
+
+.connecting-text {
+  color: var(--text-secondary);
+  font-size: 16px;
+  animation: blink 1.5s infinite;
+}
+
+.kill-switch-text {
+  color: #f44336;
+  font-size: 14px;
+  font-weight: bold;
+  background: rgba(244, 67, 54, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.selected-server-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: rgba(var(--accent-color), 0.1);
+  border-radius: 12px;
+  border: 2px solid rgba(var(--accent-color), 0.3);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.selected-server-info.multi-hop {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.connection-type {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: bold;
+  text-align: center;
+}
+
+.hop-chain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hop-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.hop-arrow {
+  color: var(--text-secondary);
+  font-weight: bold;
+}
+
+.server-flag {
+  font-size: 24px;
+}
+
+.server-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.server-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.server-purpose {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.5; }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Touch-friendly interactions */
+.tab, .theme-toggle, .logout-btn {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation;
+}
+
+/* Smooth scrolling for mobile */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile-specific optimizations */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific */
+  .App {
+    min-height: -webkit-fill-available;
+  }
+  
+  .tab-navigation {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 1024px) {
+  .vpn-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .control-section {
+    position: static;
+    order: -1;
+    margin-bottom: 20px;
+  }
+}
+
+/* Tablet optimizations */
+@media (max-width: 768px) and (min-width: 481px) {
+  .App-header {
+    padding: 20px 25px;
+  }
+  
+  .tab-navigation {
+    padding: 0 15px;
+  }
+  
+  .analytics-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .App-header {
+    padding: 15px 20px;
+    position: relative;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .App-header h1 {
+    font-size: 2rem;
+  }
+  
+  .header-controls {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .user-info {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .tab-navigation {
+    padding: 0 10px;
+    justify-content: flex-start;
+    position: sticky;
+    top: 0;
+    z-index: 99;
+    margin-bottom: 20px;
+  }
+  
+  .tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    min-width: auto;
+    flex-shrink: 0;
+  }
+  
+  .App-main {
+    padding: 0 15px 40px;
+  }
+  
+  .control-section {
+    min-width: auto;
+    width: 100%;
+    padding: 20px;
+    position: static;
+    order: 1;
+  }
+  
+  .selected-server-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .hop-chain {
+    justify-content: center;
+  }
+  
+  .analytics-tabs {
+    flex-direction: column;
+    padding: 10px;
+  }
+  
+  .analytics-tab {
+    width: 100%;
+    text-align: center;
+    padding: 15px;
+    font-size: 15px;
+  }
+}
+
+/* Modern smartphone optimizations */
+@media (max-width: 480px) {
+  .App {
+    font-size: 14px;
+  }
+  
+  .App-header {
+    padding: 12px 15px;
+  }
+  
+  .App-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+  }
+  
+  .header-controls {
+    flex-direction: row;
+    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .theme-toggle {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+  
+  .logout-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+  
+  .user-info {
+    font-size: 12px;
+    flex-direction: row;
+    gap: 8px;
+  }
+  
+  .tab {
+    padding: 10px 12px;
+    font-size: 13px;
+    min-height: 44px;
+  }
+  
+  .App-main {
+    padding: 0 10px 40px;
+  }
+  
+  .control-section {
+    padding: 15px;
+    border-radius: 12px;
+  }
+  
+  .kill-switch-message {
+    font-size: 16px;
+    padding: 20px;
+    margin: 15px;
+  }
+  
+  .server-flag {
+    font-size: 20px;
+  }
+  
+  .server-name {
+    font-size: 14px;
+  }
+  
+  .server-purpose {
+    font-size: 11px;
+  }
+}
+
+/* Ultra-wide mobile screens (iPhone 14 Pro Max, etc.) */
+@media (max-width: 430px) and (min-width: 415px) {
+  .tab-navigation {
+    padding: 0 8px;
+  }
+  
+  .tab {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+}
+
+/* Small mobile screens optimization */
+@media (max-width: 414px) {
+  .App-header h1 {
+    font-size: 1.3rem;
+  }
+  
+  .header-controls {
+    gap: 8px;
+  }
+  
+  .user-info {
+    font-size: 11px;
+  }
+  
+  .tab {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .analytics-tab {
+    padding: 12px;
+    font-size: 13px;
+  }
+}
+
+/* iPhone SE and similar small screens */
+@media (max-width: 375px) {
+  .App-header h1 {
+    font-size: 1.2rem;
+  }
+  
+  .tab {
+    padding: 8px;
+    font-size: 11px;
+  }
+  
+  .analytics-tabs {
+    padding: 8px;
+  }
+  
+  .analytics-tab {
+    padding: 10px;
+    font-size: 12px;
+  }
+}
+
+/* Landscape orientation for mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .App-header {
+    padding: 10px 20px;
+  }
+  
+  .App-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .tab-navigation {
+    padding: 5px 10px;
+  }
+  
+  .tab {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .control-section {
+    padding: 15px;
+  }
+}
+
+/* Dark mode mobile optimizations */
+@media (max-width: 768px) {
+  [data-theme="dark"] .tab-navigation {
+    background: rgba(0, 0, 0, 0.4);
+  }
+  
+  [data-theme="dark"] .analytics-tabs {
+    background: rgba(30, 30, 50, 0.95);
+  }
+}
+
+/* Accessibility improvements for mobile */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tab {
+    border: 2px solid currentColor;
+  }
+  
+  .tab.active {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+  }
+}
+
+/* Support for notch displays (iPhone X and newer) */
+@supports (padding: max(0px)) {
+  .App-header {
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-top: max(15px, env(safe-area-inset-top));
+  }
+  
+  .App-main {
+    padding-left: max(15px, env(safe-area-inset-left));
+    padding-right: max(15px, env(safe-area-inset-right));
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
+  }
+}

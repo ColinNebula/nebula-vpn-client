@@ -1,0 +1,46 @@
+.security-operations { padding: 20px; max-width: 1400px; margin: 0 auto; }
+.sec-ops-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+.sec-ops-header h3 { color: var(--text-primary); font-size: 24px; margin: 0; font-weight: 600; }
+.threat-level { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; color: #f59e0b; font-weight: 600; }
+.threat-indicator { font-size: 20px; }
+.sec-ops-nav { display: flex; gap: 8px; margin-bottom: 25px; background: var(--bg-card); padding: 8px; border-radius: 12px; border: 1px solid var(--border-color); }
+.nav-btn { padding: 12px 20px; background: transparent; color: var(--text-secondary); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+.nav-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+.nav-btn.active { background: var(--accent-color); color: white; }
+.soc-dashboard { display: flex; flex-direction: column; gap: 25px; }
+.threat-feeds, .security-metrics { background: var(--bg-card); border-radius: 16px; padding: 25px; border: 1px solid var(--border-color); }
+.threat-feeds h4, .security-metrics h4 { color: var(--text-primary); font-size: 18px; margin: 0 0 20px 0; font-weight: 600; }
+.feeds-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+.feed-card { background: var(--bg-secondary); border-radius: 10px; padding: 20px; border: 1px solid var(--border-color); }
+.feed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.feed-name { color: var(--text-primary); font-weight: 600; }
+.feed-status.active { color: #10b981; }
+.feed-stats { display: flex; flex-direction: column; gap: 4px; }
+.threat-count { color: var(--text-primary); font-weight: 700; font-size: 18px; }
+.last-update { color: var(--text-secondary); font-size: 12px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+.sec-metric { display: flex; align-items: center; gap: 15px; padding: 20px; background: var(--bg-secondary); border-radius: 10px; }
+.metric-icon { font-size: 32px; }
+.metric-data { display: flex; flex-direction: column; gap: 4px; }
+.metric-value { color: var(--text-primary); font-size: 24px; font-weight: 700; }
+.metric-label { color: var(--text-secondary); font-size: 12px; }
+.incidents-view, .vulnerabilities-view { background: var(--bg-card); border-radius: 16px; padding: 25px; border: 1px solid var(--border-color); }
+.incidents-header, .vuln-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.incidents-header h4, .vuln-header h4 { color: var(--text-primary); font-size: 18px; margin: 0; font-weight: 600; }
+.create-incident, .scan-vulnerabilities { padding: 10px 20px; background: var(--accent-color); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.incidents-list, .vulnerabilities-list { display: flex; flex-direction: column; gap: 12px; }
+.incident-card, .vuln-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-secondary); border-radius: 10px; }
+.incident-info, .vuln-info { display: flex; align-items: center; gap: 15px; }
+.incident-type, .vuln-cve { color: var(--text-primary); font-weight: 600; }
+.severity-badge, .vuln-severity { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.severity-badge.high, .vuln-severity.high { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.severity-badge.medium, .vuln-severity.medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.severity-badge.low, .vuln-severity.low { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.severity-badge.critical, .vuln-severity.critical { background: rgba(239, 68, 68, 0.3); color: #dc2626; }
+.status-badge, .vuln-status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+.status-badge.investigating, .vuln-status-badge.investigating { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.status-badge.resolved, .vuln-status-badge.patched { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.status-badge.monitoring { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.vuln-status-badge.patch_available { background: rgba(99, 102, 241, 0.2); color: var(--accent-color); }
+.vuln-component { color: var(--text-secondary); font-size: 13px; }
+@media (max-width: 768px) { .security-operations { padding: 15px; } .feeds-grid, .metrics-grid { grid-template-columns: 1fr; } .incident-card, .vuln-card { flex-direction: column; align-items: flex-start; gap: 10px; } }
