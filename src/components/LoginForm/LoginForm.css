@@ -140,6 +140,10 @@
   margin: 0;
   color: var(--text-secondary, #666);
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
 .login-footer a {
@@ -149,6 +153,22 @@
 
 .login-footer a:hover {
   text-decoration: underline;
+}
+
+.signup-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+  color: #764ba2;
 }
 
 /* Mobile Responsiveness */

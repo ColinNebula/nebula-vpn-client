@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './LoginForm.css';
 
-const LoginForm = ({ onLogin, isDarkMode }) => {
+const LoginForm = ({ onLogin, onSwitchToSignup, isDarkMode }) => {
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
@@ -128,7 +128,15 @@ const LoginForm = ({ onLogin, isDarkMode }) => {
         </div>
         
         <div className="login-footer">
-          <p>Don't have an account? <a href="#signup">Sign up</a></p>
+          <p>Don't have an account? 
+            <button 
+              type="button"
+              className="signup-link" 
+              onClick={onSwitchToSignup}
+            >
+              Sign up
+            </button>
+          </p>
         </div>
       </div>
     </div>

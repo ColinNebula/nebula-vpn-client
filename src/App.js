@@ -5,6 +5,7 @@ import ConnectButton from './components/ConnectButton';
 import ServerList from './components/ServerList';
 import StatusIndicator from './components/StatusIndicator';
 import LoginForm from './components/LoginForm';
+import SignupForm from './components/SignupForm';
 import SplashScreen from './components/SplashScreen';
 import InstallPrompt from './components/InstallPrompt';
 import SubscriptionModal from './components/SubscriptionModal';
@@ -57,6 +58,7 @@ import MobileOptimizations from './components/MobileOptimizations';
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
   const [user, setUser] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedServer, setSelectedServer] = useState(null);
@@ -197,8 +199,15 @@ function App() {
     console.log('🔐 Login form submitted, authenticating...');
     // Simulate login
     setTimeout(() => {
-      setUser({ email: credentials.email, plan: 'Premium' });
+      setUser({ 
+        email: credentials.email, 
+        plan: 'Premium',
+        firstName: credentials.email.split('@')[0],
+        lastName: '',
+        verified: true
+      });
       setIsAuthenticated(true);
+      setShowSignup(false);
       console.log('✅ Authentication successful, loading main app...');
       addLog('User logged in successfully', 'success');
       
@@ -221,6 +230,32 @@ function App() {
         setActiveTab(tab);
       }
     }, 1000);
+  };
+
+  const handleSignup = (userData) => {
+    console.log('🎉 New user signup:', userData);
+    // Create user from signup data
+    setUser({
+      email: userData.email,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      plan: userData.plan || 'free',
+      country: userData.country,
+      verified: userData.verified,
+      createdAt: userData.createdAt
+    });
+    setCurrentPlan(userData.plan || 'free');
+    setIsAuthenticated(true);
+    setShowSignup(false);
+    console.log('✅ Account created successfully!');
+    addLog('New account created and verified', 'success');
+    
+    // Show welcome message
+    setTimeout(() => {
+      if (userData.plan === 'free') {
+        setShowSubscriptionModal(true);
+      }
+    }, 3000);
   };
 
   const handleLogout = () => {
@@ -330,8 +365,24 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    console.log('🔑 Rendering login form...');
-    return <LoginForm onLogin={handleLogin} isDarkMode={isDarkMode} />;
+    console.log('🔑 Rendering login/signup form...');
+    
+    if (showSignup) {
+      return (
+        <SignupForm 
+          onSignupSuccess={handleSignup}
+          onSwitchToLogin={() => setShowSignup(false)}
+        />
+      );
+    }
+    
+    return (
+      <LoginForm 
+        onLogin={handleLogin} 
+        onSwitchToSignup={() => setShowSignup(true)}
+        isDarkMode={isDarkMode} 
+      />
+    );
   }
 
   console.log('🏠 Rendering main app...');
