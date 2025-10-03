@@ -1,44 +1,71 @@
 {
   "short_name": "Nebula VPN",
   "name": "Nebula VPN Client - Secure Connection",
-  "description": "Professional VPN client with advanced security features",
+  "description": "Professional VPN client with advanced security features including AI optimization, blockchain integration, and quantum security",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
     },
     {
-      "src": "logo192.png",
-      "type": "image/png",
+      "src": "logo.svg",
+      "type": "image/svg+xml",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     },
     {
-      "src": "logo512.png",
-      "type": "image/png",
+      "src": "logo.svg",
+      "type": "image/svg+xml",
       "sizes": "512x512",
       "purpose": "any maskable"
+    },
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "144x144",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "96x96",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "72x72",
+      "purpose": "any"
     }
   ],
-  "start_url": ".",
+  "start_url": "/nebula-vpn-client/",
+  "scope": "/nebula-vpn-client/",
+  "id": "/nebula-vpn-client/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
   "theme_color": "#667eea",
   "background_color": "#667eea",
-  "categories": ["security", "utilities", "networking"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["security", "utilities", "networking", "productivity"],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "screenshots": [
     {
       "src": "screenshot-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Nebula VPN Dashboard"
     },
     {
       "src": "screenshot-narrow.png",
       "sizes": "750x1334",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Mobile VPN Interface"
     }
   ],
   "shortcuts": [
@@ -46,16 +73,53 @@
       "name": "Quick Connect",
       "short_name": "Connect",
       "description": "Connect to optimal VPN server",
-      "url": "/?action=connect",
-      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+      "url": "/nebula-vpn-client/?action=connect",
+      "icons": [{ "src": "logo.svg", "sizes": "any", "purpose": "any" }]
     },
     {
       "name": "Speed Test",
       "short_name": "Speed",
       "description": "Test connection speed",
-      "url": "/?tab=speedtest",
-      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+      "url": "/nebula-vpn-client/?tab=speedtest",
+      "icons": [{ "src": "logo.svg", "sizes": "any", "purpose": "any" }]
+    },
+    {
+      "name": "Server List",
+      "short_name": "Servers",
+      "description": "View available servers",
+      "url": "/nebula-vpn-client/?tab=servers",
+      "icons": [{ "src": "logo.svg", "sizes": "any", "purpose": "any" }]
+    },
+    {
+      "name": "Security Dashboard",
+      "short_name": "Security",
+      "description": "View security features",
+      "url": "/nebula-vpn-client/?tab=security",
+      "icons": [{ "src": "logo.svg", "sizes": "any", "purpose": "any" }]
     }
   ],
-  "prefer_related_applications": false
+  "share_target": {
+    "action": "/nebula-vpn-client/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+vpn",
+      "url": "/nebula-vpn-client/?protocol=%s"
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred"
 }

@@ -4,7 +4,7 @@ const urlsToCache = [
   '/static/js/bundle.js',
   '/static/css/main.css',
   '/manifest.json',
-  '/favicon.ico'
+  '/logo.svg'
 ];
 
 // Install event - cache resources
@@ -60,8 +60,8 @@ self.addEventListener('sync', (event) => {
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'VPN status update',
-    icon: '/logo192.png',
-    badge: '/logo192.png',
+    icon: '/logo.svg',
+    badge: '/logo.svg',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
@@ -71,12 +71,12 @@ self.addEventListener('push', (event) => {
       {
         action: 'explore',
         title: 'Open VPN Client',
-        icon: '/logo192.png'
+        icon: '/logo.svg'
       },
       {
         action: 'close',
         title: 'Dismiss',
-        icon: '/logo192.png'
+        icon: '/logo.svg'
       }
     ]
   };

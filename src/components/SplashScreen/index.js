@@ -12,7 +12,9 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
   const hasCompletedRef = useRef(false);
 
   // Update ref when onComplete changes
-  onCompleteRef.current = onComplete;
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   // Memoized completion handler to prevent multiple calls
   const handleCompletion = useCallback(() => {
@@ -31,6 +33,7 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
 
   useEffect(() => {
     console.log('🌟 Splash screen initialized, starting loading animation...');
+    isMountedRef.current = true;
     
     const loadingMessages = [
       'Initializing Nebula VPN...',
@@ -44,23 +47,36 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
     let currentMessageIndex = 0;
     
     // Progress animation with consistent timing
-    const interval = setInterval(() => {
-      if (!isMountedRef.current) return;
+    const progressInterval = setInterval(() => {
+      if (!isMountedRef.current) {
+        clearInterval(progressInterval);
+        return;
+      }
       
       // Increment progress by fixed amount to reach 100% in about 2.5 seconds
       currentProgress += 4; // 25 increments * 100ms = 2.5s to reach 100%
       if (currentProgress > 100) currentProgress = 100;
       
+      console.log('📊 Progress update:', currentProgress + '%');
       setProgress(currentProgress);
       
       // Update message based on progress milestones
-      const targetMessageIndex = Math.floor((currentProgress / 100) * (loadingMessages.length - 1));
+      const targetMessageIndex = Math.min(
+        Math.floor((currentProgress / 100) * loadingMessages.length),
+        loadingMessages.length - 1
+      );
       
-      if (targetMessageIndex !== currentMessageIndex && targetMessageIndex < loadingMessages.length) {
+      if (targetMessageIndex !== currentMessageIndex) {
         currentMessageIndex = targetMessageIndex;
+        console.log('💬 Message update:', loadingMessages[currentMessageIndex]);
         setCurrentText(loadingMessages[currentMessageIndex]);
       }
-    }, 100); // Faster, smoother updates
+      
+      // Clear interval when we reach 100%
+      if (currentProgress >= 100) {
+        clearInterval(progressInterval);
+      }
+    }, 100); // Update every 100ms
 
     // Guaranteed completion after exactly 3 seconds
     const completeTimer = setTimeout(() => {
@@ -87,8 +103,9 @@ const SplashScreen = ({ onComplete, isDarkMode = false }) => {
 
     // Cleanup function
     return () => {
+      console.log('🧹 Cleaning up splash screen...');
       isMountedRef.current = false;
-      clearInterval(interval);
+      clearInterval(progressInterval);
       clearTimeout(completeTimer);
       clearTimeout(emergencyTimer);
     };
