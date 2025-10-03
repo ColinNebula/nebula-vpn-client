@@ -10,7 +10,10 @@ import SplashScreen from './components/SplashScreen';
 import InstallPrompt from './components/InstallPrompt';
 import SubscriptionModal from './components/SubscriptionModal';
 import PromoBanner from './components/PromoBanner';
+import AdminPanel from './components/AdminPanel';
+import UpgradePrompt from './components/UpgradePrompt';
 import TrafficMonitor from './components/TrafficMonitor';
+import { hasFeature, getAllowedServers } from './config/planFeatures';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionLog from './components/ConnectionLog';
 import SpeedTest from './components/SpeedTest';
@@ -73,6 +76,7 @@ function App() {
   const [splitTunnelApps, setSplitTunnelApps] = useState([]);
   const [multiHopServers, setMultiHopServers] = useState([]);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [currentPlan, setCurrentPlan] = useState('free');
   const [settings, setSettings] = useState({
     autoConnect: false,
@@ -88,7 +92,7 @@ function App() {
   });
 
   // Enhanced server data with multi-hop capabilities
-  const servers = [
+  const allServers = [
     { id: '1', name: 'US East', location: 'New York', ping: '25ms', load: 45, country: 'US', flag: '🇺🇸', purpose: 'general', streaming: true, gaming: true, p2p: true, multiHopSupport: true },
     { id: '2', name: 'US West', location: 'Los Angeles', ping: '18ms', load: 32, country: 'US', flag: '🇺🇸', purpose: 'streaming', streaming: true, gaming: true, p2p: false, multiHopSupport: true },
     { id: '3', name: 'Europe', location: 'Frankfurt', ping: '45ms', load: 67, country: 'DE', flag: '🇩🇪', purpose: 'general', streaming: true, gaming: false, p2p: true, multiHopSupport: true },
@@ -100,6 +104,9 @@ function App() {
     { id: '9', name: 'Netherlands P2P', location: 'Amsterdam', ping: '50ms', load: 42, country: 'NL', flag: '🇳🇱', purpose: 'p2p', streaming: false, gaming: false, p2p: true, multiHopSupport: true },
     { id: '10', name: 'France', location: 'Paris', ping: '48ms', load: 65, country: 'FR', flag: '🇫🇷', purpose: 'streaming', streaming: true, gaming: true, p2p: false, multiHopSupport: true }
   ];
+
+  // Filter servers based on current plan
+  const servers = getAllowedServers(currentPlan, allServers);
 
   // PWA features and service worker registration
   useEffect(() => {
@@ -404,6 +411,17 @@ function App() {
         currentPlan={currentPlan}
         onUpgrade={() => setShowSubscriptionModal(true)}
       />
+
+      {/* Admin Panel */}
+      {showAdminPanel && (
+        <AdminPanel 
+          onClose={() => setShowAdminPanel(false)}
+          currentUser={user}
+          onUpdateUser={(updatedUser) => {
+            setUser(updatedUser);
+          }}
+        />
+      )}
       
       {/* Offline indicator */}
       {!isOnline && (
@@ -430,6 +448,9 @@ function App() {
           <div className="header-controls">
             <button className="upgrade-btn" onClick={() => setShowSubscriptionModal(true)}>
               ⭐ Upgrade
+            </button>
+            <button className="admin-btn" onClick={() => setShowAdminPanel(true)}>
+              ⚙️ Settings
             </button>
             <button className="theme-toggle" onClick={toggleDarkMode}>
               {isDarkMode ? '☀️' : '🌙'}
@@ -462,72 +483,94 @@ function App() {
         >
           🌍 Servers
         </button>
-        <button 
-          className={`tab ${activeTab === 'multihop' ? 'active' : ''}`}
-          onClick={() => setActiveTab('multihop')}
-        >
-          🔗 Multi-Hop
-        </button>
-        <button 
-          className={`tab ${activeTab === 'splittunnel' ? 'active' : ''}`}
-          onClick={() => setActiveTab('splittunnel')}
-        >
-          📱 Split Tunnel
-        </button>
-        <button 
-          className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
-          onClick={() => setActiveTab('analytics')}
-        >
-          📈 Analytics
-        </button>
-        <button 
-          className={`tab ${activeTab === 'security' ? 'active' : ''}`}
-          onClick={() => setActiveTab('security')}
-        >
-          🛡️ Security
-        </button>
-        <button 
-          className={`tab ${activeTab === 'automation' ? 'active' : ''}`}
-          onClick={() => setActiveTab('automation')}
-        >
-          🤖 Automation
-        </button>
-        <button 
-          className={`tab ${activeTab === 'experience' ? 'active' : ''}`}
-          onClick={() => setActiveTab('experience')}
-        >
-          ✨ Experience
-        </button>
-        <button 
-          className={`tab ${activeTab === 'enterprise' ? 'active' : ''}`}
-          onClick={() => setActiveTab('enterprise')}
-        >
-          🏢 Enterprise
-        </button>
-        <button 
-          className={`tab ${activeTab === 'ai' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ai')}
-        >
-          🤖 AI/ML
-        </button>
-        <button 
-          className={`tab ${activeTab === 'nextgen' ? 'active' : ''}`}
-          onClick={() => setActiveTab('nextgen')}
-        >
-          🚀 Next-Gen
-        </button>
-        <button 
-          className={`tab ${activeTab === 'mobile' ? 'active' : ''}`}
-          onClick={() => setActiveTab('mobile')}
-        >
-          📱 Mobile
-        </button>
-        <button 
-          className={`tab ${activeTab === 'speedtest' ? 'active' : ''}`}
-          onClick={() => setActiveTab('speedtest')}
-        >
-          ⚡ Speed Test
-        </button>
+        {hasFeature(currentPlan, 'multiHop') && (
+          <button 
+            className={`tab ${activeTab === 'multihop' ? 'active' : ''}`}
+            onClick={() => setActiveTab('multihop')}
+          >
+            🔗 Multi-Hop
+          </button>
+        )}
+        {hasFeature(currentPlan, 'splitTunneling') && (
+          <button 
+            className={`tab ${activeTab === 'splittunnel' ? 'active' : ''}`}
+            onClick={() => setActiveTab('splittunnel')}
+          >
+            📱 Split Tunnel
+          </button>
+        )}
+        {hasFeature(currentPlan, 'trafficAnalytics') && (
+          <button 
+            className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analytics')}
+          >
+            📈 Analytics
+          </button>
+        )}
+        {hasFeature(currentPlan, 'threatDetection') && (
+          <button 
+            className={`tab ${activeTab === 'security' ? 'active' : ''}`}
+            onClick={() => setActiveTab('security')}
+          >
+            🛡️ Security
+          </button>
+        )}
+        {hasFeature(currentPlan, 'automationRules') && (
+          <button 
+            className={`tab ${activeTab === 'automation' ? 'active' : ''}`}
+            onClick={() => setActiveTab('automation')}
+          >
+            🤖 Automation
+          </button>
+        )}
+        {hasFeature(currentPlan, 'liveDashboard') && (
+          <button 
+            className={`tab ${activeTab === 'experience' ? 'active' : ''}`}
+            onClick={() => setActiveTab('experience')}
+          >
+            ✨ Experience
+          </button>
+        )}
+        {hasFeature(currentPlan, 'networkTopology') && (
+          <button 
+            className={`tab ${activeTab === 'enterprise' ? 'active' : ''}`}
+            onClick={() => setActiveTab('enterprise')}
+          >
+            🏢 Enterprise
+          </button>
+        )}
+        {hasFeature(currentPlan, 'aiNetworkOptimizer') && (
+          <button 
+            className={`tab ${activeTab === 'ai' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ai')}
+          >
+            🤖 AI/ML
+          </button>
+        )}
+        {hasFeature(currentPlan, 'collaborativeVPN') && (
+          <button 
+            className={`tab ${activeTab === 'nextgen' ? 'active' : ''}`}
+            onClick={() => setActiveTab('nextgen')}
+          >
+            🚀 Next-Gen
+          </button>
+        )}
+        {hasFeature(currentPlan, 'mobileOptimizations') && (
+          <button 
+            className={`tab ${activeTab === 'mobile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('mobile')}
+          >
+            📱 Mobile
+          </button>
+        )}
+        {hasFeature(currentPlan, 'speedTest') && (
+          <button 
+            className={`tab ${activeTab === 'speedtest' ? 'active' : ''}`}
+            onClick={() => setActiveTab('speedtest')}
+          >
+            ⚡ Speed Test
+          </button>
+        )}
         <button 
           className={`tab ${activeTab === 'traffic' ? 'active' : ''}`}
           onClick={() => setActiveTab('traffic')}
@@ -575,275 +618,343 @@ function App() {
           )}
           
           {activeTab === 'multihop' && (
-            <MultiHop 
-              servers={servers.filter(s => s.multiHopSupport)}
-              selectedServers={multiHopServers}
-              onServersChange={handleMultiHopChange}
-              isConnected={isConnected}
-            />
+            hasFeature(currentPlan, 'multiHop') ? (
+              <MultiHop 
+                servers={allServers.filter(s => s.multiHopSupport)}
+                selectedServers={multiHopServers}
+                onServersChange={handleMultiHopChange}
+                isConnected={isConnected}
+              />
+            ) : (
+              <UpgradePrompt 
+                feature="multiHop"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'splittunnel' && (
-            <SplitTunneling 
-              apps={splitTunnelApps}
-              onAppsChange={handleSplitTunnelChange}
-              isConnected={isConnected}
-              enabled={settings.splitTunneling}
-            />
+            hasFeature(currentPlan, 'splitTunneling') ? (
+              <SplitTunneling 
+                apps={splitTunnelApps}
+                onAppsChange={handleSplitTunnelChange}
+                isConnected={isConnected}
+                enabled={settings.splitTunneling}
+              />
+            ) : (
+              <UpgradePrompt 
+                feature="splitTunneling"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
+          )}
+          
+          {activeTab === 'speedtest' && (
+            hasFeature(currentPlan, 'speedTest') ? (
+              <SpeedTest isConnected={isConnected} />
+            ) : (
+              <UpgradePrompt 
+                feature="speedTest"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'analytics' && (
-            <div className="analytics-section">
-              <div className="analytics-tabs">
-                <button 
-                  className={`analytics-tab ${activeTab === 'analytics' && !window.analyticsSubTab ? 'active' : ''}`}
-                  onClick={() => { window.analyticsSubTab = 'overview'; setActiveTab('analytics'); }}
-                >
-                  📊 Overview
-                </button>
-                <button 
-                  className={`analytics-tab ${window.analyticsSubTab === 'performance' ? 'active' : ''}`}
-                  onClick={() => { window.analyticsSubTab = 'performance'; setActiveTab('analytics'); }}
-                >
-                  📈 Performance
-                </button>
-                <button 
-                  className={`analytics-tab ${window.analyticsSubTab === 'history' ? 'active' : ''}`}
-                  onClick={() => { window.analyticsSubTab = 'history'; setActiveTab('analytics'); }}
-                >
-                  📜 History
-                </button>
-                <button 
-                  className={`analytics-tab ${window.analyticsSubTab === 'usage' ? 'active' : ''}`}
-                  onClick={() => { window.analyticsSubTab = 'usage'; setActiveTab('analytics'); }}
-                >
-                  📱 App Usage
-                </button>
-                <button 
-                  className={`analytics-tab ${window.analyticsSubTab === 'map' ? 'active' : ''}`}
-                  onClick={() => { window.analyticsSubTab = 'map'; setActiveTab('analytics'); }}
-                >
-                  🌍 Global Map
-                </button>
+            hasFeature(currentPlan, 'trafficAnalytics') ? (
+              <div className="analytics-section">
+                <div className="analytics-tabs">
+                  <button 
+                    className={`analytics-tab ${activeTab === 'analytics' && !window.analyticsSubTab ? 'active' : ''}`}
+                    onClick={() => { window.analyticsSubTab = 'overview'; setActiveTab('analytics'); }}
+                  >
+                    📊 Overview
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.analyticsSubTab === 'performance' ? 'active' : ''}`}
+                    onClick={() => { window.analyticsSubTab = 'performance'; setActiveTab('analytics'); }}
+                  >
+                    📈 Performance
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.analyticsSubTab === 'history' ? 'active' : ''}`}
+                    onClick={() => { window.analyticsSubTab = 'history'; setActiveTab('analytics'); }}
+                  >
+                    📜 History
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.analyticsSubTab === 'usage' ? 'active' : ''}`}
+                    onClick={() => { window.analyticsSubTab = 'usage'; setActiveTab('analytics'); }}
+                  >
+                    📱 App Usage
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.analyticsSubTab === 'map' ? 'active' : ''}`}
+                    onClick={() => { window.analyticsSubTab = 'map'; setActiveTab('analytics'); }}
+                  >
+                    🌍 Global Map
+                  </button>
+                </div>
+                
+                <div className="analytics-content">
+                  {(!window.analyticsSubTab || window.analyticsSubTab === 'overview') && (
+                    <TrafficAnalytics 
+                      isConnected={isConnected}
+                      connectionTime={connectionTime}
+                    />
+                  )}
+                  {window.analyticsSubTab === 'performance' && (
+                    <PerformanceMetrics 
+                      isConnected={isConnected}
+                      currentServer={selectedServer || (multiHopServers.length > 0 ? multiHopServers[multiHopServers.length - 1] : null)}
+                    />
+                  )}
+                  {window.analyticsSubTab === 'history' && (
+                    <ConnectionHistory />
+                  )}
+                  {window.analyticsSubTab === 'usage' && (
+                    <DataUsageTracker 
+                      isConnected={isConnected}
+                    />
+                  )}
+                  {window.analyticsSubTab === 'map' && (
+                    <GeographicMap 
+                      servers={servers}
+                      currentServer={selectedServer || (multiHopServers.length > 0 ? multiHopServers[multiHopServers.length - 1] : null)}
+                      onServerSelect={handleServerSelect}
+                    />
+                  )}
+                </div>
               </div>
-              
-              <div className="analytics-content">
-                {(!window.analyticsSubTab || window.analyticsSubTab === 'overview') && (
-                  <TrafficAnalytics 
-                    isConnected={isConnected}
-                    connectionTime={connectionTime}
-                  />
-                )}
-                {window.analyticsSubTab === 'performance' && (
-                  <PerformanceMetrics 
-                    isConnected={isConnected}
-                    currentServer={selectedServer || (multiHopServers.length > 0 ? multiHopServers[multiHopServers.length - 1] : null)}
-                  />
-                )}
-                {window.analyticsSubTab === 'history' && (
-                  <ConnectionHistory />
-                )}
-                {window.analyticsSubTab === 'usage' && (
-                  <DataUsageTracker 
-                    isConnected={isConnected}
-                  />
-                )}
-                {window.analyticsSubTab === 'map' && (
-                  <GeographicMap 
-                    servers={servers}
-                    currentServer={selectedServer || (multiHopServers.length > 0 ? multiHopServers[multiHopServers.length - 1] : null)}
-                    onServerSelect={handleServerSelect}
-                  />
-                )}
-              </div>
-            </div>
+            ) : (
+              <UpgradePrompt 
+                feature="trafficAnalytics"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'security' && (
-            <div className="analytics-section">
-              <div className="analytics-tabs">
-                <button 
-                  className={`analytics-tab ${activeTab === 'security' && !window.securitySubTab ? 'active' : ''}`}
-                  onClick={() => { window.securitySubTab = 'threats'; setActiveTab('security'); }}
-                >
-                  🛡️ Threat Detection
-                </button>
-                <button 
-                  className={`analytics-tab ${window.securitySubTab === 'dns' ? 'active' : ''}`}
-                  onClick={() => { window.securitySubTab = 'dns'; setActiveTab('security'); }}
-                >
-                  🔒 DNS Protection
-                </button>
-                <button 
-                  className={`analytics-tab ${window.securitySubTab === 'ipv6' ? 'active' : ''}`}
-                  onClick={() => { window.securitySubTab = 'ipv6'; setActiveTab('security'); }}
-                >
-                  🌐 IPv6 Protection
-                </button>
-                <button 
-                  className={`analytics-tab ${window.securitySubTab === 'firewall' ? 'active' : ''}`}
-                  onClick={() => { window.securitySubTab = 'firewall'; setActiveTab('security'); }}
-                >
-                  🔥 Firewall
-                </button>
-                <button 
-                  className={`analytics-tab ${window.securitySubTab === 'obfuscation' ? 'active' : ''}`}
-                  onClick={() => { window.securitySubTab = 'obfuscation'; setActiveTab('security'); }}
-                >
-                  🥷 Obfuscation
-                </button>
-                <button 
-                  className={`analytics-tab ${window.securitySubTab === '2fa' ? 'active' : ''}`}
-                  onClick={() => { window.securitySubTab = '2fa'; setActiveTab('security'); }}
-                >
-                  🔐 Two-Factor Auth
-                </button>
+            hasFeature(currentPlan, 'threatDetection') ? (
+              <div className="analytics-section">
+                <div className="analytics-tabs">
+                  <button 
+                    className={`analytics-tab ${activeTab === 'security' && !window.securitySubTab ? 'active' : ''}`}
+                    onClick={() => { window.securitySubTab = 'threats'; setActiveTab('security'); }}
+                  >
+                    🛡️ Threat Detection
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.securitySubTab === 'dns' ? 'active' : ''}`}
+                    onClick={() => { window.securitySubTab = 'dns'; setActiveTab('security'); }}
+                  >
+                    🔒 DNS Protection
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.securitySubTab === 'ipv6' ? 'active' : ''}`}
+                    onClick={() => { window.securitySubTab = 'ipv6'; setActiveTab('security'); }}
+                  >
+                    🌐 IPv6 Protection
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.securitySubTab === 'firewall' ? 'active' : ''}`}
+                    onClick={() => { window.securitySubTab = 'firewall'; setActiveTab('security'); }}
+                  >
+                    🔥 Firewall
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.securitySubTab === 'obfuscation' ? 'active' : ''}`}
+                    onClick={() => { window.securitySubTab = 'obfuscation'; setActiveTab('security'); }}
+                  >
+                    🥷 Obfuscation
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.securitySubTab === '2fa' ? 'active' : ''}`}
+                    onClick={() => { window.securitySubTab = '2fa'; setActiveTab('security'); }}
+                  >
+                    🔐 Two-Factor Auth
+                  </button>
+                </div>
+                
+                <div className="analytics-content">
+                  {(!window.securitySubTab || window.securitySubTab === 'threats') && (
+                    <ThreatDetection isConnected={isConnected} />
+                  )}
+                  
+                  {window.securitySubTab === 'dns' && (
+                    <DNSProtection isConnected={isConnected} />
+                  )}
+                  
+                  {window.securitySubTab === 'ipv6' && (
+                    <IPv6Protection isConnected={isConnected} />
+                  )}
+                  
+                  {window.securitySubTab === 'firewall' && (
+                    <FirewallManager isConnected={isConnected} />
+                  )}
+                  
+                  {window.securitySubTab === 'obfuscation' && (
+                    <ObfuscationSettings isConnected={isConnected} />
+                  )}
+                  
+                  {window.securitySubTab === '2fa' && (
+                    <TwoFactorAuth />
+                  )}
+                </div>
               </div>
-              
-              <div className="analytics-content">
-                {(!window.securitySubTab || window.securitySubTab === 'threats') && (
-                  <ThreatDetection isConnected={isConnected} />
-                )}
-                
-                {window.securitySubTab === 'dns' && (
-                  <DNSProtection isConnected={isConnected} />
-                )}
-                
-                {window.securitySubTab === 'ipv6' && (
-                  <IPv6Protection isConnected={isConnected} />
-                )}
-                
-                {window.securitySubTab === 'firewall' && (
-                  <FirewallManager isConnected={isConnected} />
-                )}
-                
-                {window.securitySubTab === 'obfuscation' && (
-                  <ObfuscationSettings isConnected={isConnected} />
-                )}
-                
-                {window.securitySubTab === '2fa' && (
-                  <TwoFactorAuth />
-                )}
-              </div>
-            </div>
+            ) : (
+              <UpgradePrompt 
+                feature="threatDetection"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'automation' && (
-            <div className="analytics-section">
-              <div className="analytics-tabs">
-                <button 
-                  className={`analytics-tab ${activeTab === 'automation' && !window.automationSubTab ? 'active' : ''}`}
-                  onClick={() => { window.automationSubTab = 'rules'; setActiveTab('automation'); }}
-                >
-                  ⚙️ Automation Rules
-                </button>
-                <button 
-                  className={`analytics-tab ${window.automationSubTab === 'bandwidth' ? 'active' : ''}`}
-                  onClick={() => { window.automationSubTab = 'bandwidth'; setActiveTab('automation'); }}
-                >
-                  📊 Bandwidth Scheduler
-                </button>
-                <button 
-                  className={`analytics-tab ${window.automationSubTab === 'monitor' ? 'active' : ''}`}
-                  onClick={() => { window.automationSubTab = 'monitor'; setActiveTab('automation'); }}
-                >
-                  📡 Network Monitor
-                </button>
-                <button 
-                  className={`analytics-tab ${window.automationSubTab === 'chaining' ? 'active' : ''}`}
-                  onClick={() => { window.automationSubTab = 'chaining'; setActiveTab('automation'); }}
-                >
-                  🔗 VPN Chaining
-                </button>
-                <button 
-                  className={`analytics-tab ${window.automationSubTab === 'audit' ? 'active' : ''}`}
-                  onClick={() => { window.automationSubTab = 'audit'; setActiveTab('automation'); }}
-                >
-                  🔒 Privacy Audit
-                </button>
+            hasFeature(currentPlan, 'automationRules') ? (
+              <div className="analytics-section">
+                <div className="analytics-tabs">
+                  <button 
+                    className={`analytics-tab ${activeTab === 'automation' && !window.automationSubTab ? 'active' : ''}`}
+                    onClick={() => { window.automationSubTab = 'rules'; setActiveTab('automation'); }}
+                  >
+                    ⚙️ Automation Rules
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.automationSubTab === 'bandwidth' ? 'active' : ''}`}
+                    onClick={() => { window.automationSubTab = 'bandwidth'; setActiveTab('automation'); }}
+                  >
+                    📊 Bandwidth Scheduler
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.automationSubTab === 'monitor' ? 'active' : ''}`}
+                    onClick={() => { window.automationSubTab = 'monitor'; setActiveTab('automation'); }}
+                  >
+                    📡 Network Monitor
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.automationSubTab === 'chaining' ? 'active' : ''}`}
+                    onClick={() => { window.automationSubTab = 'chaining'; setActiveTab('automation'); }}
+                  >
+                    🔗 VPN Chaining
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.automationSubTab === 'audit' ? 'active' : ''}`}
+                    onClick={() => { window.automationSubTab = 'audit'; setActiveTab('automation'); }}
+                  >
+                    🔒 Privacy Audit
+                  </button>
+                </div>
+                
+                <div className="analytics-content">
+                  {(!window.automationSubTab || window.automationSubTab === 'rules') && (
+                    <AutomationRules isConnected={isConnected} />
+                  )}
+                  
+                  {window.automationSubTab === 'bandwidth' && (
+                    <BandwidthScheduler isConnected={isConnected} />
+                  )}
+                  
+                  {window.automationSubTab === 'monitor' && (
+                    <NetworkMonitor isConnected={isConnected} />
+                  )}
+                  
+                  {window.automationSubTab === 'chaining' && (
+                    <VPNChaining isConnected={isConnected} />
+                  )}
+                  
+                  {window.automationSubTab === 'audit' && (
+                    <PrivacyAudit isConnected={isConnected} />
+                  )}
+                </div>
               </div>
-              
-              <div className="analytics-content">
-                {(!window.automationSubTab || window.automationSubTab === 'rules') && (
-                  <AutomationRules isConnected={isConnected} />
-                )}
-                
-                {window.automationSubTab === 'bandwidth' && (
-                  <BandwidthScheduler isConnected={isConnected} />
-                )}
-                
-                {window.automationSubTab === 'monitor' && (
-                  <NetworkMonitor isConnected={isConnected} />
-                )}
-                
-                {window.automationSubTab === 'chaining' && (
-                  <VPNChaining isConnected={isConnected} />
-                )}
-                
-                {window.automationSubTab === 'audit' && (
-                  <PrivacyAudit isConnected={isConnected} />
-                )}
-              </div>
-            </div>
+            ) : (
+              <UpgradePrompt 
+                feature="automationRules"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'experience' && (
-            <div className="analytics-section">
-              <div className="analytics-tabs">
-                <button 
-                  className={`analytics-tab ${activeTab === 'experience' && !window.experienceSubTab ? 'active' : ''}`}
-                  onClick={() => { window.experienceSubTab = 'customization'; setActiveTab('experience'); }}
-                >
-                  🎨 Customization
-                </button>
-                <button 
-                  className={`analytics-tab ${window.experienceSubTab === 'quickactions' ? 'active' : ''}`}
-                  onClick={() => { window.experienceSubTab = 'quickactions'; setActiveTab('experience'); }}
-                >
-                  ⚡ Quick Actions
-                </button>
-                <button 
-                  className={`analytics-tab ${window.experienceSubTab === 'notifications' ? 'active' : ''}`}
-                  onClick={() => { window.experienceSubTab = 'notifications'; setActiveTab('experience'); }}
-                >
-                  🔔 Notifications
-                </button>
-                <button 
-                  className={`analytics-tab ${window.experienceSubTab === 'sessions' ? 'active' : ''}`}
-                  onClick={() => { window.experienceSubTab = 'sessions'; setActiveTab('experience'); }}
-                >
-                  💾 Sessions
-                </button>
+            hasFeature(currentPlan, 'liveDashboard') ? (
+              <div className="analytics-section">
+                <div className="analytics-tabs">
+                  <button 
+                    className={`analytics-tab ${activeTab === 'experience' && !window.experienceSubTab ? 'active' : ''}`}
+                    onClick={() => { window.experienceSubTab = 'customization'; setActiveTab('experience'); }}
+                  >
+                    🎨 Customization
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.experienceSubTab === 'quickactions' ? 'active' : ''}`}
+                    onClick={() => { window.experienceSubTab = 'quickactions'; setActiveTab('experience'); }}
+                  >
+                    ⚡ Quick Actions
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.experienceSubTab === 'notifications' ? 'active' : ''}`}
+                    onClick={() => { window.experienceSubTab = 'notifications'; setActiveTab('experience'); }}
+                  >
+                    🔔 Notifications
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.experienceSubTab === 'sessions' ? 'active' : ''}`}
+                    onClick={() => { window.experienceSubTab = 'sessions'; setActiveTab('experience'); }}
+                  >
+                    💾 Sessions
+                  </button>
+                </div>
+                
+                <div className="analytics-content">
+                  {(!window.experienceSubTab || window.experienceSubTab === 'customization') && (
+                    <CustomizationCenter />
+                  )}
+                  
+                  {window.experienceSubTab === 'quickactions' && (
+                    <QuickActions 
+                      onQuickConnect={handleToggleConnection}
+                      onSpeedTest={() => setActiveTab('speedtest')}
+                      isConnected={isConnected}
+                      onDisconnect={handleToggleConnection}
+                    />
+                  )}
+                  
+                  {window.experienceSubTab === 'notifications' && (
+                    <NotificationCenter />
+                  )}
+                  
+                  {window.experienceSubTab === 'sessions' && (
+                    <SessionManager 
+                      onLoadProfile={(profile) => alert(`Loading profile: ${profile.name}`)}
+                    />
+                  )}
+                </div>
               </div>
-              
-              <div className="analytics-content">
-                {(!window.experienceSubTab || window.experienceSubTab === 'customization') && (
-                  <CustomizationCenter />
-                )}
-                
-                {window.experienceSubTab === 'quickactions' && (
-                  <QuickActions 
-                    onQuickConnect={handleToggleConnection}
-                    onSpeedTest={() => setActiveTab('speedtest')}
-                    isConnected={isConnected}
-                    onDisconnect={handleToggleConnection}
-                  />
-                )}
-                
-                {window.experienceSubTab === 'notifications' && (
-                  <NotificationCenter />
-                )}
-                
-                {window.experienceSubTab === 'sessions' && (
-                  <SessionManager 
-                    onLoadProfile={(profile) => alert(`Loading profile: ${profile.name}`)}
-                  />
-                )}
-              </div>
-            </div>
+            ) : (
+              <UpgradePrompt 
+                feature="liveDashboard"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'enterprise' && (
+            hasFeature(currentPlan, 'networkTopology') ? (
             <div className="analytics-section">
               <div className="analytics-tabs">
                 <button 
@@ -905,9 +1016,18 @@ function App() {
                 )}
               </div>
             </div>
+            ) : (
+              <UpgradePrompt 
+                feature="networkTopology"
+                requiredPlan="ultimate"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'ai' && (
+            hasFeature(currentPlan, 'aiNetworkOptimizer') ? (
             <div className="analytics-section">
               <div className="analytics-tabs">
                 <button 
@@ -969,9 +1089,18 @@ function App() {
                 )}
               </div>
             </div>
+            ) : (
+              <UpgradePrompt 
+                feature="aiNetworkOptimizer"
+                requiredPlan="ultimate"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'nextgen' && (
+            hasFeature(currentPlan, 'collaborativeVPN') ? (
             <div className="analytics-section">
               <div className="analytics-tabs">
                 <button 
@@ -1028,10 +1157,27 @@ function App() {
                 )}
               </div>
             </div>
+            ) : (
+              <UpgradePrompt 
+                feature="collaborativeVPN"
+                requiredPlan="ultimate"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'mobile' && (
-            <MobileOptimizations />
+            hasFeature(currentPlan, 'mobileOptimizations') ? (
+              <MobileOptimizations />
+            ) : (
+              <UpgradePrompt 
+                feature="mobileOptimizations"
+                requiredPlan="premium"
+                onUpgrade={() => setShowSubscriptionModal(true)}
+                fullScreen={true}
+              />
+            )
           )}
           
           {activeTab === 'speedtest' && (
