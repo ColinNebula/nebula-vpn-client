@@ -25,11 +25,15 @@ const GeographicMap = ({ servers, currentServer, onServerSelect }) => {
     { id: 15, name: 'Stockholm, Sweden', lat: 59.3293, lon: 18.0686, continent: 'Europe', users: 6543, load: 41 }
   ];
 
-  // Convert lat/lon to SVG coordinates (simple mercator-ish projection)
+  // Convert lat/lon to SVG coordinates (improved mercator projection)
   const projectToSVG = (lat, lon) => {
+    // Mercator projection with better aspect ratio
     const x = ((lon + 180) / 360) * 100;
-    const y = ((90 - lat) / 180) * 100;
-    return { x, y };
+    // Using mercator formula for y with proper scaling for 2:1 aspect ratio
+    const latRad = (lat * Math.PI) / 180;
+    const mercY = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
+    const y = 25 - (mercY / (2 * Math.PI)) * 50; // Center at y=25 for 50 height
+    return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(50, y)) };
   };
 
   const getFilteredServers = () => {
@@ -141,18 +145,115 @@ const GeographicMap = ({ servers, currentServer, onServerSelect }) => {
 
       {/* Interactive Map */}
       <div className="map-container">
-        <svg className="world-map" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-          {/* Background */}
-          <rect x="0" y="0" width="100" height="100" fill="var(--map-bg, #e0f2f7)" />
-          
-          {/* Grid lines */}
+        <svg className="world-map" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="var(--map-grid, #b0d4de)" strokeWidth="0.1" opacity="0.3" />
+            {/* Ocean pattern */}
+            <pattern id="ocean" width="2" height="2" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.3" fill="#b3d9f2" opacity="0.3" />
             </pattern>
+            
+            {/* Grid pattern */}
+            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#8ec5d6" strokeWidth="0.1" opacity="0.2" />
+            </pattern>
+            
+            {/* Glow filters */}
+            <filter id="continent-glow">
+              <feGaussianBlur stdDeviation="0.3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
           </defs>
-          <rect width="100" height="100" fill="url(#grid)" />
+          
+          {/* Ocean Background */}
+          <rect x="0" y="0" width="100" height="50" fill="#d4ebf7" className="ocean-bg" />
+          <rect width="100" height="50" fill="url(#ocean)" />
+          <rect width="100" height="50" fill="url(#grid)" />
+          
+          {/* Continents - Simplified SVG paths */}
+          {/* North America */}
+          <path 
+            d="M 8 8 L 12 6 L 15 8 L 18 7 L 20 9 L 22 8 L 24 10 L 26 12 L 24 15 L 22 18 L 20 20 L 18 22 L 15 20 L 13 18 L 11 16 L 9 14 L 7 12 L 8 10 Z"
+            fill="#a8d5a3"
+            stroke="#8bb887"
+            strokeWidth="0.2"
+            className="continent"
+            filter="url(#continent-glow)"
+          />
+          
+          {/* South America */}
+          <path 
+            d="M 20 22 L 22 24 L 24 27 L 23 30 L 21 33 L 19 35 L 17 33 L 16 30 L 17 27 L 18 24 Z"
+            fill="#b8e0b3"
+            stroke="#96c691"
+            strokeWidth="0.2"
+            className="continent"
+            filter="url(#continent-glow)"
+          />
+          
+          {/* Europe */}
+          <path 
+            d="M 42 8 L 45 7 L 48 8 L 50 10 L 52 11 L 51 13 L 49 14 L 47 13 L 45 12 L 43 11 L 42 9 Z"
+            fill="#c4d9b3"
+            stroke="#a5bd94"
+            strokeWidth="0.2"
+            className="continent"
+            filter="url(#continent-glow)"
+          />
+          
+          {/* Africa */}
+          <path 
+            d="M 44 14 L 46 16 L 48 18 L 50 20 L 52 23 L 51 26 L 49 28 L 47 30 L 45 29 L 43 27 L 42 24 L 41 21 L 42 18 L 43 16 Z"
+            fill="#d4c896"
+            stroke="#b8ad7d"
+            strokeWidth="0.2"
+            className="continent"
+            filter="url(#continent-glow)"
+          />
+          
+          {/* Asia */}
+          <path 
+            d="M 52 6 L 58 5 L 64 7 L 68 9 L 72 11 L 75 14 L 76 17 L 74 19 L 70 20 L 66 19 L 62 18 L 58 17 L 55 15 L 52 13 L 50 10 Z"
+            fill="#e0d4a8"
+            stroke="#c4bb8f"
+            strokeWidth="0.2"
+            className="continent"
+            filter="url(#continent-glow)"
+          />
+          
+          {/* Southeast Asia */}
+          <path 
+            d="M 70 20 L 73 22 L 75 24 L 76 26 L 74 27 L 71 26 L 69 24 L 68 22 Z"
+            fill="#ccd99f"
+            stroke="#b3c087"
+            strokeWidth="0.2"
+            className="continent"
+            filter="url(#continent-glow)"
+          />
+          
+          {/* Australia */}
+          <path 
+            d="M 74 30 L 78 29 L 82 30 L 84 33 L 83 36 L 80 37 L 76 36 L 74 34 L 73 32 Z"
+            fill="#d9c9a3"
+            stroke="#bfaf89"
+            strokeWidth="0.2"
+            className="continent"
+            filter="url(#continent-glow)"
+          />
 
+          
+          {/* Latitude lines */}
+          <line x1="0" y1="12.5" x2="100" y2="12.5" stroke="#8ec5d6" strokeWidth="0.15" opacity="0.3" strokeDasharray="1,1" />
+          <line x1="0" y1="25" x2="100" y2="25" stroke="#8ec5d6" strokeWidth="0.2" opacity="0.4" strokeDasharray="1,1" />
+          <line x1="0" y1="37.5" x2="100" y2="37.5" stroke="#8ec5d6" strokeWidth="0.15" opacity="0.3" strokeDasharray="1,1" />
+          
+          {/* Longitude lines */}
+          <line x1="25" y1="0" x2="25" y2="50" stroke="#8ec5d6" strokeWidth="0.15" opacity="0.3" strokeDasharray="1,1" />
+          <line x1="50" y1="0" x2="50" y2="50" stroke="#8ec5d6" strokeWidth="0.2" opacity="0.4" strokeDasharray="1,1" />
+          <line x1="75" y1="0" x2="75" y2="50" stroke="#8ec5d6" strokeWidth="0.15" opacity="0.3" strokeDasharray="1,1" />
+          
           {/* Connection path from your location to current server */}
           {showConnectionPath && currentServer && (
             <>

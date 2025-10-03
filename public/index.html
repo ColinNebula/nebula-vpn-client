@@ -2,26 +2,92 @@
 <html lang="en">
     <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Nebula VPN - Next-Gen VPN Client</title>
+    <meta name="title" content="Nebula VPN - Next-Gen VPN Client">
+    <meta name="description" content="Nebula VPN - Next-generation VPN client with AI, blockchain, and quantum security features. Install on any device for secure, private browsing." />
+    
+    <!-- Viewport and Device Optimization -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#667eea" />
+    
+    <!-- PWA Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Nebula VPN">
     <meta name="application-name" content="Nebula VPN">
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#667eea" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#667eea">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a2838">
     <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-navbutton-color" content="#667eea">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#667eea">
+    
+    <!-- Icons and Touch Icons -->
+    <link rel="icon" href="%PUBLIC_URL%/logo.svg" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="144x144" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="120x120" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="114x114" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="76x76" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="72x72" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="60x60" href="%PUBLIC_URL%/logo.svg">
+    <link rel="apple-touch-icon" sizes="57x57" href="%PUBLIC_URL%/logo.svg">
+    
+    <!-- Microsoft Tiles -->
     <meta name="msapplication-config" content="/browserconfig.xml">
-    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
-    <meta name="description" content="Nebula VPN - Next-generation VPN client with AI, blockchain, and quantum security features" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
+    <meta name="msapplication-TileImage" content="%PUBLIC_URL%/logo.svg">
+    <meta name="msapplication-square70x70logo" content="%PUBLIC_URL%/logo.svg">
+    <meta name="msapplication-square150x150logo" content="%PUBLIC_URL%/logo.svg">
+    <meta name="msapplication-wide310x150logo" content="%PUBLIC_URL%/logo.svg">
+    <meta name="msapplication-square310x310logo" content="%PUBLIC_URL%/logo.svg">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://colinnebula.github.io/nebula-vpn-client/">
+    <meta property="og:title" content="Nebula VPN - Next-Gen VPN Client">
+    <meta property="og:description" content="Professional VPN client with AI optimization, blockchain integration, and quantum security features">
+    <meta property="og:image" content="%PUBLIC_URL%/logo.svg">
+    <meta property="og:site_name" content="Nebula VPN">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://colinnebula.github.io/nebula-vpn-client/">
+    <meta property="twitter:title" content="Nebula VPN - Next-Gen VPN Client">
+    <meta property="twitter:description" content="Professional VPN client with AI optimization, blockchain integration, and quantum security features">
+    <meta property="twitter:image" content="%PUBLIC_URL%/logo.svg">
+    
+    <!-- Android -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Samsung Browser -->
+    <meta name="samsung-internet-enabled" content="true">
+    
+    <!-- UC Browser -->
+    <meta name="full-screen" content="yes">
+    <meta name="browsermode" content="application">
+    
+    <!-- Format Detection -->
+    <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="address=no">
+    
+    <!-- Web App Capabilities -->
+    <meta name="web-app-capable" content="yes">
+    
+    <!-- Manifest -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- DNS Prefetch for Performance -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
@@ -31,11 +97,56 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>Nebula VPN - Next-Gen VPN Client</title>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1>⚠️ JavaScript Required</h1>
+        <p>Nebula VPN requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
+    
+    <!-- Install Prompt Script -->
+    <script>
+      // PWA Install Prompt Handler
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        console.log('💾 Install prompt available');
+        
+        // Show custom install button/banner if you have one
+        const installBanner = document.getElementById('install-banner');
+        if (installBanner) {
+          installBanner.style.display = 'block';
+        }
+      });
+      
+      window.addEventListener('appinstalled', () => {
+        console.log('✅ PWA installed successfully');
+        deferredPrompt = null;
+      });
+      
+      // Track if app is running as PWA
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        console.log('🚀 Running as installed PWA');
+        document.documentElement.setAttribute('data-pwa-mode', 'standalone');
+      }
+      
+      // Service Worker Registration (production only)
+      if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('%PUBLIC_URL%/sw.js')
+            .then(registration => {
+              console.log('✅ Service Worker registered:', registration.scope);
+            })
+            .catch(error => {
+              console.log('❌ Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

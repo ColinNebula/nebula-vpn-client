@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import logo from './logo.svg';
 import ConnectButton from './components/ConnectButton';
 import ServerList from './components/ServerList';
 import StatusIndicator from './components/StatusIndicator';
 import LoginForm from './components/LoginForm';
 import SplashScreen from './components/SplashScreen';
+import InstallPrompt from './components/InstallPrompt';
 import TrafficMonitor from './components/TrafficMonitor';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionLog from './components/ConnectionLog';
@@ -332,6 +334,9 @@ function App() {
 
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
+      {/* Install Prompt */}
+      <InstallPrompt />
+      
       {/* Offline indicator */}
       {!isOnline && (
         <div className="offline-banner">
@@ -350,7 +355,10 @@ function App() {
 
       <header className="App-header">
         <div className="header-content">
-          <h1>Nebula VPN Client</h1>
+          <div className="header-logo-section">
+            <img src={logo} alt="Nebula VPN Logo" className="header-logo" />
+            <h1>Nebula VPN Client</h1>
+          </div>
           <div className="header-controls">
             <button className="theme-toggle" onClick={toggleDarkMode}>
               {isDarkMode ? '☀️' : '🌙'}

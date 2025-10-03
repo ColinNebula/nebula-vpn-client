@@ -109,34 +109,65 @@
 /* Map Container */
 .map-container {
   position: relative;
-  background: var(--bg-card, #fafafa);
+  background: linear-gradient(180deg, #d4ebf7 0%, #e8f4f8 100%);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 30px;
-  border: 1px solid var(--border-color, #eee);
+  border: 2px solid #b3d9f2;
   overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .world-map {
   width: 100%;
-  height: 500px;
+  height: 600px;
   display: block;
   border-radius: 8px;
+  background: transparent;
+}
+
+/* Ocean background with animation */
+.ocean-bg {
+  animation: ocean-wave 20s ease-in-out infinite;
+}
+
+@keyframes ocean-wave {
+  0%, 100% {
+    fill: #d4ebf7;
+  }
+  50% {
+    fill: #c8e5f5;
+  }
+}
+
+/* Continents */
+.continent {
+  transition: all 0.4s ease;
+  cursor: default;
+}
+
+.continent:hover {
+  opacity: 0.9;
+  filter: brightness(1.1) url(#continent-glow);
+  transform: scale(1.01);
+  transform-origin: center;
 }
 
 /* Server Markers */
 .server-marker {
   transition: all 0.3s ease;
   cursor: pointer;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
 }
 
 .server-marker:hover {
-  transform: scale(1.5);
-  filter: brightness(1.2);
+  transform: scale(1.8);
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5)) brightness(1.3);
 }
 
 .server-marker.connected {
-  animation: pulse-marker 2s infinite;
+  animation: pulse-marker 2s infinite, glow-ring 2s infinite;
+  filter: drop-shadow(0 0 6px currentColor);
 }
 
 @keyframes pulse-marker {
@@ -145,36 +176,49 @@
     opacity: 1;
   }
   50% {
-    transform: scale(1.2);
+    transform: scale(1.3);
     opacity: 0.8;
+  }
+}
+
+@keyframes glow-ring {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px currentColor) brightness(1.2);
   }
 }
 
 .server-glow {
   animation: glow-pulse 2s infinite;
+  filter: blur(0.5);
 }
 
 @keyframes glow-pulse {
   0%, 100% {
-    opacity: 0.2;
+    opacity: 0.15;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.4;
+    opacity: 0.35;
+    transform: scale(1.1);
   }
 }
 
 .connection-path {
-  animation: dash 3s linear infinite;
+  animation: dash 4s linear infinite;
+  filter: drop-shadow(0 0 2px rgba(33, 150, 243, 0.5));
 }
 
 @keyframes dash {
   to {
-    stroke-dashoffset: -10;
+    stroke-dashoffset: -20;
   }
 }
 
 .pulse-dot {
-  animation: pulse-dot-anim 1.5s ease-out infinite;
+  animation: pulse-dot-anim 2s ease-out infinite;
 }
 
 @keyframes pulse-dot-anim {
@@ -182,8 +226,12 @@
     r: 0.8;
     opacity: 1;
   }
+  70% {
+    r: 3;
+    opacity: 0.3;
+  }
   100% {
-    r: 2;
+    r: 4;
     opacity: 0;
   }
 }
@@ -413,7 +461,7 @@
   }
 
   .world-map {
-    height: 400px;
+    height: 450px;
   }
 
   .legend-items {
@@ -440,7 +488,7 @@
   }
 
   .world-map {
-    height: 300px;
+    height: 350px;
   }
 
   .stat-value {
@@ -449,9 +497,24 @@
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .world-map {
-    --map-bg: #1a2332;
-    --map-grid: #2a3542;
+[data-theme="dark"] .map-container {
+  background: linear-gradient(180deg, #1a2838 0%, #243447 100%);
+  border-color: #2d3e52;
+}
+
+[data-theme="dark"] .ocean-bg {
+  animation: ocean-wave-dark 20s ease-in-out infinite;
+}
+
+@keyframes ocean-wave-dark {
+  0%, 100% {
+    fill: #1a2838;
   }
+  50% {
+    fill: #1f2f42;
+  }
+}
+
+[data-theme="dark"] .continent {
+  opacity: 0.85;
 }
