@@ -7,6 +7,8 @@ import StatusIndicator from './components/StatusIndicator';
 import LoginForm from './components/LoginForm';
 import SplashScreen from './components/SplashScreen';
 import InstallPrompt from './components/InstallPrompt';
+import SubscriptionModal from './components/SubscriptionModal';
+import PromoBanner from './components/PromoBanner';
 import TrafficMonitor from './components/TrafficMonitor';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionLog from './components/ConnectionLog';
@@ -68,6 +70,8 @@ function App() {
   const [killSwitchActive, setKillSwitchActive] = useState(false);
   const [splitTunnelApps, setSplitTunnelApps] = useState([]);
   const [multiHopServers, setMultiHopServers] = useState([]);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState('free');
   const [settings, setSettings] = useState({
     autoConnect: false,
     killSwitch: true,
@@ -337,6 +341,19 @@ function App() {
       {/* Install Prompt */}
       <InstallPrompt />
       
+      {/* Subscription Modal */}
+      <SubscriptionModal 
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        currentPlan={currentPlan}
+      />
+
+      {/* Promotional Banner */}
+      <PromoBanner 
+        currentPlan={currentPlan}
+        onUpgrade={() => setShowSubscriptionModal(true)}
+      />
+      
       {/* Offline indicator */}
       {!isOnline && (
         <div className="offline-banner">
@@ -360,11 +377,14 @@ function App() {
             <h1>Nebula VPN Client</h1>
           </div>
           <div className="header-controls">
+            <button className="upgrade-btn" onClick={() => setShowSubscriptionModal(true)}>
+              ⭐ Upgrade
+            </button>
             <button className="theme-toggle" onClick={toggleDarkMode}>
               {isDarkMode ? '☀️' : '🌙'}
             </button>
             <div className="user-info">
-              <span>Welcome, {user.email} ({user.plan})</span>
+              <span>Welcome, {user.email} ({currentPlan.toUpperCase()})</span>
               <button className="logout-btn" onClick={handleLogout}>Logout</button>
             </div>
           </div>

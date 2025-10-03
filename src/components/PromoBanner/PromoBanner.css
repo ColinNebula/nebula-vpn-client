@@ -1,0 +1,360 @@
+.promo-banner-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  animation: slideInRight 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(500px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.promo-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  padding: 30px;
+  width: 420px;
+  max-width: calc(100vw - 40px);
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
+  position: relative;
+  color: white;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.promo-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.promo-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.promo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.promo-header {
+  text-align: center;
+}
+
+.promo-badge {
+  display: inline-block;
+  background: rgba(255, 215, 0, 0.9);
+  color: #333;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.promo-header h2 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.promo-header p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.95;
+  line-height: 1.5;
+}
+
+.promo-countdown {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.countdown-label {
+  font-size: 12px;
+  text-align: center;
+  margin-bottom: 10px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.countdown-timer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.countdown-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.countdown-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.countdown-unit {
+  font-size: 10px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.countdown-separator {
+  font-size: 24px;
+  font-weight: 700;
+  opacity: 0.6;
+  margin: 0 4px;
+}
+
+.promo-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.promo-feature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.promo-feature:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  font-size: 18px;
+}
+
+.promo-pricing {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+}
+
+.price-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+.old-price {
+  font-size: 16px;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.new-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.discount-badge {
+  background: #4CAF50;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.price {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.price-per-month {
+  font-size: 13px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.promo-upgrade-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #333;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.promo-upgrade-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(255, 215, 0, 0.6);
+}
+
+.promo-upgrade-btn:active {
+  transform: translateY(0);
+}
+
+.btn-icon {
+  font-size: 20px;
+}
+
+.promo-guarantee {
+  display: flex;
+  justify-content: space-around;
+  gap: 15px;
+  font-size: 11px;
+  opacity: 0.9;
+  flex-wrap: wrap;
+}
+
+.promo-guarantee span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .promo-banner-container {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .promo-banner {
+    width: 100%;
+    padding: 25px 20px;
+  }
+
+  .promo-header h2 {
+    font-size: 20px;
+  }
+
+  .countdown-value {
+    font-size: 24px;
+  }
+
+  .promo-features {
+    grid-template-columns: 1fr;
+  }
+
+  .price {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .promo-banner {
+    padding: 20px 15px;
+  }
+
+  .promo-header h2 {
+    font-size: 18px;
+  }
+
+  .countdown-timer {
+    gap: 4px;
+  }
+
+  .countdown-value {
+    font-size: 20px;
+  }
+
+  .countdown-separator {
+    font-size: 20px;
+    margin: 0 2px;
+  }
+
+  .promo-upgrade-btn {
+    font-size: 14px;
+    padding: 14px;
+  }
+
+  .promo-guarantee {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+}
+
+/* Animation for attention */
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.promo-banner-container:hover .promo-banner {
+  animation: bounce 0.8s;
+}
