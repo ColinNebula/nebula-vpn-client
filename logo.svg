@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4fc3f7;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#29b6f6;stop-opacity:0.8" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Outer glow circle -->
+  <circle cx="100" cy="100" r="90" fill="url(#glowGradient)" opacity="0.2" filter="url(#glow)"/>
+  
+  <!-- Shield shape -->
+  <path d="M 100 20 L 160 50 L 160 110 Q 160 160 100 180 Q 40 160 40 110 L 40 50 Z" 
+        fill="url(#shieldGradient)" 
+        filter="url(#shadow)"
+        stroke="white" 
+        stroke-width="2" 
+        opacity="0.95"/>
+  
+  <!-- Inner shield detail -->
+  <path d="M 100 35 L 150 58 L 150 105 Q 150 145 100 162 Q 50 145 50 105 L 50 58 Z" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="2" 
+        opacity="0.4"/>
+  
+  <!-- VPN connection dots -->
+  <circle cx="100" cy="80" r="8" fill="white" opacity="0.9"/>
+  <circle cx="75" cy="100" r="6" fill="white" opacity="0.7"/>
+  <circle cx="125" cy="100" r="6" fill="white" opacity="0.7"/>
+  <circle cx="100" cy="120" r="8" fill="white" opacity="0.9"/>
+  
+  <!-- Connection lines -->
+  <line x1="100" y1="80" x2="75" y2="100" stroke="white" stroke-width="2" opacity="0.5"/>
+  <line x1="100" y1="80" x2="125" y2="100" stroke="white" stroke-width="2" opacity="0.5"/>
+  <line x1="75" y1="100" x2="100" y2="120" stroke="white" stroke-width="2" opacity="0.5"/>
+  <line x1="125" y1="100" x2="100" y2="120" stroke="white" stroke-width="2" opacity="0.5"/>
+  
+  <!-- Lock icon at bottom -->
+  <rect x="92" y="132" width="16" height="12" rx="2" fill="white" opacity="0.8"/>
+  <path d="M 95 132 L 95 127 Q 95 123 100 123 Q 105 123 105 127 L 105 132" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="2.5" 
+        opacity="0.8"/>
+</svg>
