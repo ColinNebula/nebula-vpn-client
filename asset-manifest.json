@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/nebula-vpn-client/static/css/main.a94431f8.css",
-    "main.js": "/nebula-vpn-client/static/js/main.87c34389.js",
-    "static/js/453.17bc673b.chunk.js": "/nebula-vpn-client/static/js/453.17bc673b.chunk.js",
+    "main.css": "/nebula-vpn-client/static/css/main.27c71715.css",
+    "main.js": "/nebula-vpn-client/static/js/main.21de156b.js",
+    "static/js/453.3f063d16.chunk.js": "/nebula-vpn-client/static/js/453.3f063d16.chunk.js",
     "index.html": "/nebula-vpn-client/index.html",
     "static/media/logo.svg": "/nebula-vpn-client/static/media/logo.18afa8f6939726b7e3e3b6f7604a3d78.svg",
-    "main.a94431f8.css.map": "/nebula-vpn-client/static/css/main.a94431f8.css.map",
-    "main.87c34389.js.map": "/nebula-vpn-client/static/js/main.87c34389.js.map",
-    "453.17bc673b.chunk.js.map": "/nebula-vpn-client/static/js/453.17bc673b.chunk.js.map"
+    "main.27c71715.css.map": "/nebula-vpn-client/static/css/main.27c71715.css.map",
+    "main.21de156b.js.map": "/nebula-vpn-client/static/js/main.21de156b.js.map",
+    "453.3f063d16.chunk.js.map": "/nebula-vpn-client/static/js/453.3f063d16.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.a94431f8.css",
-    "static/js/main.87c34389.js"
+    "static/css/main.27c71715.css",
+    "static/js/main.21de156b.js"
   ]
 }
