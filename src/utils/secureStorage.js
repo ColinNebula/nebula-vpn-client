@@ -5,8 +5,39 @@
 
 class SecureStorage {
   constructor() {
-    this.encryptionKey = 'nebula-vpn-secure-key-2025'; // In production, use a proper encryption key
+    // Generate a device-specific key derived from browser fingerprint
+    // This is NOT hardcoded - it's derived at runtime
+    this.encryptionKey = this.deriveEncryptionKey();
     this.prefix = 'nebula_';
+  }
+
+  /**
+   * Derive an encryption key from device-specific data
+   * This creates a unique key per browser/device without storing secrets in code
+   */
+  deriveEncryptionKey() {
+    // Collect browser fingerprint data
+    const fingerprint = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width,
+      screen.height,
+      screen.colorDepth,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency || 0,
+      navigator.deviceMemory || 0
+    ].join('|');
+    
+    // Simple hash function for deriving key
+    let hash = 0;
+    for (let i = 0; i < fingerprint.length; i++) {
+      const char = fingerprint.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    
+    // Convert to hex string and pad
+    return 'neb_' + Math.abs(hash).toString(16).padStart(16, '0');
   }
 
   /**

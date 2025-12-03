@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "homepage": "https://ColinNebula.github.io/nebula-vpn-client",
+  "main": "public/electron.js",
+  "author": "ColinNebula",
+  "description": "Nebula VPN - Secure, Fast, and Private VPN Client",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
@@ -10,7 +13,7 @@
     "@testing-library/user-event": "^13.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^0.0.0",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -19,7 +22,19 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-build": "npm run build && electron-builder",
+    "electron-pack": "electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "security:audit": "node scripts/security-audit.js",
+    "security:prepare": "node scripts/prepare-for-github.js",
+    "security:prepare:clean": "node scripts/prepare-for-github.js --clean",
+    "security:prepare:fix": "node scripts/prepare-for-github.js --fix",
+    "security:check": "npm audit && node scripts/security-audit.js",
+    "precommit": "npm run security:prepare",
+    "prepush": "npm run security:check"
   },
   "eslintConfig": {
     "extends": [
@@ -40,6 +55,55 @@
     ]
   },
   "devDependencies": {
-    "gh-pages": "^6.3.0"
+    "concurrently": "^8.2.2",
+    "electron": "^39.2.4",
+    "electron-builder": "^24.9.1",
+    "electron-is-dev": "^2.0.0",
+    "gh-pages": "^6.3.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.nebula.vpn",
+    "productName": "Nebula VPN",
+    "files": [
+      "build/**/*",
+      "electron/**/*",
+      "public/electron.js",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "extraMetadata": {
+      "main": "public/electron.js"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "public/logo512.png"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "public/logo512.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network",
+      "icon": "public/logo512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

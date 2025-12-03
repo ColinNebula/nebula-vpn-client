@@ -8,6 +8,7 @@ import LoginForm from './components/LoginForm';
 import SignupForm from './components/SignupForm';
 import SplashScreen from './components/SplashScreen';
 import InstallPrompt from './components/InstallPrompt';
+import InstallPWA from './components/InstallPWA';
 import SubscriptionModal from './components/SubscriptionModal';
 import PromoBanner from './components/PromoBanner';
 import AdminPanel from './components/AdminPanel';
@@ -57,6 +58,10 @@ import BlockchainIntegration from './components/BlockchainIntegration';
 import QuantumSecurity from './components/QuantumSecurity';
 import EdgeComputing from './components/EdgeComputing';
 import MobileOptimizations from './components/MobileOptimizations';
+import PauseVPN from './components/PauseVPN';
+import QuickConnect from './components/QuickConnect';
+import RotatingIP from './components/RotatingIP';
+import AutoConnectWiFi from './components/AutoConnectWiFi';
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
@@ -90,6 +95,15 @@ function App() {
     dnsLeakProtection: true,
     ipv6Protection: true
   });
+
+  // New enhanced feature states
+  const [isVPNPaused, setIsVPNPaused] = useState(false);
+  const [rotatingIPEnabled, setRotatingIPEnabled] = useState(false);
+  const [rotatingIPInterval, setRotatingIPInterval] = useState(10);
+  const [autoConnectWiFiEnabled, setAutoConnectWiFiEnabled] = useState(false);
+  const [trustedNetworks, setTrustedNetworks] = useState([]);
+  const [recentServers, setRecentServers] = useState([]);
+  const [favoriteServers, setFavoriteServers] = useState([]);
 
   // Enhanced server data with multi-hop capabilities
   const allServers = [
@@ -172,6 +186,25 @@ function App() {
     }
     return () => clearInterval(interval);
   }, [isConnected]);
+
+  // Update Electron system tray when VPN status changes
+  useEffect(() => {
+    if (window.electron?.isElectron) {
+      const status = {
+        connected: isConnected,
+        server: selectedServer?.name || (multiHopServers.length > 0 ? multiHopServers.map(s => s.name).join(' → ') : 'Unknown')
+      };
+      
+      // Send status to Electron main process
+      const statusEvent = new CustomEvent('vpn-status-changed', { detail: status });
+      window.dispatchEvent(statusEvent);
+      
+      // Update tray tooltip via IPC
+      if (window.electron.vpn && typeof window.electron.vpn.updateStatus === 'function') {
+        window.electron.vpn.updateStatus(status);
+      }
+    }
+  }, [isConnected, selectedServer, multiHopServers]);
 
   // Advanced Kill Switch monitoring
   useEffect(() => {
@@ -396,7 +429,10 @@ function App() {
 
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
-      {/* Install Prompt */}
+      {/* PWA Install Prompt */}
+      <InstallPWA />
+      
+      {/* Legacy Install Prompt */}
       <InstallPrompt />
       
       {/* Subscription Modal */}
@@ -594,16 +630,78 @@ function App() {
       <main className="App-main">
         <div className="vpn-container">
           {activeTab === 'dashboard' && (
-            <LiveDashboard 
-              isConnected={isConnected}
-              selectedServer={selectedServer}
-              connectionTime={connectionTime}
-              trafficData={trafficData}
-              multiHopServers={multiHopServers}
-              onQuickConnect={handleToggleConnection}
-              onServerSelect={handleServerSelect}
-              servers={servers}
-            />
+            <div className="enhanced-dashboard">
+              {/* Quick Connect Component */}
+              <QuickConnect
+                servers={servers}
+                isConnected={isConnected && !isVPNPaused}
+                currentServer={selectedServer}
+                onConnect={(server) => {
+                  setSelectedServer(server);
+                  setRecentServers(prev => [server.id, ...prev.filter(id => id !== server.id).slice(0, 4)]);
+                  handleToggleConnection();
+                }}
+                onDisconnect={handleToggleConnection}
+                recentServers={recentServers}
+                favoriteServers={favoriteServers}
+              />
+
+              {/* Pause VPN Component */}
+              <PauseVPN
+                isConnected={isConnected}
+                onPause={(duration) => {
+                  setIsVPNPaused(true);
+                  addLog(`VPN paused for ${duration / 60} minutes`, 'warning');
+                }}
+                onResume={() => {
+                  setIsVPNPaused(false);
+                  addLog('VPN resumed', 'success');
+                }}
+              />
+
+              {/* Rotating IP Component */}
+              <RotatingIP
+                isConnected={isConnected && !isVPNPaused}
+                isEnabled={rotatingIPEnabled}
+                onToggle={(enabled) => {
+                  setRotatingIPEnabled(enabled);
+                  addLog(`Rotating IP ${enabled ? 'enabled' : 'disabled'}`, 'info');
+                }}
+                rotationInterval={rotatingIPInterval}
+                onIntervalChange={setRotatingIPInterval}
+              />
+
+              {/* Auto-Connect WiFi Component */}
+              <AutoConnectWiFi
+                isEnabled={autoConnectWiFiEnabled}
+                onToggle={(enabled) => {
+                  setAutoConnectWiFiEnabled(enabled);
+                  addLog(`Auto-connect on WiFi ${enabled ? 'enabled' : 'disabled'}`, 'info');
+                }}
+                onConnect={handleToggleConnection}
+                trustedNetworks={trustedNetworks}
+                onAddTrustedNetwork={(network) => {
+                  setTrustedNetworks(prev => [...prev, network]);
+                  addLog(`Added ${network.name} to trusted networks`, 'success');
+                }}
+                onRemoveTrustedNetwork={(id) => {
+                  setTrustedNetworks(prev => prev.filter(n => n.id !== id));
+                  addLog('Removed network from trusted list', 'info');
+                }}
+              />
+
+              {/* Original Live Dashboard */}
+              <LiveDashboard 
+                isConnected={isConnected && !isVPNPaused}
+                selectedServer={selectedServer}
+                connectionTime={connectionTime}
+                trafficData={trafficData}
+                multiHopServers={multiHopServers}
+                onQuickConnect={handleToggleConnection}
+                onServerSelect={handleServerSelect}
+                servers={servers}
+              />
+            </div>
           )}
           
           {activeTab === 'servers' && (

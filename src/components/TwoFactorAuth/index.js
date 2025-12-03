@@ -17,8 +17,11 @@ const TwoFactorAuth = () => {
   ]);
   const [savedCodes, setSavedCodes] = useState(false);
 
-  const qrCodeData = 'otpauth://totp/Nebula VPN:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Nebula VPN';
-  const secretKey = 'JBSWY3DPEHPK3PXP';
+  // NOTE: In production, this would be generated server-side for each user
+  // This is a placeholder for UI demonstration only
+  const DEMO_SECRET = 'XXXX-XXXX-XXXX-XXXX'; // Placeholder - generated server-side
+  const qrCodeData = `otpauth://totp/Nebula VPN:user@example.com?secret=${DEMO_SECRET}&issuer=Nebula VPN`;
+  const secretKey = DEMO_SECRET; // Display placeholder - real secret comes from server
 
   const handleTwoFAToggle = () => {
     if (twoFAEnabled) {

@@ -910,3 +910,47 @@ html {
     padding-bottom: max(40px, env(safe-area-inset-bottom));
   }
 }
+
+/* Enhanced Dashboard Styles */
+.enhanced-dashboard {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.enhanced-dashboard > * {
+  animation: fadeInUp 0.4s ease forwards;
+  opacity: 0;
+}
+
+.enhanced-dashboard > *:nth-child(1) { animation-delay: 0s; }
+.enhanced-dashboard > *:nth-child(2) { animation-delay: 0.1s; }
+.enhanced-dashboard > *:nth-child(3) { animation-delay: 0.2s; }
+.enhanced-dashboard > *:nth-child(4) { animation-delay: 0.3s; }
+.enhanced-dashboard > *:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* CSS Variables for components */
+.enhanced-dashboard {
+  --card-bg: rgba(30, 30, 50, 0.95);
+  --text-primary: #ffffff;
+  --text-secondary: #888888;
+}
+
+.App:not(.dark-mode) .enhanced-dashboard {
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --text-primary: #333333;
+  --text-secondary: #666666;
+}

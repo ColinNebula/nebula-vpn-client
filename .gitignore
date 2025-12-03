@@ -1,23 +1,186 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
+# ===================
+# DEPENDENCIES
+# ===================
+node_modules/
 /.pnp
 .pnp.js
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-# testing
-/coverage
+# ===================
+# ENVIRONMENT & SECRETS
+# ===================
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+.secrets
+credentials/
+*.credentials
+config.local.js
+config.local.json
 
-# production
+# ===================
+# BUILD & OUTPUT
+# ===================
 /build
+/dist
+/out
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.msi
+*.snap
+release/
+*.asar
 
-# misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# ===================
+# TESTING & COVERAGE
+# ===================
+/coverage
+.nyc_output
+*.lcov
+test-results/
+junit.xml
 
+# ===================
+# LOGS & DEBUG
+# ===================
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+logs/
+*.log.*
+debug/
+crash-reports/
+
+# ===================
+# LARGE MEDIA FILES
+# ===================
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.iso
+*.img
+*.dmg
+
+# ===================
+# LARGE DATA FILES
+# ===================
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.csv
+*.xlsx
+*.xls
+data/
+database/
+backups/
+
+# ===================
+# IDE & EDITOR
+# ===================
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ===================
+# OS GENERATED
+# ===================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ===================
+# ELECTRON SPECIFIC
+# ===================
+electron/dist/
+electron-builder-effective-config.yaml
+*.blockmap
+
+# ===================
+# SECURITY SCAN OUTPUTS
+# ===================
+.scannerwork/
+audit-report*.json
+security-report*.json
+dependency-check-report/
+*.sarif
+
+# ===================
+# TEMPORARY FILES
+# ===================
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.temp
+.cache/
+.parcel-cache/
+
+# ===================
+# SENSITIVE CONFIG
+# ===================
+firebase*.json
+!firebase.json.example
+google-services.json
+GoogleService-Info.plist
+aws-config.json
+azure-config.json
+*.keystore
+keystore.properties
+
+# ===================
+# VPN SPECIFIC
+# ===================
+*.ovpn
+*.conf
+wireguard/
+openvpn/
+vpn-configs/
+certificates/
+private-keys/
