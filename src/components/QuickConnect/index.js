@@ -1,5 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import './QuickConnect.css';
+
+// Specialty servers (Tor, Double VPN, Obfuscated) are intentionally slower — skip for Quick Connect
+const SKIP_SPECIALTIES = new Set(['tor', 'double', 'obfuscated']);
+
+/**
+ * Score a server for "safest + closest" quick-connect.
+ * Returns a value in [0, 100] — higher is better.
+ *   50 % weight → safety  (inverted load:  100 - load)
+ *   50 % weight → proximity (inverted normalised ping)
+ * Ping is normalised against MAX_PING_MS so it sits on the same 0-100 scale.
+ */
+const MAX_PING_MS = 300;
+
+const scoreServer = (server) => {
+  const pingMs   = Math.min(parseInt(server.ping) || MAX_PING_MS, MAX_PING_MS);
+  const safetyPct    = 100 - server.load;                   // 0-100
+  const proximityPct = ((MAX_PING_MS - pingMs) / MAX_PING_MS) * 100; // 0-100
+  return safetyPct * 0.5 + proximityPct * 0.5;
+};
 
 const QuickConnect = ({ 
   servers, 
@@ -11,47 +30,55 @@ const QuickConnect = ({
   favoriteServers = []
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [connectMode, setConnectMode] = useState('fastest'); // fastest, nearest, favorite, recent
+  const [connectMode, setConnectMode] = useState('smart'); // smart, fastest, nearest, favorite, recent
 
-  // Find the best server based on mode
+  // Pre-filter: exclude specialty-only servers for quick connect
+  const generalServers = useMemo(() => {
+    if (!servers || servers.length === 0) return [];
+    const filtered = servers.filter(s => !SKIP_SPECIALTIES.has(s.specialty));
+    return filtered.length > 0 ? filtered : servers; // fallback to all if somehow empty
+  }, [servers]);
+
   const getBestServer = () => {
     if (!servers || servers.length === 0) return null;
 
     switch (connectMode) {
+      case 'smart': {
+        // Safest + closest: composite score balancing load and ping
+        return generalServers.reduce((best, server) => {
+          return !best || scoreServer(server) > scoreServer(best) ? server : best;
+        }, null);
+      }
+
       case 'fastest':
-        return servers.reduce((best, server) => {
-          const bestLoad = best ? best.load : 100;
-          return server.load < bestLoad ? server : best;
+        return generalServers.reduce((best, server) => {
+          return !best || server.load < best.load ? server : best;
         }, null);
-      
+
       case 'nearest':
-        return servers.reduce((best, server) => {
-          const bestPing = best ? parseInt(best.ping) : 999;
-          const serverPing = parseInt(server.ping);
-          return serverPing < bestPing ? server : best;
+        return generalServers.reduce((best, server) => {
+          return !best || parseInt(server.ping) < parseInt(best.ping) ? server : best;
         }, null);
-      
+
       case 'favorite':
-        return favoriteServers.length > 0 
-          ? servers.find(s => favoriteServers.includes(s.id)) 
-          : getBestServerByLoad();
-      
+        return favoriteServers.length > 0
+          ? servers.find(s => favoriteServers.includes(s.id)) || getBestSmartServer()
+          : getBestSmartServer();
+
       case 'recent':
-        return recentServers.length > 0 
-          ? servers.find(s => s.id === recentServers[0]) 
-          : getBestServerByLoad();
-      
+        return recentServers.length > 0
+          ? servers.find(s => s.id === recentServers[0]) || getBestSmartServer()
+          : getBestSmartServer();
+
       default:
-        return getBestServerByLoad();
+        return getBestSmartServer();
     }
   };
 
-  const getBestServerByLoad = () => {
-    return servers.reduce((best, server) => {
-      const bestLoad = best ? best.load : 100;
-      return server.load < bestLoad ? server : best;
-    }, null);
-  };
+  const getBestSmartServer = () =>
+    generalServers.reduce((best, server) =>
+      !best || scoreServer(server) > scoreServer(best) ? server : best
+    , null);
 
   const handleQuickConnect = () => {
     if (isConnected) {
@@ -66,25 +93,28 @@ const QuickConnect = ({
 
   const getModeIcon = () => {
     switch (connectMode) {
-      case 'fastest': return '⚡';
-      case 'nearest': return '📍';
+      case 'smart':    return '🛡️';
+      case 'fastest':  return '⚡';
+      case 'nearest':  return '📍';
       case 'favorite': return '⭐';
-      case 'recent': return '🕐';
-      default: return '⚡';
+      case 'recent':   return '🕐';
+      default:         return '🛡️';
     }
   };
 
   const getModeLabel = () => {
     switch (connectMode) {
-      case 'fastest': return 'Fastest Server';
-      case 'nearest': return 'Nearest Server';
+      case 'smart':    return 'Safest & Closest';
+      case 'fastest':  return 'Fastest Server';
+      case 'nearest':  return 'Nearest Server';
       case 'favorite': return 'Favorite Server';
-      case 'recent': return 'Recent Server';
-      default: return 'Best Server';
+      case 'recent':   return 'Recent Server';
+      default:         return 'Safest & Closest';
     }
   };
 
   const bestServer = getBestServer();
+  const smartScore = bestServer ? Math.round(scoreServer(bestServer)) : null;
 
   return (
     <div className={`quick-connect-container ${isConnected ? 'connected' : ''}`}>
@@ -107,7 +137,9 @@ const QuickConnect = ({
               <span className="sub-text">
                 {isConnected 
                   ? `Connected to ${currentServer?.name || 'VPN'}`
-                  : `${getModeIcon()} ${getModeLabel()}`
+                  : bestServer
+                    ? `${getModeIcon()} ${bestServer.flag} ${bestServer.name} — ${bestServer.ping}, ${bestServer.load}% load`
+                    : `${getModeIcon()} ${getModeLabel()}`
                 }
               </span>
             </div>
@@ -135,12 +167,21 @@ const QuickConnect = ({
           <div className="options-title">Connection Mode</div>
           <div className="mode-options">
             <button 
+              className={`mode-option ${connectMode === 'smart' ? 'active' : ''}`}
+              onClick={() => setConnectMode('smart')}
+            >
+              <span className="mode-icon">🛡️</span>
+              <span className="mode-label">Smart</span>
+              <span className="mode-desc">Safest &amp; closest</span>
+            </button>
+
+            <button 
               className={`mode-option ${connectMode === 'fastest' ? 'active' : ''}`}
               onClick={() => setConnectMode('fastest')}
             >
               <span className="mode-icon">⚡</span>
               <span className="mode-label">Fastest</span>
-              <span className="mode-desc">Lowest server load</span>
+              <span className="mode-desc">Lowest load</span>
             </button>
 
             <button 
@@ -189,7 +230,10 @@ const QuickConnect = ({
                 </div>
                 <div className="server-stats">
                   <span className="stat ping">{bestServer.ping}</span>
-                  <span className="stat load">{bestServer.load}%</span>
+                  <span className="stat load">{bestServer.load}% load</span>
+                  {connectMode === 'smart' && smartScore !== null && (
+                    <span className="stat score">Score {smartScore}</span>
+                  )}
                 </div>
               </div>
             </div>

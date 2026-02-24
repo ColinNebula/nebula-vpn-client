@@ -4,62 +4,6 @@
   z-index: 1;
 }
 
-/* ==================== Debug Panel ==================== */
-.pwa-debug-panel {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  background: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 12px;
-  z-index: 99999;
-  max-width: 280px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: 'SF Mono', Monaco, monospace;
-}
-
-.pwa-debug-panel strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: #667eea;
-}
-
-.debug-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.debug-row:last-of-type {
-  border-bottom: none;
-}
-
-.debug-row .success {
-  color: #4caf50;
-}
-
-.debug-row .error {
-  color: #f44336;
-}
-
-.debug-row .pending {
-  color: #ff9800;
-}
-
-.debug-info {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 11px;
-  opacity: 0.8;
-  word-break: break-word;
-}
-
 /* ==================== Update Banner ==================== */
 .update-banner {
   position: fixed;
@@ -780,14 +724,6 @@
 
 /* ==================== Mobile Responsive ==================== */
 @media (max-width: 768px) {
-  .pwa-debug-panel {
-    top: auto;
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    max-width: none;
-  }
-
   .install-prompt-banner {
     bottom: 10px;
     width: calc(100% - 20px);

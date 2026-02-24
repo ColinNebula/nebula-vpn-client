@@ -6,7 +6,6 @@ const InstallPWA = () => {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [platform, setPlatform] = useState('');
-  const [debugInfo, setDebugInfo] = useState('Initializing...');
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showOfflineToast, setShowOfflineToast] = useState(false);
@@ -55,7 +54,6 @@ const InstallPWA = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
                          window.navigator.standalone === true ||
                          document.referrer.includes('android-app://');
-    setDebugInfo(`Standalone mode: ${isStandalone}`);
     
     if (isStandalone) {
       setIsInstalled(true);
@@ -76,7 +74,6 @@ const InstallPWA = () => {
       detectedPlatform = 'linux';
     }
     setPlatform(detectedPlatform);
-    setDebugInfo(`Platform: ${detectedPlatform}, Waiting for install prompt...`);
 
     // Enhanced service worker registration
     if ('serviceWorker' in navigator) {
@@ -116,7 +113,6 @@ const InstallPWA = () => {
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e) => {
       console.log('💾 beforeinstallprompt event fired!');
-      setDebugInfo('Install prompt available! Click to install.');
       e.preventDefault();
       setDeferredPrompt(e);
       setTimeout(() => {
@@ -127,7 +123,6 @@ const InstallPWA = () => {
     // Listen for successful installation
     const handleAppInstalled = () => {
       console.log('✅ PWA installed successfully');
-      setDebugInfo('Successfully installed!');
       setIsInstalled(true);
       setShowInstallButton(false);
       setDeferredPrompt(null);
@@ -160,7 +155,7 @@ const InstallPWA = () => {
     // Check after 3 seconds if prompt was received
     const timeoutId = setTimeout(() => {
       if (!deferredPrompt && !isStandalone) {
-        setDebugInfo(`Platform: ${detectedPlatform} - No auto-install available.`);
+        // no-op: prompt not available on this platform
       }
     }, 3000);
 
@@ -287,36 +282,6 @@ const InstallPWA = () => {
 
   return (
     <div className="install-pwa-container">
-      {/* Debug Info (development only) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="pwa-debug-panel">
-          <strong>🔧 PWA Debug:</strong>
-          <div className="debug-row">
-            <span>Status:</span>
-            <span className={isInstalled ? 'success' : 'pending'}>
-              {isInstalled ? '✓ Installed' : '○ Not Installed'}
-            </span>
-          </div>
-          <div className="debug-row">
-            <span>Platform:</span>
-            <span>{platform}</span>
-          </div>
-          <div className="debug-row">
-            <span>Cache:</span>
-            <span className={cacheStatus === 'cached' ? 'success' : ''}>
-              {cacheStatus}
-            </span>
-          </div>
-          <div className="debug-row">
-            <span>Network:</span>
-            <span className={isOffline ? 'error' : 'success'}>
-              {isOffline ? '✗ Offline' : '✓ Online'}
-            </span>
-          </div>
-          <div className="debug-info">{debugInfo}</div>
-        </div>
-      )}
-
       {/* Update Available Banner */}
       {showUpdateBanner && (
         <div className="update-banner">

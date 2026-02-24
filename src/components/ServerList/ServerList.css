@@ -371,3 +371,163 @@
     min-width: auto;
   }
 }
+
+/* ── Search bar ─────────────────────────────────────────── */
+.server-list-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.server-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 15px;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.server-search-input {
+  width: 100%;
+  padding: 10px 36px 10px 36px;
+  border: 2px solid var(--border-color, #ddd);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--bg-card, white);
+  color: var(--text-primary, #333);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.server-search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.search-clear-btn:hover { color: var(--text-primary, #333); }
+
+/* ── Specialty badge ─────────────────────────────────────── */
+.specialty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.specialty-select {
+  padding: 8px 12px;
+  border: 2px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg-card, white);
+  color: var(--text-primary, #333);
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+  min-width: 130px;
+}
+
+.specialty-select:focus {
+  outline: none;
+  border-color: var(--accent-color, #2196F3);
+}
+
+/* ── Clear (small) button in stats bar ──────────────────── */
+.clear-filters-btn-small {
+  padding: 4px 10px;
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.clear-filters-btn-small:hover {
+  background: rgba(244, 67, 54, 0.2);
+}
+
+/* ── View mode toggle ────────────────────────────────────── */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.view-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  background: var(--bg-card, white);
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.view-btn.active, .view-btn:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+/* ── List mode for server grid ───────────────────────────── */
+.server-grid.list-mode {
+  grid-template-columns: 1fr;
+}
+
+.server-grid.list-mode .server-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+
+.server-grid.list-mode .server-header {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 200px;
+}
+
+.server-grid.list-mode .server-details {
+  margin-left: auto;
+}
+
+.server-grid.list-mode .optimal-indicator {
+  position: static;
+  margin-left: 8px;
+}
+
+.server-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

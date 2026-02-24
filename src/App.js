@@ -62,6 +62,9 @@ import PauseVPN from './components/PauseVPN';
 import QuickConnect from './components/QuickConnect';
 import RotatingIP from './components/RotatingIP';
 import AutoConnectWiFi from './components/AutoConnectWiFi';
+import DarkWebMonitor from './components/DarkWebMonitor';
+import IPLeakTest from './components/IPLeakTest';
+import ConnectionProfiles from './components/ConnectionProfiles';
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
@@ -105,18 +108,55 @@ function App() {
   const [recentServers, setRecentServers] = useState([]);
   const [favoriteServers, setFavoriteServers] = useState([]);
 
-  // Enhanced server data with multi-hop capabilities
+  // Enhanced server data with multi-hop capabilities — 40+ locations across 30+ countries
   const allServers = [
-    { id: '1', name: 'US East', location: 'New York', ping: '25ms', load: 45, country: 'US', flag: '🇺🇸', purpose: 'general', streaming: true, gaming: true, p2p: true, multiHopSupport: true },
-    { id: '2', name: 'US West', location: 'Los Angeles', ping: '18ms', load: 32, country: 'US', flag: '🇺🇸', purpose: 'streaming', streaming: true, gaming: true, p2p: false, multiHopSupport: true },
-    { id: '3', name: 'Europe', location: 'Frankfurt', ping: '45ms', load: 67, country: 'DE', flag: '🇩🇪', purpose: 'general', streaming: true, gaming: false, p2p: true, multiHopSupport: true },
-    { id: '4', name: 'Asia Gaming', location: 'Singapore', ping: '120ms', load: 23, country: 'SG', flag: '🇸🇬', purpose: 'gaming', streaming: false, gaming: true, p2p: false, multiHopSupport: false },
-    { id: '5', name: 'Canada', location: 'Toronto', ping: '30ms', load: 56, country: 'CA', flag: '🇨🇦', purpose: 'general', streaming: true, gaming: true, p2p: true, multiHopSupport: true },
-    { id: '6', name: 'UK Streaming', location: 'London', ping: '55ms', load: 78, country: 'GB', flag: '🇬🇧', purpose: 'streaming', streaming: true, gaming: false, p2p: false, multiHopSupport: true },
-    { id: '7', name: 'Australia', location: 'Sydney', ping: '180ms', load: 34, country: 'AU', flag: '🇦🇺', purpose: 'general', streaming: true, gaming: false, p2p: true, multiHopSupport: false },
-    { id: '8', name: 'Japan Gaming', location: 'Tokyo', ping: '140ms', load: 89, country: 'JP', flag: '🇯🇵', purpose: 'gaming', streaming: false, gaming: true, p2p: false, multiHopSupport: true },
-    { id: '9', name: 'Netherlands P2P', location: 'Amsterdam', ping: '50ms', load: 42, country: 'NL', flag: '🇳🇱', purpose: 'p2p', streaming: false, gaming: false, p2p: true, multiHopSupport: true },
-    { id: '10', name: 'France', location: 'Paris', ping: '48ms', load: 65, country: 'FR', flag: '🇫🇷', purpose: 'streaming', streaming: true, gaming: true, p2p: false, multiHopSupport: true }
+    // North America
+    { id: '1',  name: 'US East',          location: 'New York',      ping: '25ms',  load: 45, country: 'US', flag: '🇺🇸', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '2',  name: 'US West',          location: 'Los Angeles',   ping: '18ms',  load: 32, country: 'US', flag: '🇺🇸', purpose: 'streaming', streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '3',  name: 'US Central',       location: 'Chicago',       ping: '22ms',  load: 41, country: 'US', flag: '🇺🇸', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '4',  name: 'US P2P',           location: 'Dallas',        ping: '28ms',  load: 38, country: 'US', flag: '🇺🇸', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '5',  name: 'Canada East',      location: 'Toronto',       ping: '30ms',  load: 56, country: 'CA', flag: '🇨🇦', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '6',  name: 'Canada West',      location: 'Vancouver',     ping: '35ms',  load: 29, country: 'CA', flag: '🇨🇦', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '7',  name: 'Mexico',           location: 'Mexico City',   ping: '55ms',  load: 22, country: 'MX', flag: '🇲🇽', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    // Europe
+    { id: '8',  name: 'Germany',          location: 'Frankfurt',     ping: '45ms',  load: 67, country: 'DE', flag: '🇩🇪', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '9',  name: 'UK Streaming',     location: 'London',        ping: '55ms',  load: 78, country: 'GB', flag: '🇬🇧', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '10', name: 'UK General',       location: 'Manchester',    ping: '58ms',  load: 44, country: 'GB', flag: '🇬🇧', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '11', name: 'Netherlands P2P',  location: 'Amsterdam',     ping: '50ms',  load: 42, country: 'NL', flag: '🇳🇱', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '12', name: 'France',           location: 'Paris',         ping: '48ms',  load: 65, country: 'FR', flag: '🇫🇷', purpose: 'streaming', streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '13', name: 'Switzerland',      location: 'Zurich',        ping: '52ms',  load: 31, country: 'CH', flag: '🇨🇭', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'privacy' },
+    { id: '14', name: 'Sweden',           location: 'Stockholm',     ping: '60ms',  load: 27, country: 'SE', flag: '🇸🇪', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '15', name: 'Norway',           location: 'Oslo',          ping: '62ms',  load: 19, country: 'NO', flag: '🇳🇴', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '16', name: 'Spain',            location: 'Madrid',        ping: '58ms',  load: 48, country: 'ES', flag: '🇪🇸', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '17', name: 'Italy',            location: 'Milan',         ping: '55ms',  load: 53, country: 'IT', flag: '🇮🇹', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '18', name: 'Poland',           location: 'Warsaw',        ping: '65ms',  load: 35, country: 'PL', flag: '🇵🇱', purpose: 'general',   streaming: false, gaming: true,  p2p: false, multiHopSupport: true,  specialty: null },
+    { id: '19', name: 'Romania',          location: 'Bucharest',     ping: '70ms',  load: 28, country: 'RO', flag: '🇷🇴', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '20', name: 'Iceland',          location: 'Reykjavik',     ping: '75ms',  load: 12, country: 'IS', flag: '🇮🇸', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: true,  specialty: 'privacy' },
+    { id: '21', name: 'Austria',          location: 'Vienna',        ping: '53ms',  load: 40, country: 'AT', flag: '🇦🇹', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '22', name: 'Belgium',          location: 'Brussels',      ping: '52ms',  load: 37, country: 'BE', flag: '🇧🇪', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: null },
+    // Asia Pacific
+    { id: '23', name: 'Singapore',        location: 'Singapore',     ping: '120ms', load: 23, country: 'SG', flag: '🇸🇬', purpose: 'gaming',    streaming: false, gaming: true,  p2p: false, multiHopSupport: false, specialty: 'gaming' },
+    { id: '24', name: 'Japan Gaming',     location: 'Tokyo',         ping: '140ms', load: 89, country: 'JP', flag: '🇯🇵', purpose: 'gaming',    streaming: false, gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'gaming' },
+    { id: '25', name: 'Japan Streaming',  location: 'Osaka',         ping: '145ms', load: 55, country: 'JP', flag: '🇯🇵', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: 'streaming' },
+    { id: '26', name: 'South Korea',      location: 'Seoul',         ping: '150ms', load: 47, country: 'KR', flag: '🇰🇷', purpose: 'gaming',    streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'gaming' },
+    { id: '27', name: 'Australia',        location: 'Sydney',        ping: '180ms', load: 34, country: 'AU', flag: '🇦🇺', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: false, specialty: null },
+    { id: '28', name: 'Australia East',   location: 'Melbourne',     ping: '185ms', load: 26, country: 'AU', flag: '🇦🇺', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: 'streaming' },
+    { id: '29', name: 'India',            location: 'Mumbai',        ping: '130ms', load: 61, country: 'IN', flag: '🇮🇳', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '30', name: 'Hong Kong',        location: 'Hong Kong',     ping: '135ms', load: 72, country: 'HK', flag: '🇭🇰', purpose: 'general',   streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: null },
+    { id: '31', name: 'New Zealand',      location: 'Auckland',      ping: '200ms', load: 18, country: 'NZ', flag: '🇳🇿', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    // Middle East & Africa
+    { id: '32', name: 'UAE',              location: 'Dubai',         ping: '110ms', load: 44, country: 'AE', flag: '🇦🇪', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '33', name: 'Israel',           location: 'Tel Aviv',      ping: '95ms',  load: 33, country: 'IL', flag: '🇮🇱', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '34', name: 'South Africa',     location: 'Johannesburg',  ping: '160ms', load: 29, country: 'ZA', flag: '🇿🇦', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    // South America
+    { id: '35', name: 'Brazil',           location: 'São Paulo',     ping: '95ms',  load: 52, country: 'BR', flag: '🇧🇷', purpose: 'general',   streaming: true,  gaming: true,  p2p: false, multiHopSupport: false, specialty: null },
+    { id: '36', name: 'Argentina',        location: 'Buenos Aires',  ping: '110ms', load: 38, country: 'AR', flag: '🇦🇷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '37', name: 'Chile',            location: 'Santiago',      ping: '115ms', load: 21, country: 'CL', flag: '🇨🇱', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    // Specialty / Privacy
+    { id: '38', name: 'Tor over VPN',     location: 'Special',       ping: '350ms', load: 15, country: 'XX', flag: '🧅', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'tor' },
+    { id: '39', name: 'Double VPN',       location: 'NL → US',       ping: '80ms',  load: 20, country: 'XX', flag: '🔐', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: true,  specialty: 'double' },
+    { id: '40', name: 'Obfuscated US',    location: 'New York',      ping: '35ms',  load: 30, country: 'US', flag: '🥷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
+    { id: '41', name: 'Obfuscated EU',    location: 'Amsterdam',     ping: '60ms',  load: 25, country: 'NL', flag: '🥷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
   ];
 
   // Filter servers based on current plan
@@ -479,21 +519,27 @@ function App() {
         <div className="header-content">
           <div className="header-logo-section">
             <img src={logo} alt="Nebula VPN Logo" className="header-logo" />
-            <h1>Nebula VPN Client</h1>
+            <h1>Nebula VPN</h1>
           </div>
           <div className="header-controls">
-            <button className="upgrade-btn" onClick={() => setShowSubscriptionModal(true)}>
-              ⭐ Upgrade
-            </button>
+            {currentPlan === 'free' && (
+              <button className="upgrade-btn" onClick={() => setShowSubscriptionModal(true)}>
+                ⭐ Upgrade
+              </button>
+            )}
             <button className="admin-btn" onClick={() => setShowAdminPanel(true)}>
               ⚙️ Settings
             </button>
-            <button className="theme-toggle" onClick={toggleDarkMode}>
+            <button className="theme-toggle" title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggleDarkMode}>
               {isDarkMode ? '☀️' : '🌙'}
             </button>
             <div className="user-info">
-              <span>Welcome, {user.email} ({currentPlan.toUpperCase()})</span>
-              <button className="logout-btn" onClick={handleLogout}>Logout</button>
+              <div className="user-avatar" title={user.email}>
+                {user.email.charAt(0).toUpperCase()}
+              </div>
+              <span title={user.email}>{user.email.split('@')[0]}</span>
+              <span className={`plan-badge ${currentPlan}`}>{currentPlan}</span>
+              <button className="logout-btn" onClick={handleLogout}>↩ Out</button>
             </div>
           </div>
         </div>
@@ -506,6 +552,7 @@ function App() {
         />
       </header>
       
+      <div className="tab-nav-wrapper">
       <nav className="tab-navigation">
         <button 
           className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
@@ -608,6 +655,24 @@ function App() {
           </button>
         )}
         <button 
+          className={`tab ${activeTab === 'leaktest' ? 'active' : ''}`}
+          onClick={() => setActiveTab('leaktest')}
+        >
+          🔬 Leak Test
+        </button>
+        <button 
+          className={`tab ${activeTab === 'darkweb' ? 'active' : ''}`}
+          onClick={() => setActiveTab('darkweb')}
+        >
+          🕵️ Dark Web
+        </button>
+        <button 
+          className={`tab ${activeTab === 'profiles' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profiles')}
+        >
+          ⚡ Profiles
+        </button>
+        <button 
           className={`tab ${activeTab === 'traffic' ? 'active' : ''}`}
           onClick={() => setActiveTab('traffic')}
         >
@@ -626,6 +691,7 @@ function App() {
           ⚙️ Settings
         </button>
       </nav>
+      </div>
       
       <main className="App-main">
         <div className="vpn-container">
@@ -1282,6 +1348,34 @@ function App() {
             <SpeedTest 
               isConnected={isConnected}
               selectedServer={selectedServer || (multiHopServers.length > 0 ? multiHopServers[multiHopServers.length - 1] : null)}
+            />
+          )}
+
+          {activeTab === 'leaktest' && (
+            <IPLeakTest isConnected={isConnected} />
+          )}
+
+          {activeTab === 'darkweb' && (
+            <DarkWebMonitor />
+          )}
+
+          {activeTab === 'profiles' && (
+            <ConnectionProfiles
+              isConnected={isConnected}
+              currentSettings={settings}
+              onActivate={(profile) => {
+                handleSettingsChange({ ...settings, ...profile.settings });
+                addLog(`Connection profile "${profile.name}" activated`, 'success');
+                // Auto-select server matching the profile's preferred region/purpose
+                const match = servers.find(
+                  s => s.country === profile.preferCountry && s.purpose === profile.preferredPurpose
+                ) || servers.find(s => s.purpose === profile.preferredPurpose)
+                  || servers.find(s => s.country === profile.preferCountry);
+                if (match && !isConnected) {
+                  setSelectedServer(match);
+                  addLog(`Auto-selected server: ${match.name} for "${profile.name}" profile`, 'info');
+                }
+              }}
             />
           )}
           

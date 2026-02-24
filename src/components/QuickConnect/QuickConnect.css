@@ -281,6 +281,11 @@
   color: #ff9800;
 }
 
+.stat.score {
+  color: #667eea;
+  font-weight: 700;
+}
+
 /* Connected Info */
 .connected-info {
   margin-top: 12px;

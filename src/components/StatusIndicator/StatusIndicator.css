@@ -1,76 +1,157 @@
-.status-indicator {
+/* ── Status Bar ── */
+.status-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 15px;
-  padding: 20px;
-  border-radius: 10px;
-  margin: 20px 0;
-  transition: all 0.3s ease;
+  gap: 10px;
+  padding: 5px 12px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  max-width: 1400px;
+  margin: 0 auto;
+  flex-wrap: wrap;
 }
 
-.status-indicator.connected {
-  background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
-  border: 2px solid #4CAF50;
+.status-bar.connected {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.status-indicator.disconnected {
-  background: linear-gradient(135deg, #ffebee, #ffcdd2);
-  border: 2px solid #f44336;
+.status-bar.disconnected {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: rgba(255, 255, 255, 0.8);
 }
 
-.status-dot {
-  width: 20px;
-  height: 20px;
+/* Status dot + label */
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot-sm {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  animation: pulse 2s infinite;
+  flex-shrink: 0;
+  animation: dotPulse 2.5s ease-in-out infinite;
 }
 
-.status-indicator.connected .status-dot {
-  background: #4CAF50;
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+.dot-green {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
 }
 
-.status-indicator.disconnected .status-dot {
-  background: #f44336;
-  box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+.dot-red {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  animation-name: dotBlink;
 }
 
-.status-info {
-  text-align: center;
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.8; }
 }
 
-.status-text {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 5px;
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-.status-indicator.connected .status-text {
-  color: #2e7d32;
+.status-label {
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.3px;
 }
 
-.status-indicator.disconnected .status-text {
-  color: #c62828;
+.status-bar.connected .status-label { color: #6ee7b7; }
+.status-bar.disconnected .status-label { color: #fca5a5; }
+
+/* Vertical divider */
+.status-divider {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
 }
 
-.connection-time {
-  font-size: 14px;
-  color: #555;
+/* Server info */
+.status-server {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.status-flag { font-size: 15px; }
+
+.status-server-name {
+  font-weight: 500;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.status-ping {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
   font-family: monospace;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
+.status-no-server {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+}
+
+/* Session timer */
+.status-timer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.status-timer-value {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Kill switch badge */
+.status-ks-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid rgba(244, 67, 54, 0.35);
+  border-radius: 20px;
+  color: #fca5a5;
+  white-space: nowrap;
+}
+
+/* Disconnected warning */
+.status-warning {
+  font-size: 12px;
+  color: rgba(252, 165, 165, 0.75);
+  font-style: italic;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .status-bar {
+    gap: 7px;
+    padding: 4px 10px;
+    font-size: 12px;
   }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  .status-warning,
+  .status-timer { display: none; }
 }

@@ -1,0 +1,254 @@
+.ilt-container {
+  background: var(--bg-card, white);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: var(--shadow, 0 8px 25px rgba(0,0,0,0.15));
+  border: 1px solid var(--border-color, #eee);
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* Header */
+.ilt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.ilt-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ilt-icon { font-size: 42px; line-height: 1; }
+
+.ilt-title  { margin: 0 0 4px; font-size: 1.5rem; font-weight: 700; color: var(--text-primary, #333); }
+.ilt-subtitle { margin: 0; font-size: 0.9rem; color: var(--text-secondary, #666); }
+
+.ilt-run-btn {
+  padding: 11px 26px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  transition: opacity 0.2s, transform 0.2s;
+  white-space: nowrap;
+}
+
+.ilt-run-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.ilt-run-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.ilt-run-btn.running { animation: ilt-pulse-btn 1.2s ease-in-out infinite; }
+
+@keyframes ilt-pulse-btn {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+/* Status banner */
+.ilt-status-banner {
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 22px;
+}
+
+.ilt-status-banner.connected    { background: rgba(56,142,60,0.12); color: #2e7d32; }
+.ilt-status-banner.disconnected { background: rgba(211,47,47,0.10); color: #c62828; }
+
+/* Progress */
+.ilt-progress-section {
+  margin-bottom: 22px;
+}
+
+.ilt-progress-bar-wrap {
+  height: 8px;
+  background: var(--border-color, #eee);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.ilt-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.ilt-progress-label {
+  font-size: 13px;
+  color: var(--text-secondary, #777);
+  text-align: center;
+  margin: 0;
+}
+
+/* Results */
+.ilt-results { display: flex; flex-direction: column; gap: 22px; }
+
+/* Score card */
+.ilt-score-card {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.06));
+  border-radius: 12px;
+  border: 1px solid rgba(102,126,234,0.15);
+  flex-wrap: wrap;
+}
+
+.ilt-score-ring {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: conic-gradient(var(--score-color) calc(var(--score) * 1%), #eee 0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid var(--score-color, #4CAF50);
+  flex-shrink: 0;
+}
+
+.ilt-score-number { font-size: 1.8rem; font-weight: 800; color: var(--text-primary, #333); line-height: 1; }
+.ilt-score-out-of { font-size: 11px; color: var(--text-secondary, #888); }
+
+.ilt-score-label { font-size: 1.2rem; font-weight: 700; margin-bottom: 4px; }
+.ilt-score-desc  { font-size: 14px; color: var(--text-secondary, #666); margin: 0; max-width: 360px; }
+
+/* Section */
+.ilt-section { }
+
+.ilt-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #333);
+  margin: 0 0 12px;
+}
+
+/* IP grid */
+.ilt-ip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 560px) { .ilt-ip-grid { grid-template-columns: 1fr; } }
+
+.ilt-ip-card {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1.5px solid;
+  position: relative;
+}
+
+.ilt-ip-card.real {
+  border-color: rgba(211,47,47,0.3);
+  background: rgba(211,47,47,0.05);
+}
+
+.ilt-ip-card.protected {
+  border-color: rgba(56,142,60,0.35);
+  background: rgba(56,142,60,0.06);
+}
+
+.ilt-ip-card-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.ilt-ip-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary, #333);
+  font-family: monospace;
+  margin-bottom: 4px;
+}
+
+.ilt-ip-meta {
+  font-size: 12px;
+  color: var(--text-secondary, #777);
+}
+
+.ilt-ip-shield {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(56,142,60,0.2);
+  color: #2e7d32;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+/* Checks */
+.ilt-checks { display: flex; flex-direction: column; gap: 10px; }
+
+.ilt-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+}
+
+.ilt-check.pass { background: rgba(56,142,60,0.08); border: 1.5px solid rgba(56,142,60,0.25); }
+.ilt-check.fail { background: rgba(211,47,47,0.08); border: 1.5px solid rgba(211,47,47,0.25); }
+
+.ilt-check-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+.ilt-check-body { display: flex; flex-direction: column; gap: 2px; }
+
+.ilt-check-text   { font-weight: 600; font-size: 14px; color: var(--text-primary, #333); }
+.ilt-check-detail { font-size: 12px; color: var(--text-secondary, #777); }
+
+/* Recommendations */
+.ilt-recommendations { display: flex; flex-direction: column; gap: 10px; }
+
+.ilt-rec-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255,152,0,0.08);
+  border: 1.5px solid rgba(255,152,0,0.25);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  line-height: 1.5;
+}
+
+.ilt-rec-icon { font-size: 18px; flex-shrink: 0; }
+
+/* Idle */
+.ilt-idle {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-secondary, #888);
+}
+
+.ilt-idle-icon { font-size: 56px; margin-bottom: 16px; }
+.ilt-idle p    { font-size: 15px; max-width: 420px; margin: 0 auto 20px; }
+
+.ilt-test-list {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: #667eea;
+}
