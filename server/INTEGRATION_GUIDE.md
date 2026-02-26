@@ -170,7 +170,7 @@ npm start
 # Register user
 curl -X POST http://localhost:3001/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
+  -d '{"email":"your@email.com","password":"<your-password>","name":"Your Name"}'
 
 # Get servers
 curl http://localhost:3001/api/servers \

@@ -22,14 +22,17 @@ const servers = [
 router.get('/', authMiddleware, (req, res) => {
   try {
     const userPlan = req.user.plan || 'free';
+    const isAdmin = req.user.role === 'admin';
     
     let availableServers = servers;
     
-    // Filter based on plan
-    if (userPlan === 'free') {
-      availableServers = servers.filter(s => s.tier === 'free');
-    } else if (userPlan === 'premium') {
-      availableServers = servers.filter(s => s.tier === 'free' || s.tier === 'premium');
+    // Admin gets access to all servers; otherwise filter based on plan
+    if (!isAdmin) {
+      if (userPlan === 'free') {
+        availableServers = servers.filter(s => s.tier === 'free');
+      } else if (userPlan === 'premium') {
+        availableServers = servers.filter(s => s.tier === 'free' || s.tier === 'premium');
+      }
     }
     
     // Add random ping variation for realism
@@ -59,10 +62,11 @@ router.get('/:id', authMiddleware, (req, res) => {
     }
 
     const userPlan = req.user.plan || 'free';
+    const isAdmin = req.user.role === 'admin';
     const planHierarchy = { free: 0, premium: 1, ultimate: 2 };
     const serverHierarchy = { free: 0, premium: 1, ultimate: 2 };
 
-    if (planHierarchy[userPlan] < serverHierarchy[server.tier]) {
+    if (!isAdmin && planHierarchy[userPlan] < serverHierarchy[server.tier]) {
       return res.status(403).json({ 
         error: 'Upgrade required',
         requiredPlan: server.tier 

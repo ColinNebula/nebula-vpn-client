@@ -242,6 +242,9 @@ export const PLAN_FEATURES = {
 
 // Helper function to check if a feature is available for a plan
 export const hasFeature = (plan, feature) => {
+  // Admin role gets unrestricted access to all features
+  if (plan === 'admin') return true;
+
   const planFeatures = PLAN_FEATURES[plan] || PLAN_FEATURES.free;
   
   // Handle nested features (e.g., 'servers.streaming')
@@ -259,6 +262,9 @@ export const hasFeature = (plan, feature) => {
 
 // Get allowed servers for a plan
 export const getAllowedServers = (plan, allServers) => {
+  // Admin gets access to all servers
+  if (plan === 'admin') return allServers;
+
   const planFeatures = PLAN_FEATURES[plan] || PLAN_FEATURES.free;
   
   if (planFeatures.servers.allowedServers === 'all') {
@@ -272,6 +278,9 @@ export const getAllowedServers = (plan, allServers) => {
 
 // Check if user has reached device limit
 export const canAddDevice = (plan, currentDevices) => {
+  // Admin has unlimited devices
+  if (plan === 'admin') return true;
+
   const planFeatures = PLAN_FEATURES[plan] || PLAN_FEATURES.free;
   
   if (planFeatures.devices === 'unlimited') {
@@ -283,6 +292,9 @@ export const canAddDevice = (plan, currentDevices) => {
 
 // Check if user has bandwidth remaining
 export const hasBandwidthRemaining = (plan, usedBandwidth) => {
+  // Admin has unlimited bandwidth
+  if (plan === 'admin') return true;
+
   const planFeatures = PLAN_FEATURES[plan] || PLAN_FEATURES.free;
   
   if (!planFeatures.bandwidth.limited) {
@@ -294,6 +306,7 @@ export const hasBandwidthRemaining = (plan, usedBandwidth) => {
 
 // Get plan display name
 export const getPlanDisplayName = (plan) => {
+  if (plan === 'admin') return 'Admin';
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 };
 
@@ -302,7 +315,8 @@ export const getPlanColor = (plan) => {
   const colors = {
     free: '#9E9E9E',
     premium: '#4CAF50',
-    ultimate: '#667eea'
+    ultimate: '#667eea',
+    admin: '#FF5722'
   };
   return colors[plan] || colors.free;
 };

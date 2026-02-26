@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const logger = require('../utils/logger');
 
 class VPNService {
@@ -126,12 +127,12 @@ class VPNService {
   }
 
   generatePublicKey() {
-    // In production: use actual crypto library
-    return Buffer.from(Array(32).fill(0).map(() => Math.random() * 255)).toString('base64');
+    // Use cryptographically secure random bytes
+    return crypto.randomBytes(32).toString('base64');
   }
 
   generatePrivateKey() {
-    return Buffer.from(Array(32).fill(0).map(() => Math.random() * 255)).toString('base64');
+    return crypto.randomBytes(32).toString('base64');
   }
 
   getWireGuardConfig(connection) {

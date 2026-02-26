@@ -18,10 +18,22 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+// Role-based guard — call after authMiddleware
+const adminMiddleware = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    logger.warn(`Unauthorised admin access attempt by ${req.user?.email || 'unknown'}`);
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+
 const planMiddleware = (requiredPlan) => {
   return (req, res, next) => {
+    // Admin role bypasses all plan restrictions
+    if (req.user?.role === 'admin') return next();
+
     const userPlan = req.user?.plan || 'free';
-    const planHierarchy = { free: 0, premium: 1, ultimate: 2 };
+    const planHierarchy = { free: 0, premium: 1, ultimate: 2, enterprise: 3 };
     
     if (planHierarchy[userPlan] < planHierarchy[requiredPlan]) {
       return res.status(403).json({ 
@@ -35,4 +47,5 @@ const planMiddleware = (requiredPlan) => {
   };
 };
 
-module.exports = { authMiddleware, planMiddleware };
+module.exports = { authMiddleware, adminMiddleware, planMiddleware };
+

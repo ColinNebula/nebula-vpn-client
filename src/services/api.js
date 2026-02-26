@@ -26,7 +26,9 @@ class APIService {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'API request failed');
+      const err = new Error(data.error || 'API request failed');
+      err.status = response.status;  // preserve HTTP status so callers can distinguish auth vs network errors
+      throw err;
     }
 
     return data;
@@ -72,6 +74,34 @@ class APIService {
       headers: this.getHeaders(),
     });
 
+    return this.handleResponse(response);
+  }
+
+  // Social / OAuth sign-in — provider is 'google' | 'apple' | 'microsoft'
+  // profile: { email, name, sub } as returned by the provider SDK
+  async oauthLogin(provider, profile) {
+    const response = await fetch(`${API_BASE_URL}/auth/oauth`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ provider, profile }),
+    });
+
+    const data = await this.handleResponse(response);
+
+    if (data.token) {
+      this.token = data.token;
+      localStorage.setItem('token', data.token);
+    }
+
+    return data;
+  }
+
+  async saveSettings(prefs) {
+    const response = await fetch(`${API_BASE_URL}/user/settings`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(prefs),
+    });
     return this.handleResponse(response);
   }
 
@@ -193,6 +223,48 @@ class APIService {
       headers: this.getHeaders(),
     });
 
+    return this.handleResponse(response);
+  }
+
+  // ── Admin Operations (role: admin only) ──────────────────────────────────
+
+  async adminGetUsers() {
+    const response = await fetch(`${API_BASE_URL}/admin/users`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async adminGetStats() {
+    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async adminSetRole(email, role) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(email)}/role`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ role }),
+    });
+    return this.handleResponse(response);
+  }
+
+  async adminSetPlan(email, plan) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(email)}/plan`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ plan }),
+    });
+    return this.handleResponse(response);
+  }
+
+  async adminDeleteUser(email) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(email)}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
     return this.handleResponse(response);
   }
 }

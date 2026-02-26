@@ -22,7 +22,7 @@ Expected response:
 ```bash
 curl -X POST http://localhost:3001/api/auth/register \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"test@example.com\",\"password\":\"password123\",\"name\":\"Test User\"}"
+  -d '{"email":"your@email.com","password":"<your-password>","name":"Your Name"}'
 ```
 
 Save the `token` from the response!
@@ -32,7 +32,7 @@ Save the `token` from the response!
 ```bash
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"test@example.com\",\"password\":\"password123\"}"
+  -d '{"email":"your@email.com","password":"<your-password>"}'
 ```
 
 ## Get Servers (with authentication)
@@ -103,10 +103,10 @@ Open your React app in browser, then in console:
 const api = require('./services/api').default;
 
 // Register
-await api.register('test@example.com', 'password123', 'Test User');
+await api.register('your@email.com', '<your-password>', 'Your Name');
 
 // Login
-const result = await api.login('test@example.com', 'password123');
+const result = await api.login('your@email.com', '<your-password>');
 console.log('Logged in:', result);
 
 // Get servers

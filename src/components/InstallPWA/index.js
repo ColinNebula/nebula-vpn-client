@@ -75,9 +75,12 @@ const InstallPWA = () => {
     }
     setPlatform(detectedPlatform);
 
-    // Enhanced service worker registration
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
+    // Enhanced service worker registration — production only.
+    // In dev the sw.js path resolves incorrectly due to the homepage sub-path,
+    // causing a MIME-type SecurityError. App.js handles production registration.
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      const swUrl = `${process.env.PUBLIC_URL}/sw.js`;
+      navigator.serviceWorker.register(swUrl)
         .then((registration) => {
           setSwRegistration(registration);
           console.log('✅ Service Worker registered');

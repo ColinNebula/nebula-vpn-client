@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import logo from './logo.svg';
+import { savePrefs, loadPrefs } from './utils/persistence';
 import ConnectButton from './components/ConnectButton';
 import ServerList from './components/ServerList';
 import StatusIndicator from './components/StatusIndicator';
@@ -12,6 +13,8 @@ import InstallPWA from './components/InstallPWA';
 import SubscriptionModal from './components/SubscriptionModal';
 import PromoBanner from './components/PromoBanner';
 import AdminPanel from './components/AdminPanel';
+import AdminDashboard from './components/AdminDashboard';
+import apiService from './services/api';
 import UpgradePrompt from './components/UpgradePrompt';
 import TrafficMonitor from './components/TrafficMonitor';
 import { hasFeature, getAllowedServers } from './config/planFeatures';
@@ -62,6 +65,7 @@ import PauseVPN from './components/PauseVPN';
 import QuickConnect from './components/QuickConnect';
 import RotatingIP from './components/RotatingIP';
 import AutoConnectWiFi from './components/AutoConnectWiFi';
+import MainDashboard from './components/MainDashboard';
 import DarkWebMonitor from './components/DarkWebMonitor';
 import IPLeakTest from './components/IPLeakTest';
 import ConnectionProfiles from './components/ConnectionProfiles';
@@ -85,6 +89,7 @@ function App() {
   const [multiHopServers, setMultiHopServers] = useState([]);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [currentPlan, setCurrentPlan] = useState('free');
   const [settings, setSettings] = useState({
     autoConnect: false,
@@ -107,6 +112,11 @@ function App() {
   const [trustedNetworks, setTrustedNetworks] = useState([]);
   const [recentServers, setRecentServers] = useState([]);
   const [favoriteServers, setFavoriteServers] = useState([]);
+
+  // Ref used to debounce auto-saving preferences to the server
+  const prefsSaveTimer = useRef(null);
+  // Flag set during preference restoration to prevent a save-on-restore loop
+  const isRestoringPrefs = useRef(false);
 
   // Enhanced server data with multi-hop capabilities — 40+ locations across 30+ countries
   const allServers = [
@@ -159,20 +169,29 @@ function App() {
     { id: '41', name: 'Obfuscated EU',    location: 'Amsterdam',     ping: '60ms',  load: 25, country: 'NL', flag: '🥷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
   ];
 
-  // Filter servers based on current plan
-  const servers = getAllowedServers(currentPlan, allServers);
+  // Admin gets unrestricted access; all others are gated by their plan
+  const effectivePlan = user?.role === 'admin' ? 'admin' : currentPlan;
+
+  // Filter servers based on effective plan
+  const servers = getAllowedServers(effectivePlan, allServers);
 
   // PWA features and service worker registration
   useEffect(() => {
-    // Register service worker for PWA
-    if ('serviceWorker' in navigator) {
+    // Register service worker for PWA — production only.
+    // In development, CRA's dev server does not serve sw.js from the root so
+    // registration would fail with a MIME-type error.  The PUBLIC_URL is also
+    // set to the homepage sub-path (/nebula-vpn-client) at build time but is
+    // an empty string when running locally, so we must guard on NODE_ENV.
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        // PUBLIC_URL is '' in dev, '/nebula-vpn-client' in the GH Pages build.
+        const swUrl = `${process.env.PUBLIC_URL}/sw.js`;
+        navigator.serviceWorker.register(swUrl)
           .then((registration) => {
-            console.log('SW registered: ', registration);
+            console.log('✅ SW registered: ', registration);
           })
           .catch((registrationError) => {
-            console.log('SW registration failed: ', registrationError);
+            console.log('❌ SW registration failed: ', registrationError);
           });
       });
     }
@@ -268,6 +287,109 @@ function App() {
     }
   }, [settings.advancedKillSwitch, isConnected]);
 
+  // ── Restore all saveable preferences for a user ────────────────────────
+  // serverPrefs: settings object returned from the server (canonical)
+  // localPrefs:  fallback from localStorage (used when server is offline)
+  // serverList:  the full allServers array so we can look up objects by id
+  const restorePrefs = useCallback((serverPrefs, localPrefs, serverList) => {
+    const prefs = (serverPrefs && Object.keys(serverPrefs).length > 0)
+      ? serverPrefs
+      : localPrefs;
+    if (!prefs) return;
+
+    isRestoringPrefs.current = true;
+    try {
+      if (prefs.settings)                setSettings(p => ({ ...p, ...prefs.settings }));
+      if (prefs.isDarkMode !== undefined) setIsDarkMode(prefs.isDarkMode);
+      if (prefs.selectedServerId) {
+        const srv = serverList.find(s => s.id === prefs.selectedServerId);
+        if (srv) setSelectedServer(srv);
+      }
+      if (prefs.recentServers)               setRecentServers(prefs.recentServers);
+      if (prefs.favoriteServers)             setFavoriteServers(prefs.favoriteServers);
+      if (prefs.rotatingIPEnabled !== undefined) setRotatingIPEnabled(prefs.rotatingIPEnabled);
+      if (prefs.rotatingIPInterval)          setRotatingIPInterval(prefs.rotatingIPInterval);
+      if (prefs.autoConnectWiFiEnabled !== undefined) setAutoConnectWiFiEnabled(prefs.autoConnectWiFiEnabled);
+      if (prefs.trustedNetworks)             setTrustedNetworks(prefs.trustedNetworks);
+      if (prefs.splitTunnelApps)             setSplitTunnelApps(prefs.splitTunnelApps);
+      if (prefs.multiHopServerIds) {
+        const hops = prefs.multiHopServerIds
+          .map(id => serverList.find(s => s.id === id))
+          .filter(Boolean);
+        if (hops.length) setMultiHopServers(hops);
+      }
+    } finally {
+      // Allow a tick before re-enabling saves so React batches the state updates
+      setTimeout(() => { isRestoringPrefs.current = false; }, 100);
+    }
+  }, []);
+
+  // ── Restore session from token on first mount ──────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    apiService.verifyToken()
+      .then(data => {
+        const u = data.user;
+        const userObj = {
+          email: u.email,
+          plan: u.plan || 'free',
+          role: u.role || 'user',
+          firstName: u.name ? u.name.split(' ')[0] : u.email.split('@')[0],
+          lastName: u.name ? u.name.split(' ').slice(1).join(' ') : '',
+          verified: true
+        };
+        setUser(userObj);
+        setCurrentPlan(u.plan || 'free');
+        setIsAuthenticated(true);
+        setShowSplashScreen(false);
+        restorePrefs(u.settings || {}, loadPrefs(u.email), allServers);
+      })
+      .catch(() => {
+        // Token invalid or expired — clear it so login screen shows
+        localStorage.removeItem('token');
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Auto-save preferences whenever they change ─────────────────────────────
+  useEffect(() => {
+    if (!user?.email || isRestoringPrefs.current) return;
+
+    const prefs = {
+      settings,
+      isDarkMode,
+      selectedServerId: selectedServer?.id || null,
+      recentServers,
+      favoriteServers,
+      rotatingIPEnabled,
+      rotatingIPInterval,
+      autoConnectWiFiEnabled,
+      trustedNetworks,
+      splitTunnelApps,
+      multiHopServerIds: multiHopServers.map(s => s.id),
+    };
+
+    // Persist to localStorage immediately (survives server restarts)
+    savePrefs(user.email, prefs);
+
+    // Debounce the server write to avoid flooding on rapid changes
+    clearTimeout(prefsSaveTimer.current);
+    prefsSaveTimer.current = setTimeout(() => {
+      apiService.saveSettings(prefs).catch(() => {}); // fire-and-forget
+    }, 2000);
+
+    return () => clearTimeout(prefsSaveTimer.current);
+  }, [
+    user?.email,
+    settings, isDarkMode, selectedServer,
+    recentServers, favoriteServers,
+    rotatingIPEnabled, rotatingIPInterval,
+    autoConnectWiFiEnabled, trustedNetworks,
+    splitTunnelApps, multiHopServers
+  ]);
+
   const handleSplashComplete = () => {
     console.log('🚀 Splash screen completed, transitioning to login...');
     console.log('Current state - showSplashScreen:', showSplashScreen, 'isAuthenticated:', isAuthenticated);
@@ -275,41 +397,78 @@ function App() {
     console.log('State updated - showSplashScreen should now be false');
   };
 
-  const handleLogin = (credentials) => {
+  const handleLogin = async (credentials) => {
     console.log('🔐 Login form submitted, authenticating...');
-    // Simulate login
-    setTimeout(() => {
-      setUser({ 
-        email: credentials.email, 
-        plan: 'Premium',
+    try {
+      const data = await apiService.login(credentials.email, credentials.password);
+      const u = data.user;
+      setUser({
+        email: u.email,
+        plan: u.plan || 'free',
+        role: u.role || 'user',
+        firstName: u.name ? u.name.split(' ')[0] : u.email.split('@')[0],
+        lastName: u.name ? u.name.split(' ').slice(1).join(' ') : '',
+        verified: true
+      });
+      setCurrentPlan(u.plan || 'free');
+      setIsAuthenticated(true);
+      setShowSignup(false);
+      // Restore saved preferences: server is canonical, localStorage is fallback
+      restorePrefs(u.settings || {}, loadPrefs(u.email), allServers);
+      console.log('✅ Authentication successful (backend)');
+      addLog('User logged in successfully', 'success');
+    } catch (err) {
+      // err.status is set for HTTP errors (auth failure, validation, etc.)
+      // A missing status means a network/fetch error — server is truly unreachable
+      if (err.status) {
+        // Real auth error (401, 400, 429, …) — do NOT log the user in
+        console.warn('⚠️ Login rejected by server:', err.message);
+        addLog(`Login failed: ${err.message}`, 'error');
+        throw err;  // re-throw so LoginForm can display the error message
+      }
+
+      // Network error — server offline, use offline mode
+      console.warn('⚠️ Backend unreachable, using offline mode:', err.message);
+      addLog('Server unreachable — running in offline mode', 'warning');
+
+      // Still enforce basic offline credentials: reject obviously wrong attempts
+      // (no password entered at all)
+      if (!credentials.password) {
+        throw new Error('Password is required');
+      }
+
+      setUser({
+        email: credentials.email,
+        plan: 'free',
+        role: 'user',
         firstName: credentials.email.split('@')[0],
         lastName: '',
         verified: true
       });
+      setCurrentPlan('free');
       setIsAuthenticated(true);
       setShowSignup(false);
-      console.log('✅ Authentication successful, loading main app...');
-      addLog('User logged in successfully', 'success');
-      
-      // Check for URL parameters for PWA shortcuts
-      const urlParams = new URLSearchParams(window.location.search);
-      const action = urlParams.get('action');
-      const tab = urlParams.get('tab');
-      
-      if (action === 'connect') {
-        // Auto-select optimal server for quick connect
-        const optimalServer = servers.reduce((best, current) => {
-          const currentScore = (100 - current.load) + (200 - parseInt(current.ping));
-          const bestScore = (100 - best.load) + (200 - parseInt(best.ping));
-          return currentScore > bestScore ? current : best;
-        });
-        setSelectedServer(optimalServer);
-      }
-      
-      if (tab) {
-        setActiveTab(tab);
-      }
-    }, 1000);
+      // Restore whatever was saved locally for this email (offline-mode best-effort)
+      restorePrefs({}, loadPrefs(credentials.email), allServers);
+    }
+
+    // Handle PWA shortcut URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action');
+    const tab = urlParams.get('tab');
+
+    if (action === 'connect') {
+      const optimalServer = servers.reduce((best, current) => {
+        const currentScore = (100 - current.load) + (200 - parseInt(current.ping));
+        const bestScore = (100 - best.load) + (200 - parseInt(best.ping));
+        return currentScore > bestScore ? current : best;
+      });
+      setSelectedServer(optimalServer);
+    }
+
+    if (tab) {
+      setActiveTab(tab);
+    }
   };
 
   const handleSignup = (userData) => {
@@ -350,9 +509,56 @@ function App() {
     addLog('User logged out', 'info');
   };
 
+  // Shared handler for Google / Apple / Microsoft OAuth
+  const handleSocialAuth = async (provider, profile) => {
+    console.log(`🔐 Social auth: ${provider}`, profile.email);
+    try {
+      const data = await apiService.oauthLogin(provider, profile);
+      const u = data.user;
+      setUser({
+        email: u.email,
+        plan: u.plan || 'free',
+        role: u.role || 'user',
+        firstName: u.name ? u.name.split(' ')[0] : u.email.split('@')[0],
+        lastName: u.name ? u.name.split(' ').slice(1).join(' ') : '',
+        verified: true
+      });
+      setCurrentPlan(u.plan || 'free');
+      setIsAuthenticated(true);
+      setShowSignup(false);
+      restorePrefs(u.settings || {}, loadPrefs(u.email), allServers);
+      console.log(`✅ ${provider} authentication successful`);
+      addLog(`Signed in with ${provider}`, 'success');
+      if (data.isNewUser && (u.plan || 'free') === 'free') {
+        setTimeout(() => setShowSubscriptionModal(true), 3000);
+      }
+    } catch (err) {
+      if (err.status) {
+        console.warn(`⚠️ ${provider} auth rejected:`, err.message);
+        addLog(`${provider} sign-in failed: ${err.message}`, 'error');
+        throw err;
+      }
+      // Network unavailable — fall back to offline mode
+      console.warn('⚠️ Backend unreachable, using offline mode for social auth');
+      addLog('Server unreachable — running in offline mode', 'warning');
+      setUser({
+        email: profile.email,
+        plan: 'free',
+        role: 'user',
+        firstName: profile.name ? profile.name.split(' ')[0] : profile.email.split('@')[0],
+        lastName: profile.name ? profile.name.split(' ').slice(1).join(' ') : '',
+        verified: true
+      });
+      setCurrentPlan('free');
+      setIsAuthenticated(true);
+      setShowSignup(false);
+      restorePrefs({}, loadPrefs(profile.email), allServers);
+    }
+  };
+
   const addLog = (message, type = 'info') => {
     const log = {
-      id: Date.now(),
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toLocaleString(),
       message,
       type
@@ -452,6 +658,7 @@ function App() {
         <SignupForm 
           onSignupSuccess={handleSignup}
           onSwitchToLogin={() => setShowSignup(false)}
+          onSocialAuth={handleSocialAuth}
         />
       );
     }
@@ -460,6 +667,7 @@ function App() {
       <LoginForm 
         onLogin={handleLogin} 
         onSwitchToSignup={() => setShowSignup(true)}
+        onSocialLogin={handleSocialAuth}
         isDarkMode={isDarkMode} 
       />
     );
@@ -488,7 +696,7 @@ function App() {
         onUpgrade={() => setShowSubscriptionModal(true)}
       />
 
-      {/* Admin Panel */}
+      {/* Admin Panel (user settings) */}
       {showAdminPanel && (
         <AdminPanel 
           onClose={() => setShowAdminPanel(false)}
@@ -496,6 +704,14 @@ function App() {
           onUpdateUser={(updatedUser) => {
             setUser(updatedUser);
           }}
+        />
+      )}
+
+      {/* Admin Dashboard (role-protected) */}
+      {showAdminDashboard && user?.role === 'admin' && (
+        <AdminDashboard
+          onClose={() => setShowAdminDashboard(false)}
+          currentUser={user}
         />
       )}
       
@@ -522,9 +738,14 @@ function App() {
             <h1>Nebula VPN</h1>
           </div>
           <div className="header-controls">
-            {currentPlan === 'free' && (
+            {effectivePlan === 'free' && (
               <button className="upgrade-btn" onClick={() => setShowSubscriptionModal(true)}>
                 ⭐ Upgrade
+              </button>
+            )}
+            {user?.role === 'admin' && (
+              <button className="admin-dashboard-btn" onClick={() => setShowAdminDashboard(true)}>
+                👑 Admin
               </button>
             )}
             <button className="admin-btn" onClick={() => setShowAdminPanel(true)}>
@@ -538,7 +759,7 @@ function App() {
                 {user.email.charAt(0).toUpperCase()}
               </div>
               <span title={user.email}>{user.email.split('@')[0]}</span>
-              <span className={`plan-badge ${currentPlan}`}>{currentPlan}</span>
+              <span className={`plan-badge ${effectivePlan}`}>{effectivePlan}</span>
               <button className="logout-btn" onClick={handleLogout}>↩ Out</button>
             </div>
           </div>
@@ -566,7 +787,7 @@ function App() {
         >
           🌍 Servers
         </button>
-        {hasFeature(currentPlan, 'multiHop') && (
+        {hasFeature(effectivePlan, 'multiHop') && (
           <button 
             className={`tab ${activeTab === 'multihop' ? 'active' : ''}`}
             onClick={() => setActiveTab('multihop')}
@@ -574,7 +795,7 @@ function App() {
             🔗 Multi-Hop
           </button>
         )}
-        {hasFeature(currentPlan, 'splitTunneling') && (
+        {hasFeature(effectivePlan, 'splitTunneling') && (
           <button 
             className={`tab ${activeTab === 'splittunnel' ? 'active' : ''}`}
             onClick={() => setActiveTab('splittunnel')}
@@ -582,7 +803,7 @@ function App() {
             📱 Split Tunnel
           </button>
         )}
-        {hasFeature(currentPlan, 'trafficAnalytics') && (
+        {hasFeature(effectivePlan, 'trafficAnalytics') && (
           <button 
             className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
             onClick={() => setActiveTab('analytics')}
@@ -590,7 +811,7 @@ function App() {
             📈 Analytics
           </button>
         )}
-        {hasFeature(currentPlan, 'threatDetection') && (
+        {hasFeature(effectivePlan, 'threatDetection') && (
           <button 
             className={`tab ${activeTab === 'security' ? 'active' : ''}`}
             onClick={() => setActiveTab('security')}
@@ -598,7 +819,7 @@ function App() {
             🛡️ Security
           </button>
         )}
-        {hasFeature(currentPlan, 'automationRules') && (
+        {hasFeature(effectivePlan, 'automationRules') && (
           <button 
             className={`tab ${activeTab === 'automation' ? 'active' : ''}`}
             onClick={() => setActiveTab('automation')}
@@ -606,7 +827,7 @@ function App() {
             🤖 Automation
           </button>
         )}
-        {hasFeature(currentPlan, 'liveDashboard') && (
+        {hasFeature(effectivePlan, 'liveDashboard') && (
           <button 
             className={`tab ${activeTab === 'experience' ? 'active' : ''}`}
             onClick={() => setActiveTab('experience')}
@@ -614,7 +835,7 @@ function App() {
             ✨ Experience
           </button>
         )}
-        {hasFeature(currentPlan, 'networkTopology') && (
+        {hasFeature(effectivePlan, 'networkTopology') && (
           <button 
             className={`tab ${activeTab === 'enterprise' ? 'active' : ''}`}
             onClick={() => setActiveTab('enterprise')}
@@ -622,7 +843,7 @@ function App() {
             🏢 Enterprise
           </button>
         )}
-        {hasFeature(currentPlan, 'aiNetworkOptimizer') && (
+        {hasFeature(effectivePlan, 'aiNetworkOptimizer') && (
           <button 
             className={`tab ${activeTab === 'ai' ? 'active' : ''}`}
             onClick={() => setActiveTab('ai')}
@@ -630,7 +851,7 @@ function App() {
             🤖 AI/ML
           </button>
         )}
-        {hasFeature(currentPlan, 'collaborativeVPN') && (
+        {hasFeature(effectivePlan, 'collaborativeVPN') && (
           <button 
             className={`tab ${activeTab === 'nextgen' ? 'active' : ''}`}
             onClick={() => setActiveTab('nextgen')}
@@ -638,7 +859,7 @@ function App() {
             🚀 Next-Gen
           </button>
         )}
-        {hasFeature(currentPlan, 'mobileOptimizations') && (
+        {hasFeature(effectivePlan, 'mobileOptimizations') && (
           <button 
             className={`tab ${activeTab === 'mobile' ? 'active' : ''}`}
             onClick={() => setActiveTab('mobile')}
@@ -646,7 +867,7 @@ function App() {
             📱 Mobile
           </button>
         )}
-        {hasFeature(currentPlan, 'speedTest') && (
+        {hasFeature(effectivePlan, 'speedTest') && (
           <button 
             className={`tab ${activeTab === 'speedtest' ? 'active' : ''}`}
             onClick={() => setActiveTab('speedtest')}
@@ -696,78 +917,42 @@ function App() {
       <main className="App-main">
         <div className="vpn-container">
           {activeTab === 'dashboard' && (
-            <div className="enhanced-dashboard">
-              {/* Quick Connect Component */}
-              <QuickConnect
-                servers={servers}
-                isConnected={isConnected && !isVPNPaused}
-                currentServer={selectedServer}
-                onConnect={(server) => {
-                  setSelectedServer(server);
-                  setRecentServers(prev => [server.id, ...prev.filter(id => id !== server.id).slice(0, 4)]);
-                  handleToggleConnection();
-                }}
-                onDisconnect={handleToggleConnection}
-                recentServers={recentServers}
-                favoriteServers={favoriteServers}
-              />
-
-              {/* Pause VPN Component */}
-              <PauseVPN
-                isConnected={isConnected}
-                onPause={(duration) => {
-                  setIsVPNPaused(true);
-                  addLog(`VPN paused for ${duration / 60} minutes`, 'warning');
-                }}
-                onResume={() => {
-                  setIsVPNPaused(false);
-                  addLog('VPN resumed', 'success');
-                }}
-              />
-
-              {/* Rotating IP Component */}
-              <RotatingIP
-                isConnected={isConnected && !isVPNPaused}
-                isEnabled={rotatingIPEnabled}
-                onToggle={(enabled) => {
-                  setRotatingIPEnabled(enabled);
-                  addLog(`Rotating IP ${enabled ? 'enabled' : 'disabled'}`, 'info');
-                }}
-                rotationInterval={rotatingIPInterval}
-                onIntervalChange={setRotatingIPInterval}
-              />
-
-              {/* Auto-Connect WiFi Component */}
-              <AutoConnectWiFi
-                isEnabled={autoConnectWiFiEnabled}
-                onToggle={(enabled) => {
-                  setAutoConnectWiFiEnabled(enabled);
-                  addLog(`Auto-connect on WiFi ${enabled ? 'enabled' : 'disabled'}`, 'info');
-                }}
-                onConnect={handleToggleConnection}
-                trustedNetworks={trustedNetworks}
-                onAddTrustedNetwork={(network) => {
-                  setTrustedNetworks(prev => [...prev, network]);
-                  addLog(`Added ${network.name} to trusted networks`, 'success');
-                }}
-                onRemoveTrustedNetwork={(id) => {
-                  setTrustedNetworks(prev => prev.filter(n => n.id !== id));
-                  addLog('Removed network from trusted list', 'info');
-                }}
-              />
-
-              {/* Original Live Dashboard */}
-              <LiveDashboard 
-                isConnected={isConnected && !isVPNPaused}
-                selectedServer={selectedServer}
-                connectionTime={connectionTime}
-                trafficData={trafficData}
-                multiHopServers={multiHopServers}
-                onQuickConnect={handleToggleConnection}
-                onServerSelect={handleServerSelect}
-                servers={servers}
-              />
-            </div>
+            <MainDashboard
+              isConnected={isConnected}
+              isConnecting={isConnecting}
+              selectedServer={selectedServer}
+              connectionTime={connectionTime}
+              trafficData={trafficData}
+              multiHopServers={multiHopServers}
+              servers={servers}
+              onConnect={(server) => {
+                setSelectedServer(server);
+                setRecentServers(prev => [server.id, ...prev.filter(id => id !== server.id).slice(0, 4)]);
+                if (!isConnected) handleToggleConnection();
+              }}
+              onDisconnect={handleToggleConnection}
+              onServerChange={(server) => {
+                setSelectedServer(server);
+                setRecentServers(prev => [server.id, ...prev.filter(id => id !== server.id).slice(0, 4)]);
+              }}
+              isVPNPaused={isVPNPaused}
+              onPause={(duration) => {
+                setIsVPNPaused(true);
+                addLog(`VPN paused for ${duration / 60} minutes`, 'warning');
+              }}
+              onResume={() => {
+                setIsVPNPaused(false);
+                addLog('VPN resumed', 'success');
+              }}
+              rotatingIPEnabled={rotatingIPEnabled}
+              onToggleRotatingIP={(enabled) => {
+                setRotatingIPEnabled(enabled);
+                addLog(`Rotating IP ${enabled ? 'enabled' : 'disabled'}`, 'info');
+              }}
+              user={user}
+              killSwitchActive={killSwitchActive}
+              settings={settings}
+            />
           )}
           
           {activeTab === 'servers' && (
@@ -782,7 +967,7 @@ function App() {
           )}
           
           {activeTab === 'multihop' && (
-            hasFeature(currentPlan, 'multiHop') ? (
+            hasFeature(effectivePlan, 'multiHop') ? (
               <MultiHop 
                 servers={allServers.filter(s => s.multiHopSupport)}
                 selectedServers={multiHopServers}
@@ -800,7 +985,7 @@ function App() {
           )}
           
           {activeTab === 'splittunnel' && (
-            hasFeature(currentPlan, 'splitTunneling') ? (
+            hasFeature(effectivePlan, 'splitTunneling') ? (
               <SplitTunneling 
                 apps={splitTunnelApps}
                 onAppsChange={handleSplitTunnelChange}
@@ -818,7 +1003,7 @@ function App() {
           )}
           
           {activeTab === 'speedtest' && (
-            hasFeature(currentPlan, 'speedTest') ? (
+            hasFeature(effectivePlan, 'speedTest') ? (
               <SpeedTest isConnected={isConnected} />
             ) : (
               <UpgradePrompt 
@@ -831,7 +1016,7 @@ function App() {
           )}
           
           {activeTab === 'analytics' && (
-            hasFeature(currentPlan, 'trafficAnalytics') ? (
+            hasFeature(effectivePlan, 'trafficAnalytics') ? (
               <div className="analytics-section">
                 <div className="analytics-tabs">
                   <button 
@@ -907,7 +1092,7 @@ function App() {
           )}
           
           {activeTab === 'security' && (
-            hasFeature(currentPlan, 'threatDetection') ? (
+            hasFeature(effectivePlan, 'threatDetection') ? (
               <div className="analytics-section">
                 <div className="analytics-tabs">
                   <button 
@@ -985,7 +1170,7 @@ function App() {
           )}
           
           {activeTab === 'automation' && (
-            hasFeature(currentPlan, 'automationRules') ? (
+            hasFeature(effectivePlan, 'automationRules') ? (
               <div className="analytics-section">
                 <div className="analytics-tabs">
                   <button 
@@ -1053,7 +1238,7 @@ function App() {
           )}
           
           {activeTab === 'experience' && (
-            hasFeature(currentPlan, 'liveDashboard') ? (
+            hasFeature(effectivePlan, 'liveDashboard') ? (
               <div className="analytics-section">
                 <div className="analytics-tabs">
                   <button 
@@ -1118,7 +1303,7 @@ function App() {
           )}
           
           {activeTab === 'enterprise' && (
-            hasFeature(currentPlan, 'networkTopology') ? (
+            hasFeature(effectivePlan, 'networkTopology') ? (
             <div className="analytics-section">
               <div className="analytics-tabs">
                 <button 
@@ -1191,7 +1376,7 @@ function App() {
           )}
           
           {activeTab === 'ai' && (
-            hasFeature(currentPlan, 'aiNetworkOptimizer') ? (
+            hasFeature(effectivePlan, 'aiNetworkOptimizer') ? (
             <div className="analytics-section">
               <div className="analytics-tabs">
                 <button 
@@ -1264,7 +1449,7 @@ function App() {
           )}
           
           {activeTab === 'nextgen' && (
-            hasFeature(currentPlan, 'collaborativeVPN') ? (
+            hasFeature(effectivePlan, 'collaborativeVPN') ? (
             <div className="analytics-section">
               <div className="analytics-tabs">
                 <button 
@@ -1332,7 +1517,7 @@ function App() {
           )}
           
           {activeTab === 'mobile' && (
-            hasFeature(currentPlan, 'mobileOptimizations') ? (
+            hasFeature(effectivePlan, 'mobileOptimizations') ? (
               <MobileOptimizations />
             ) : (
               <UpgradePrompt 
@@ -1442,3 +1627,4 @@ function App() {
 }
 
 export default App;
+

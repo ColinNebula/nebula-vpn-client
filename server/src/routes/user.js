@@ -2,40 +2,59 @@ const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
-const router = express.Router();
+// Factory: receives the shared users Map from auth.js so settings persist in-memory
+module.exports = function createUserRouter(users) {
+  const router = express.Router();
 
-// Get user profile
-router.get('/profile', authMiddleware, (req, res) => {
-  res.json({
-    email: req.user.email,
-    plan: req.user.plan,
-    // Add more user data as needed
+  // Get user profile (includes saved settings)
+  router.get('/profile', authMiddleware, (req, res) => {
+    const user = users.get(req.user.email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({
+      email: user.email,
+      name: user.name,
+      plan: user.plan,
+      role: user.role,
+      settings: user.settings || {}
+    });
   });
-});
 
-// Update user plan (for testing - in production this would be via payment)
-router.post('/upgrade', authMiddleware, async (req, res) => {
-  try {
-    const { plan } = req.body;
-    
-    if (!['free', 'premium', 'ultimate'].includes(plan)) {
-      return res.status(400).json({ error: 'Invalid plan' });
+  // Save user preferences / settings
+  router.put('/settings', authMiddleware, (req, res) => {
+    const user = users.get(req.user.email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Whitelist the keys we allow to be stored — never let a client
+    // smuggle in role, plan, password, or other privileged fields.
+    const ALLOWED_KEYS = [
+      'settings', 'isDarkMode', 'selectedServerId',
+      'recentServers', 'favoriteServers',
+      'rotatingIPEnabled', 'rotatingIPInterval',
+      'autoConnectWiFiEnabled', 'trustedNetworks',
+      'splitTunnelApps', 'multiHopServerIds'
+    ];
+
+    const sanitized = {};
+    for (const key of ALLOWED_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+        sanitized[key] = req.body[key];
+      }
     }
 
-    // In production, verify payment here
-    req.user.plan = plan;
-    
-    logger.info(`User ${req.user.email} upgraded to ${plan}`);
-    
-    res.json({
-      success: true,
-      plan,
-      message: `Successfully upgraded to ${plan}`
-    });
-  } catch (error) {
-    logger.error('Upgrade error:', error);
-    res.status(500).json({ error: 'Upgrade failed' });
-  }
-});
+    user.settings = sanitized;
+    logger.info(`Settings saved for ${req.user.email}`);
+    res.json({ ok: true });
+  });
 
-module.exports = router;
+  // Update user plan (payment verification required)
+  // NOTE: self-service plan changes are intentionally disabled.
+  // Plan upgrades must be managed by an admin via /api/admin/users/:email/plan
+  // or through a verified payment webhook integration.
+  router.post('/upgrade', authMiddleware, (req, res) => {
+    return res.status(403).json({
+      error: 'Self-service plan upgrades are not permitted. Please complete a payment or contact support.'
+    });
+  });
+
+  return router;
+};

@@ -71,11 +71,6 @@ Nebula VPN Client is a modern, feature-rich VPN application designed to provide 
    Navigate to [http://localhost:3000](http://localhost:3000)
    https://colinnebula.github.io/nebula-vpn-client/
 
-### Demo Login
-Use these credentials to explore the application:
-- **Email:** `demo@nebula.com`
-- **Password:** `demo123`
-
 ## 📱 Application Structure
 
 ```

@@ -1,4 +1,11 @@
 require('dotenv').config();
+
+// ── Startup security checks ───────────────────────────────────────────────
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  console.error('FATAL: JWT_SECRET environment variable is missing or too short (minimum 32 characters). Set it in your .env file.');
+  process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -19,8 +26,11 @@ const {
 const authRoutes = require('./routes/auth');
 const vpnRoutes = require('./routes/vpn');
 const serverRoutes = require('./routes/servers');
-const userRoutes = require('./routes/user');
+const createUserRouter = require('./routes/user');
 const analyticsRoutes = require('./routes/analytics');
+// Share the users Map so the user router can read/write settings
+const userRoutes = createUserRouter(authRoutes.users);
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -112,6 +122,7 @@ app.use('/api/vpn', vpnRoutes);
 app.use('/api/servers', serverRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling (sanitized - don't expose internal errors)
 app.use((err, req, res, next) => {
