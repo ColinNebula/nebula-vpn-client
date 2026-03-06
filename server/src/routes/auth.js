@@ -186,9 +186,24 @@ router.get('/verify', (req, res) => {
 });
 
 // OAuth / Social Sign-In — finds or creates a user from a provider identity
-// In production: verify the provider token (id_token / access_token) server-side
-// before trusting the profile payload (e.g. google-auth-library, apple-signin-auth, @azure/msal-node).
+//
+// SECURITY: This endpoint MUST verify the provider-issued token server-side
+// before trusting any profile data. The provider token (id_token / access_token)
+// must be sent by the client and validated here using the provider's SDK:
+//   • Google  – google-auth-library: verifyIdToken()
+//   • Apple   – apple-signin-auth: verifyIdToken()
+//   • Microsoft – @azure/msal-node
+//
+// Until that verification is in place the endpoint is disabled to prevent
+// authentication bypass (an attacker could supply any email as `profile.email`
+// and receive a valid JWT for that account, including admin accounts).
 router.post('/oauth', async (req, res) => {
+  // TODO: implement server-side provider token verification before enabling.
+  return res.status(501).json({
+    error: 'OAuth sign-in is not yet available. Please use email/password login.',
+  });
+
+  /* eslint-disable no-unreachable */
   try {
     const { provider, profile } = req.body;
 

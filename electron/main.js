@@ -22,7 +22,10 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // Prevent WebRTC from enumerating local network interfaces, which would
+      // expose the user's real LAN/WAN IP even when the VPN tunnel is active.
+      webRTCIPHandlingPolicy: 'disable_non_proxied_udp',
     },
     backgroundColor: '#0f0f23',
     show: false, // Don't show until ready

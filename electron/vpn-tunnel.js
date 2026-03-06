@@ -248,12 +248,26 @@ class WireGuardTunnel {
 
   async _ksMacOS(action, serverIP) {
     if (action === 'add') {
+      // Resolve the actual utun device name that wg-quick assigned so we don't
+      // hardcode utun0 (which is taken if another VPN / IPSEC tunnel is active).
+      let tunnelIface = 'utun0'; // sensible default
+      try {
+        const { stdout } = await execAsync('ifconfig -l');
+        // wg-quick on macOS names the interface after the config file (e.g. nebula0
+        // maps to the first available utunN).  `wg show` lists our interface name.
+        const wgOut = await execAsync(`wg show ${this.tunnelName} 2>/dev/null || true`);
+        // Prefer grabbing the interface directly from `wg show interfaces`
+        const { stdout: ifaces } = await execAsync('wg show interfaces').catch(() => ({ stdout: '' }));
+        const found = ifaces.trim().split(/\s+/).find(i => i.startsWith('utun') || i === this.tunnelName);
+        if (found) tunnelIface = found;
+      } catch { /* use default */ }
+
       const rules = [
         '# Nebula VPN Kill Switch – generated file, do not edit',
         'block drop out all',
         'pass out on lo0 all',
         `pass out proto udp to ${serverIP}`,
-        'pass out on utun0 all',
+        `pass out on ${tunnelIface} all`,
       ].join('\n');
       const pfFile = path.join(os.tmpdir(), 'nebula-ks.conf');
       fs.writeFileSync(pfFile, rules, { mode: 0o600 });
