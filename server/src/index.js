@@ -72,19 +72,22 @@ app.use(securityHeaders);
 app.use(cors(corsOptions));
 
 // Global rate limiting
+const isDev = process.env.NODE_ENV !== 'production';
 const globalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX) || (isDev ? 5000 : 300),
   message: { error: 'Too many requests, please try again later' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  skip: () => isDev  // no rate limiting in development
 });
 app.use(globalLimiter);
 
 // Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: isDev ? 500 : 10,
   message: { error: 'Too many authentication attempts' },
   skipSuccessfulRequests: true
 });

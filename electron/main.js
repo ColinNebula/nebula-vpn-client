@@ -1,6 +1,10 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, autoUpdater, dialog } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
+const WireGuardTunnel = require('./vpn-tunnel');
+
+// One tunnel instance for the lifetime of the app
+const tunnel = new WireGuardTunnel();
 
 let mainWindow;
 let tray;
@@ -108,6 +112,7 @@ function createTray() {
   tray.setToolTip('Nebula VPN - Disconnected');
 
   tray.on('click', () => {
+    if (!mainWindow) return;
     mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
   });
 }
@@ -123,14 +128,96 @@ ipcMain.on('vpn-status-changed', (event, status) => {
 });
 
 // Handle VPN connection request from renderer
-ipcMain.handle('vpn-connect', async (event, serverId) => {
-  // This will be handled by your backend API
-  return { success: true };
+ipcMain.handle('vpn-connect', async (event, { serverId, protocol, token, killSwitch }) => {
+  try {
+    const apiBase = process.env.API_URL || 'http://localhost:3001/api';
+
+    // Step 1 – generate keys in main process and get peer config from API server
+    const keyPair = tunnel.generateKeyPair();
+
+    const res = await fetch(`${apiBase}/vpn/connect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ serverId, protocol: protocol || 'wireguard', clientPublicKey: keyPair.publicKey }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `API returned ${res.status}`);
+    }
+
+    const { serverPublicKey, serverEndpoint, assignedIP, dns } = await res.json();
+
+    // Inject the pre-generated private key so tunnel.connect() uses it
+    tunnel.keyPair = keyPair;
+
+    // Step 2 – bring up the actual WireGuard tunnel
+    const result = await tunnel.connect({
+      serverPublicKey,
+      serverEndpoint,
+      assignedIP,
+      dns,
+      enableKillSwitch: !!killSwitch,
+    });
+
+    // Update tray tooltip
+    if (tray) tray.setToolTip(`Nebula VPN – Connected (${assignedIP})`);
+
+    return { success: true, ip: result.assignedIP, publicKey: result.publicKey };
+  } catch (err) {
+    console.error('[IPC vpn-connect] Error:', err.message);
+    return { success: false, error: err.message };
+  }
 });
 
 // Handle VPN disconnection
-ipcMain.handle('vpn-disconnect', async () => {
-  return { success: true };
+ipcMain.handle('vpn-disconnect', async (event, { token } = {}) => {
+  try {
+    await tunnel.disconnect();
+
+    // Notify API server so it can remove the peer from WireGuard
+    if (token) {
+      const apiBase = process.env.API_URL || 'http://localhost:3001/api';
+      await fetch(`${apiBase}/vpn/disconnect`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      }).catch(e => console.warn('[IPC vpn-disconnect] API notify failed:', e.message));
+    }
+
+    if (tray) tray.setToolTip('Nebula VPN – Disconnected');
+    return { success: true };
+  } catch (err) {
+    console.error('[IPC vpn-disconnect] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// Real-time tunnel traffic stats
+ipcMain.handle('vpn-stats', async () => {
+  try {
+    const stats = await tunnel.getStats();
+    return { success: true, ...stats };
+  } catch (err) {
+    return { success: false, download: 0, upload: 0 };
+  }
+});
+
+// Toggle kill switch while connected
+ipcMain.handle('vpn-kill-switch', async (event, { enable, serverIP }) => {
+  try {
+    if (enable) {
+      await tunnel.enableKillSwitch(serverIP || tunnel._vpnServerIP);
+    } else {
+      await tunnel.disableKillSwitch();
+    }
+    return { success: true, active: tunnel.killSwitchActive };
+  } catch (err) {
+    console.error('[IPC vpn-kill-switch] Error:', err.message);
+    return { success: false, error: err.message };
+  }
 });
 
 // Get system info
@@ -142,6 +229,37 @@ ipcMain.handle('get-system-info', async () => {
   };
 });
 
+// Get app version
+ipcMain.handle('get-app-version', () => {
+  return { version: app.getVersion() };
+});
+
+// Check for updates
+ipcMain.handle('check-for-updates', () => {
+  if (isDev) {
+    return { checking: false, message: 'Updates disabled in development' };
+  }
+  try {
+    autoUpdater.checkForUpdates();
+    return { checking: true };
+  } catch (err) {
+    console.warn('[autoUpdater] check failed:', err.message);
+    return { checking: false, error: err.message };
+  }
+});
+
+// Log events from renderer (fire-and-forget)
+ipcMain.on('log-event', (event, payload) => {
+  if (payload && typeof payload.event === 'string') {
+    console.log(`[renderer] ${payload.event}`, payload.data ?? '');
+  }
+});
+
+// Analytics events from renderer (fire-and-forget)
+ipcMain.on('analytics-event', (event, payload) => {
+  // Intentionally a no-op in the main process; extend as needed.
+});
+
 // Auto-launch on system startup
 ipcMain.handle('set-auto-launch', async (event, enabled) => {
   app.setLoginItemSettings({
@@ -150,6 +268,39 @@ ipcMain.handle('set-auto-launch', async (event, enabled) => {
   });
   return { success: true };
 });
+
+// ── Auto-updater setup ───────────────────────────────────────────────────
+if (!isDev) {
+  // Feed URL should be set via environment variable or electron-builder config.
+  // e.g. process.env.UPDATE_FEED_URL = 'https://updates.yourserver.com/'
+  if (process.env.UPDATE_FEED_URL) {
+    autoUpdater.setFeedURL({ url: process.env.UPDATE_FEED_URL });
+  }
+
+  autoUpdater.on('update-available', () => {
+    if (mainWindow) mainWindow.webContents.send('update-available');
+  });
+
+  autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
+    if (mainWindow) mainWindow.webContents.send('update-downloaded', { releaseName, releaseNotes });
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message: `Version ${releaseName} has been downloaded.`,
+      detail: 'Restart Nebula VPN to apply the update.',
+      buttons: ['Restart Now', 'Later'],
+      defaultId: 0
+    }).then(({ response }) => {
+      if (response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[autoUpdater] Error:', err.message);
+  });
+}
 
 // App ready
 app.whenReady().then(() => {

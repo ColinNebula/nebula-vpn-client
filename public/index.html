@@ -2,6 +2,43 @@
 <html lang="en">
     <head>
     <meta charset="utf-8" />
+    <!-- Suppress browser-extension errors (MetaMask etc.) before any bundle loads -->
+    <script>
+      (function () {
+        var _isExtErr = function (msg, src) {
+          if (src && src.indexOf('chrome-extension://') === 0) return true;
+          if (!msg) return false;
+          return (
+            msg.indexOf('Failed to connect to MetaMask') !== -1 ||
+            msg.indexOf('Could not establish connection') !== -1 ||
+            msg.indexOf('Receiving end does not exist') !== -1 ||
+            msg.indexOf('Extension context invalidated') !== -1
+          );
+        };
+        // Patch window.onerror — fires before any addEventListener overlay
+        var _prevOnError = window.onerror;
+        window.onerror = function (msg, src, line, col, err) {
+          if (_isExtErr(msg, src)) return true; // returning true suppresses the error
+          return _prevOnError ? _prevOnError.apply(this, arguments) : false;
+        };
+        // Capture-phase listener for unhandledrejection
+        window.addEventListener('unhandledrejection', function (e) {
+          var msg = (e.reason && e.reason.message) || '';
+          var stack = (e.reason && e.reason.stack) || '';
+          if (_isExtErr(msg) || stack.indexOf('chrome-extension://') !== -1) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+        // Capture-phase listener for synchronous errors
+        window.addEventListener('error', function (e) {
+          if (_isExtErr(e.message, e.filename)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+      })();
+    </script>
     
     <!-- Primary Meta Tags -->
     <title>Nebula VPN - Next-Gen VPN Client</title>

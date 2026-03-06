@@ -11,6 +11,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 const ALLOWED_INVOKE_CHANNELS = [
   'vpn-connect',
   'vpn-disconnect',
+  'vpn-stats',
+  'vpn-kill-switch',
   'get-system-info',
   'set-auto-launch',
   'get-app-version',
@@ -120,14 +122,33 @@ function secureOnce(channel, callback) {
 contextBridge.exposeInMainWorld('electron', {
   // VPN controls - restricted API surface
   vpn: {
-    connect: (serverId) => {
-      // Validate serverId
-      if (typeof serverId !== 'string' || serverId.length > 100) {
+    /**
+     * Connect to a VPN server.
+     * @param {{ serverId: string, protocol?: string, token: string, killSwitch?: boolean }} config
+     */
+    connect: (config) => {
+      if (!config || typeof config !== 'object') {
+        return Promise.reject(new Error('Invalid connect config'));
+      }
+      if (typeof config.serverId !== 'string' || config.serverId.length > 100) {
         return Promise.reject(new Error('Invalid server ID'));
       }
-      return secureInvoke('vpn-connect', serverId);
+      if (typeof config.token !== 'string' || config.token.length < 10) {
+        return Promise.reject(new Error('Missing auth token'));
+      }
+      return secureInvoke('vpn-connect', {
+        serverId:   config.serverId.slice(0, 100),
+        protocol:   String(config.protocol || 'wireguard').slice(0, 20),
+        token:      config.token,
+        killSwitch: Boolean(config.killSwitch),
+      });
     },
-    disconnect: () => secureInvoke('vpn-disconnect'),
+    disconnect: ({ token } = {}) => secureInvoke('vpn-disconnect', { token: token || '' }),
+    getStats:   () => secureInvoke('vpn-stats'),
+    setKillSwitch: (enable, serverIP) => secureInvoke('vpn-kill-switch', {
+      enable: Boolean(enable),
+      serverIP: typeof serverIP === 'string' ? serverIP.slice(0, 45) : undefined,
+    }),
     updateStatus: (status) => {
       // Validate status object
       if (typeof status !== 'object' || status === null) return;

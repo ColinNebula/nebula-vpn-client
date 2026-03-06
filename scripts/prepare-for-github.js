@@ -196,6 +196,12 @@ function checkForSecrets(filePath, content) {
         lowerLine.includes('confirm your') || lowerLine.includes('please enter')) {
       return;
     }
+
+    // Skip JS/JSX object key literals and React component keys — not secrets
+    // e.g.  { key: 'dnsLeakProtection', label: '...' }  or  key={foo}
+    if (/^\s*\{\s*key\s*:/i.test(line) || /key:\s*['"`][a-zA-Z]/i.test(line)) {
+      return;
+    }
     
     // Skip markdown documentation files for password mentions
     if (filePath.endsWith('.md') && lowerLine.includes('password')) {

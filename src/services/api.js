@@ -111,6 +111,14 @@ class APIService {
   }
 
   // VPN Operations
+  // When running inside Electron, VPN commands go through IPC so the main
+  // process can manipulate the OS network stack (WireGuard, kill switch, DNS).
+  // In a plain browser / PWA context they fall back to the REST API.
+
+  _isElectron() {
+    return typeof window !== 'undefined' && window.electron?.vpn?.connect;
+  }
+
   async getVPNStatus() {
     const response = await fetch(`${API_BASE_URL}/vpn/status`, {
       headers: this.getHeaders(),
@@ -119,7 +127,18 @@ class APIService {
     return this.handleResponse(response);
   }
 
-  async connectVPN(serverId, protocol = 'wireguard') {
+  async connectVPN(serverId, protocol = 'wireguard', killSwitch = false) {
+    if (this._isElectron()) {
+      const result = await window.electron.vpn.connect({
+        serverId,
+        protocol,
+        token: this.token,
+        killSwitch,
+      });
+      if (!result.success) throw new Error(result.error || 'Tunnel connect failed');
+      return result;
+    }
+
     const response = await fetch(`${API_BASE_URL}/vpn/connect`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -130,6 +149,12 @@ class APIService {
   }
 
   async disconnectVPN() {
+    if (this._isElectron()) {
+      const result = await window.electron.vpn.disconnect({ token: this.token });
+      if (!result.success) throw new Error(result.error || 'Tunnel disconnect failed');
+      return result;
+    }
+
     const response = await fetch(`${API_BASE_URL}/vpn/disconnect`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -149,6 +174,12 @@ class APIService {
   }
 
   async getTrafficStats() {
+    if (this._isElectron()) {
+      // Read real rx/tx bytes directly from the WireGuard interface
+      const result = await window.electron.vpn.getStats();
+      return result;
+    }
+
     const response = await fetch(`${API_BASE_URL}/vpn/traffic`, {
       headers: this.getHeaders(),
     });
