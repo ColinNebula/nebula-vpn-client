@@ -28,8 +28,10 @@ const vpnRoutes = require('./routes/vpn');
 const serverRoutes = require('./routes/servers');
 const createUserRouter = require('./routes/user');
 const analyticsRoutes = require('./routes/analytics');
-// Share the users Map so the user router can read/write settings
+const securityRoutes = require('./routes/security');
+// Share the users Map so the user router and analytics router can read/write user data
 const userRoutes = createUserRouter(authRoutes.users);
+const analyticsRouter = analyticsRoutes(authRoutes.users);
 const adminRoutes = require('./routes/admin');
 
 const app = express();
@@ -124,7 +126,8 @@ app.use('/api/auth', authLimiter, bruteForceProtection, authRoutes);
 app.use('/api/vpn', vpnRoutes);
 app.use('/api/servers', serverRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/analytics', analyticsRoutes);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/security', securityRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Error handling (sanitized - don't expose internal errors)

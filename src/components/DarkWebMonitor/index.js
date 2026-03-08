@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DarkWebMonitor.css';
 
-const MOCK_BREACHES = [
-  { id: 1, site: 'DataBreach2023.com',  date: '2023-11-14', exposedData: ['Email', 'Password hash', 'Username'],         severity: 'high',     count: '12M accounts' },
-  { id: 2, site: 'ShopLeaked.net',      date: '2023-08-02', exposedData: ['Email', 'Phone', 'Address'],                  severity: 'medium',   count: '3.4M accounts' },
-  { id: 3, site: 'ForumHack.io',        date: '2022-05-30', exposedData: ['Email', 'Username', 'IP address'],            severity: 'low',      count: '850K accounts' },
-  { id: 4, site: 'CloudDump2024.org',   date: '2024-01-22', exposedData: ['Email', 'Password', 'Payment card data'],     severity: 'critical', count: '45M accounts' },
-  { id: 5, site: 'SocialScrape.info',   date: '2024-03-17', exposedData: ['Email', 'Phone', 'Profile data'],             severity: 'medium',   count: '7.1M accounts' },
-];
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 const SEVERITY_CONFIG = {
   critical: { color: '#d32f2f', bg: 'rgba(211,47,47,0.12)', label: '🚨 Critical', icon: '🚨' },
@@ -27,12 +21,13 @@ const DarkWebMonitor = () => {
   const [showAddForm, setShowAddForm]     = useState(false);
   const [emailError, setEmailError]       = useState('');
 
-  // Auto-scan on mount for demo
+  // Auto-scan monitored emails every 5 minutes
   useEffect(() => {
     if (emails.length > 0 && monitorEnabled) {
       const id = setInterval(() => runScan(emails[0].address, true), 60000 * 5);
       return () => clearInterval(id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emails, monitorEnabled]);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -64,19 +59,23 @@ const DarkWebMonitor = () => {
     if (activeEmail === entry?.address) setActiveEmail(null);
   };
 
-  const runScan = (emailAddress, silent = false) => {
+  const runScan = async (emailAddress, silent = false) => {
     if (!silent) setScanning(true);
-    setTimeout(() => {
-      // Simulate: show 0-3 random breaches based on hash of email string
-      const hash = emailAddress.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-      const count = hash % 4; // 0–3
-      const shuffled = [...MOCK_BREACHES].sort(() => (hash % 3) - 1);
-      const found = shuffled.slice(0, count);
-      setScanResults(prev => ({ ...prev, [emailAddress]: found }));
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/security/breaches?email=${encodeURIComponent(emailAddress)}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Scan failed');
+      setScanResults(prev => ({ ...prev, [emailAddress]: data.breaches }));
       setLastScan(new Date().toLocaleTimeString());
-      if (!silent) setScanning(false);
       if (!activeEmail) setActiveEmail(emailAddress);
-    }, 2200);
+    } catch (err) {
+      setScanResults(prev => ({ ...prev, [emailAddress]: { error: err.message } }));
+    } finally {
+      if (!silent) setScanning(false);
+    }
   };
 
   const getTotalBreaches = () =>

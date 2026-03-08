@@ -1,37 +1,51 @@
 import React, { useState } from 'react';
 import './TwoFactorAuth.css';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
 const TwoFactorAuth = () => {
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [setupStep, setSetupStep] = useState(1);
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
-  const [backupCodes] = useState([
-    'A8X2-9K4L-7P3M',
-    'B5Y7-3N6Q-1R8W',
-    'C9Z4-6M2V-5T1X',
-    'D3W8-4L9K-2P7N',
-    'E7Q1-5V8M-6X3Z',
-    'F2N9-7T4K-8W5L',
-    'G6M3-1P7N-9Q2X',
-    'H8L5-2K9M-3V4Z'
-  ]);
+  const [backupCodes, setBackupCodes] = useState([]);
   const [savedCodes, setSavedCodes] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [secretKey, setSecretKey] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // NOTE: In production, this would be generated server-side for each user
-  // This is a placeholder for UI demonstration only
-  const DEMO_SECRET = 'XXXX-XXXX-XXXX-XXXX'; // Placeholder - generated server-side
-  const qrCodeData = `otpauth://totp/Nebula VPN:user@example.com?secret=${DEMO_SECRET}&issuer=Nebula VPN`;
-  const secretKey = DEMO_SECRET; // Display placeholder - real secret comes from server
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  });
 
-  const handleTwoFAToggle = () => {
+  const handleTwoFAToggle = async () => {
     if (twoFAEnabled) {
       if (window.confirm('Are you sure you want to disable 2FA? This will make your account less secure.')) {
-        setTwoFAEnabled(false);
+        // Reset to step 1 and prompt for current code before disabling
         setSetupStep(1);
+        setTwoFAEnabled(false);
       }
     } else {
-      setTwoFAEnabled(true);
-      setSetupStep(1);
+      setError('');
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/2fa/setup`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Setup failed');
+        setQrDataUrl(data.qrDataUrl);
+        setSecretKey(data.secret);
+        setBackupCodes(data.backupCodes);
+        setTwoFAEnabled(true);
+        setSetupStep(1);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -40,20 +54,30 @@ const TwoFactorAuth = () => {
       const newCode = [...verificationCode];
       newCode[index] = value;
       setVerificationCode(newCode);
-
-      // Auto-focus next input
       if (value && index < 5) {
         document.getElementById(`code-${index + 1}`)?.focus();
       }
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const code = verificationCode.join('');
-    if (code.length === 6) {
-      // Simulate verification
-      alert('2FA setup successful! Your account is now protected.');
+    if (code.length !== 6) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/2fa/verify`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ token: code }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
       setSetupStep(3);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,7 +95,6 @@ const TwoFactorAuth = () => {
 
   const copySecretKey = () => {
     navigator.clipboard.writeText(secretKey);
-    alert('Secret key copied to clipboard!');
   };
 
   return (
@@ -96,10 +119,13 @@ const TwoFactorAuth = () => {
             type="checkbox" 
             checked={twoFAEnabled}
             onChange={handleTwoFAToggle}
+            disabled={loading}
           />
           <span className="toggle-slider"></span>
         </label>
       </div>
+
+      {error && <div className="error-message" style={{ color: '#d32f2f', padding: '0.5rem 1rem' }}>⚠️ {error}</div>}
 
       {twoFAEnabled && (
         <div className="setup-container">
@@ -131,15 +157,10 @@ const TwoFactorAuth = () => {
 
               <div className="qr-code-container">
                 <div className="qr-code-placeholder">
-                  <svg viewBox="0 0 200 200" className="qr-code">
-                    {/* Simplified QR code representation */}
-                    <rect x="0" y="0" width="200" height="200" fill="white"/>
-                    <rect x="10" y="10" width="40" height="40" fill="black"/>
-                    <rect x="150" y="10" width="40" height="40" fill="black"/>
-                    <rect x="10" y="150" width="40" height="40" fill="black"/>
-                    <rect x="70" y="70" width="60" height="60" fill="black"/>
-                    {/* Add more rectangles for QR pattern */}
-                  </svg>
+                  {qrDataUrl
+                    ? <img src={qrDataUrl} alt="2FA QR Code" style={{ width: 200, height: 200 }} />
+                    : <div style={{ width: 200, height: 200, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+                  }
                 </div>
 
                 <div className="manual-entry">
@@ -193,9 +214,9 @@ const TwoFactorAuth = () => {
                 <button 
                   className="verify-btn" 
                   onClick={handleVerify}
-                  disabled={verificationCode.join('').length !== 6}
+                  disabled={verificationCode.join('').length !== 6 || loading}
                 >
-                  Verify Code
+                  {loading ? 'Verifying...' : 'Verify Code'}
                 </button>
               </div>
             </div>

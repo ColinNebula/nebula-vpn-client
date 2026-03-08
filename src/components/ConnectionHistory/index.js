@@ -1,46 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectionHistory.css';
+import apiService from '../../services/api';
 
 const ConnectionHistory = () => {
   const [connections, setConnections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [selectedConnection, setSelectedConnection] = useState(null);
 
-  // Generate mock connection history
   useEffect(() => {
-    const servers = [
-      'New York, USA', 'London, UK', 'Tokyo, Japan', 'Sydney, Australia',
-      'Frankfurt, Germany', 'Singapore', 'Toronto, Canada', 'Paris, France'
-    ];
-
-    const statuses = ['completed', 'active', 'failed', 'disconnected'];
-    const protocols = ['WireGuard', 'OpenVPN', 'IKEv2'];
-
-    const mockConnections = Array.from({ length: 50 }, (_, i) => {
-      const startTime = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
-      const duration = Math.floor(Math.random() * 180) + 5; // 5-185 minutes
-      const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
-      const status = i === 0 ? 'active' : statuses[Math.floor(Math.random() * statuses.length)];
-
-      return {
-        id: `conn-${1000 + i}`,
-        server: servers[Math.floor(Math.random() * servers.length)],
-        protocol: protocols[Math.floor(Math.random() * protocols.length)],
-        status,
-        startTime: startTime.toISOString(),
-        endTime: status === 'active' ? null : endTime.toISOString(),
-        duration: status === 'active' ? 'Ongoing' : `${duration} min`,
-        dataUsed: (Math.random() * 2 + 0.1).toFixed(2),
-        avgSpeed: (Math.random() * 50 + 10).toFixed(1),
-        ip: `${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`,
-        encryption: 'AES-256',
-        exitCode: status === 'failed' ? Math.floor(Math.random() * 10) + 1 : 0
-      };
-    });
-
-    setConnections(mockConnections.sort((a, b) => new Date(b.startTime) - new Date(a.startTime)));
+    apiService.getConnectionHistory()
+      .then(data => setConnections(data.connections || []))
+      .catch(err => setFetchError(err.message || 'Failed to load connection history'))
+      .finally(() => setLoading(false));
   }, []);
 
   const getFilteredConnections = () => {
@@ -149,6 +124,9 @@ const ConnectionHistory = () => {
 
   const stats = getStats();
   const filteredConnections = getFilteredConnections();
+
+  if (loading) return <div className="connection-history" style={{ padding: '2rem', textAlign: 'center' }}>Loading connection history...</div>;
+  if (fetchError) return <div className="connection-history" style={{ padding: '2rem', color: '#d32f2f' }}>⚠️ {fetchError}</div>;
 
   return (
     <div className="connection-history">

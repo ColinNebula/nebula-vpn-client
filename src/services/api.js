@@ -249,6 +249,15 @@ class APIService {
     return this.handleResponse(response);
   }
 
+  async logConnection(entry) {
+    const response = await fetch(`${API_BASE_URL}/analytics/connections`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(entry),
+    });
+    return this.handleResponse(response);
+  }
+
   async getDataUsage() {
     const response = await fetch(`${API_BASE_URL}/analytics/usage`, {
       headers: this.getHeaders(),

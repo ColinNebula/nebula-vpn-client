@@ -1,7 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
 const logger = require('../utils/logger');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -269,6 +273,132 @@ router.post('/oauth', async (req, res) => {
   } catch (error) {
     logger.error('OAuth error:', error);
     res.status(500).json({ error: 'OAuth authentication failed' });
+  }
+});
+
+// ── Two-Factor Authentication ─────────────────────────────────────────────
+
+// Generate a TOTP secret and QR code for setup
+router.post('/2fa/setup', authMiddleware, async (req, res) => {
+  try {
+    const user = users.get(req.user.email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.twoFactorEnabled) {
+      return res.status(400).json({ error: '2FA is already enabled' });
+    }
+
+    const secret = speakeasy.generateSecret({
+      name: `Nebula VPN (${req.user.email})`,
+      issuer: 'Nebula VPN',
+      length: 32,
+    });
+
+    // Store secret temporarily until verified (not yet enabled)
+    user.twoFactorTempSecret = secret.base32;
+
+    const otpauthUrl = secret.otpauth_url;
+    const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
+
+    // Generate backup codes (8 × 10-char random hex codes)
+    const backupCodes = Array.from({ length: 8 }, () =>
+      crypto.randomBytes(5).toString('hex').toUpperCase().match(/.{1,5}/g).join('-')
+    );
+    // Store hashed backup codes
+    user.twoFactorBackupCodes = await Promise.all(
+      backupCodes.map(code => bcrypt.hash(code, 10))
+    );
+
+    logger.info(`2FA setup initiated for ${req.user.email}`);
+
+    res.json({
+      secret: secret.base32,
+      otpauthUrl,
+      qrDataUrl,
+      backupCodes, // shown to user once; hashed version stored above
+    });
+  } catch (error) {
+    logger.error('2FA setup error:', error);
+    res.status(500).json({ error: '2FA setup failed' });
+  }
+});
+
+// Verify a TOTP code to complete 2FA enrollment
+router.post('/2fa/verify', authMiddleware, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token || !/^\d{6}$/.test(token)) {
+      return res.status(400).json({ error: 'A 6-digit verification code is required' });
+    }
+
+    const user = users.get(req.user.email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const secret = user.twoFactorEnabled
+      ? user.twoFactorSecret       // re-verify after enable
+      : user.twoFactorTempSecret;  // first-time setup
+
+    if (!secret) {
+      return res.status(400).json({ error: '2FA setup has not been initiated' });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    // Promote temp secret to permanent
+    user.twoFactorSecret = secret;
+    user.twoFactorEnabled = true;
+    delete user.twoFactorTempSecret;
+
+    logger.info(`2FA enabled for ${req.user.email}`);
+    res.json({ success: true, message: '2FA has been enabled' });
+  } catch (error) {
+    logger.error('2FA verify error:', error);
+    res.status(500).json({ error: '2FA verification failed' });
+  }
+});
+
+// Disable 2FA
+router.post('/2fa/disable', authMiddleware, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token || !/^\d{6}$/.test(token)) {
+      return res.status(400).json({ error: 'Current 2FA code required to disable' });
+    }
+
+    const user = users.get(req.user.email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.twoFactorEnabled) {
+      return res.status(400).json({ error: '2FA is not enabled' });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(400).json({ error: 'Invalid 2FA code' });
+    }
+
+    user.twoFactorEnabled = false;
+    delete user.twoFactorSecret;
+    delete user.twoFactorBackupCodes;
+
+    logger.info(`2FA disabled for ${req.user.email}`);
+    res.json({ success: true, message: '2FA has been disabled' });
+  } catch (error) {
+    logger.error('2FA disable error:', error);
+    res.status(500).json({ error: 'Failed to disable 2FA' });
   }
 });
 
