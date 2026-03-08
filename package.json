@@ -2,11 +2,12 @@
   "name": "nebula-vpn-client",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://ColinNebula.github.io/nebula-vpn-client",
+  "homepage": ".",
   "main": "public/electron.js",
   "author": "ColinNebula",
   "description": "Nebula VPN - Secure, Fast, and Private VPN Client",
   "dependencies": {
+    "@noble/post-quantum": "^0.2.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
@@ -28,11 +29,16 @@
     "electron-build": "npm run build && electron-builder",
     "electron-pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",
+    "generate-icons": "node scripts/generate-icons.js",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:linux": "npm run build && electron-builder --linux",
     "security:audit": "node scripts/security-audit.js",
     "security:prepare": "node scripts/prepare-for-github.js",
     "security:prepare:clean": "node scripts/prepare-for-github.js --clean",
     "security:prepare:fix": "node scripts/prepare-for-github.js --fix",
     "security:check": "npm audit && node scripts/security-audit.js",
+    "security:generate-secrets": "node scripts/generate-secrets.js",
     "precommit": "npm run security:prepare",
     "prepush": "npm run security:check"
   },
@@ -60,6 +66,8 @@
     "electron-builder": "^24.9.1",
     "electron-is-dev": "^2.0.0",
     "gh-pages": "^6.3.0",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5",
     "wait-on": "^7.2.0"
   },
   "build": {
@@ -79,6 +87,7 @@
     },
     "win": {
       "target": [
+        "nsis",
         "portable"
       ],
       "icon": "public/logo512.png"
@@ -89,7 +98,11 @@
         "zip"
       ],
       "category": "public.app-category.utilities",
-      "icon": "public/logo512.png"
+      "icon": "public/logo512.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "linux": {
       "target": [

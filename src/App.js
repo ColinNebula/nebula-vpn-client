@@ -69,6 +69,8 @@ import MainDashboard from './components/MainDashboard';
 import DarkWebMonitor from './components/DarkWebMonitor';
 import IPLeakTest from './components/IPLeakTest';
 import ConnectionProfiles from './components/ConnectionProfiles';
+import WarrantCanary from './components/WarrantCanary';
+import TransparencyReport from './components/TransparencyReport';
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
@@ -911,6 +913,12 @@ function App() {
         >
           ⚙️ Settings
         </button>
+        <button
+          className={`tab ${activeTab === 'trust' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trust')}
+        >
+          🏛️ Trust
+        </button>
       </nav>
       </div>
       
@@ -1580,6 +1588,33 @@ function App() {
               settings={settings}
               onSettingsChange={handleSettingsChange}
             />
+          )}
+
+          {activeTab === 'trust' && (
+            <div className="analytics-section">
+              <div className="analytics-tabs">
+                <button
+                  className={`analytics-tab ${!window.trustSubTab || window.trustSubTab === 'canary' ? 'active' : ''}`}
+                  onClick={() => { window.trustSubTab = 'canary'; setActiveTab('trust'); }}
+                >
+                  🕊️ Warrant Canary
+                </button>
+                <button
+                  className={`analytics-tab ${window.trustSubTab === 'transparency' ? 'active' : ''}`}
+                  onClick={() => { window.trustSubTab = 'transparency'; setActiveTab('trust'); }}
+                >
+                  🏛️ Transparency Report
+                </button>
+              </div>
+              <div className="analytics-content">
+                {(!window.trustSubTab || window.trustSubTab === 'canary') && (
+                  <WarrantCanary />
+                )}
+                {window.trustSubTab === 'transparency' && (
+                  <TransparencyReport />
+                )}
+              </div>
+            </div>
           )}
           
           <div className="control-section">

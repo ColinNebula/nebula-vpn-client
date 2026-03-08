@@ -13,6 +13,12 @@ const ALLOWED_INVOKE_CHANNELS = [
   'vpn-disconnect',
   'vpn-stats',
   'vpn-kill-switch',
+  'vpn-split-tunnel-enable',
+  'vpn-split-tunnel-disable',
+  'vpn-doh-start',
+  'vpn-doh-stop',
+  'vpn-obfuscation-start',
+  'vpn-obfuscation-stop',
   'get-system-info',
   'set-auto-launch',
   'get-app-version',
@@ -162,7 +168,65 @@ contextBridge.exposeInMainWorld('electron', {
     },
     onStatusChange: (callback) => secureOn('vpn-status-changed', callback),
     onQuickConnect: (callback) => secureOn('vpn-quick-connect', callback),
-    onDisconnect: (callback) => secureOn('vpn-disconnect', callback)
+    onDisconnect: (callback) => secureOn('vpn-disconnect', callback),
+
+    /**
+     * Enable per-application VPN bypass (split tunneling).
+     * @param {Array<{id:string, name:string, execPath?:string}>} apps
+     */
+    enableSplitTunnel: (apps) => {
+      if (!Array.isArray(apps)) return Promise.reject(new Error('apps must be an array'));
+      // Sanitize: only keep safe scalar fields
+      const safeApps = apps.map(a => ({
+        id:       String(a.id   || '').slice(0, 64),
+        name:     String(a.name || '').slice(0, 100),
+        execPath: typeof a.execPath === 'string' ? a.execPath.slice(0, 260) : undefined,
+      }));
+      return secureInvoke('vpn-split-tunnel-enable', { apps: safeApps });
+    },
+
+    disableSplitTunnel: () => secureInvoke('vpn-split-tunnel-disable'),
+
+    /**
+     * Start DNS-over-HTTPS or DNS-over-TLS proxy.
+     * @param {{ url?: string, mode?: 'doh'|'dot', dotHost?: string, dotPort?: number }} cfg
+     */
+    startDoh: (cfg = {}) => {
+      const safe = {
+        url:     typeof cfg.url     === 'string'  ? cfg.url.slice(0, 200)       : 'https://1.1.1.1/dns-query',
+        mode:    ['doh', 'dot'].includes(cfg.mode) ? cfg.mode                    : 'doh',
+        dotHost: typeof cfg.dotHost === 'string'  ? cfg.dotHost.slice(0, 100)   : '1.1.1.1',
+        dotPort: Number.isInteger(cfg.dotPort)    ? Math.max(1, Math.min(65535, cfg.dotPort)) : 853,
+      };
+      return secureInvoke('vpn-doh-start', safe);
+    },
+
+    stopDoh: () => secureInvoke('vpn-doh-stop'),
+
+    /**
+     * Start Shadowsocks obfuscation relay.
+     * @param {{ ssServer:string, ssPort:number, password:string, method?:string,
+     *           wgServer:string, wgPort:number, localPort?:number }} cfg
+     */
+    startObfuscation: (cfg) => {
+      if (!cfg || typeof cfg !== 'object') return Promise.reject(new Error('cfg required'));
+      if (typeof cfg.ssServer !== 'string' || typeof cfg.password !== 'string') {
+        return Promise.reject(new Error('ssServer and password are required'));
+      }
+      const safe = {
+        ssServer:  cfg.ssServer.slice(0, 253),
+        ssPort:    Math.max(1, Math.min(65535, Number(cfg.ssPort)  || 8388)),
+        password:  cfg.password,                // handled server-side, no UI display
+        method:    String(cfg.method  || 'aes-256-gcm').slice(0, 30),
+        wgServer:  String(cfg.wgServer || '').slice(0, 253),
+        wgPort:    Math.max(1, Math.min(65535, Number(cfg.wgPort)  || 51820)),
+        localPort: Math.max(1024, Math.min(65535, Number(cfg.localPort) || 51821)),
+        ssLocalPath: typeof cfg.ssLocalPath === 'string' ? cfg.ssLocalPath.slice(0, 260) : undefined,
+      };
+      return secureInvoke('vpn-obfuscation-start', safe);
+    },
+
+    stopObfuscation: () => secureInvoke('vpn-obfuscation-stop'),
   },
 
   // System info - read-only access

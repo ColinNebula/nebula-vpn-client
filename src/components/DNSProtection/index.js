@@ -26,38 +26,62 @@ const DNSProtection = ({ isConnected }) => {
     { id: 'custom', name: 'Custom DNS', dns1: 'Custom', dns2: 'Custom', secure: false }
   ];
 
-  // NOTE: This test is a UI demonstration only. It checks whether the OS-level
-  // DNS is overridden to the VPN servers (set by the Electron tunnel manager)
-  // but does NOT send real DNS probe packets to an external service. A full
-  // real-time probe requires integration with an external leak-test API
-  // (e.g. dnsleaktest.com) and should be added before shipping to production.
-  const runLeakTest = () => {
+  /**
+   * Real DNS-leak test using bash.ws (same backend as ipleak.net).
+   * Triggers DNS queries from the browser then asks the server which
+   * resolvers answered — those are the user's active DNS servers.
+   */
+  const runLeakTest = async () => {
     setLeakTest({ ...leakTest, testing: true });
-    
-    // Determine leak status based on actual VPN connection state rather than
-    // random chance — DNS is protected when VPN is active and the OS DNS has
-    // been overridden by the tunnel manager.
-    setTimeout(() => {
-      const hasLeak = !isConnected; // real DNS leak possible only when VPN is off
-      const detectedDNS = hasLeak 
-        ? ['192.168.1.1', '75.75.75.75']
-        : [
-            dnsProviders.find(p => p.id === dnsSettings.provider)?.dns1 || '1.1.1.1',
-            dnsProviders.find(p => p.id === dnsSettings.provider)?.dns2 || '1.0.0.1'
-          ];
-      
+    try {
+      const id = (typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID().replace(/-/g, '')
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+      // Trigger DNS lookups through the browser's resolver
+      await Promise.allSettled(
+        Array.from({ length: 6 }, (_, i) =>
+          fetch(`https://${id}.${i}.bash.ws`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {})
+        )
+      );
+      await new Promise(r => setTimeout(r, 2500));
+
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 8000);
+      const resp = await fetch(`https://bash.ws/dnsleak/test/${id}?json`, { signal: ctrl.signal });
+      const data = resp.ok ? await resp.json() : [];
+      const servers = Array.isArray(data) ? data : [];
+
+      const trustedDNS = ['1.1.1.1', '1.0.0.1', '9.9.9.9', '149.112.112.112',
+                          '8.8.8.8', '8.8.4.4', '208.67.222.222', '208.67.220.220'];
+      const hasLeak = servers.length > 0 &&
+        servers.some(d => d.ip && !trustedDNS.some(t => d.ip === t || d.ip.startsWith(t)));
+
       setLeakTest({
         testing: false,
         lastTest: new Date().toLocaleString(),
         results: {
           leakDetected: hasLeak,
-          dnsServers: detectedDNS,
-          location: hasLeak ? 'ISP DNS Server' : 'VPN DNS Server',
+          dnsServers: servers.length > 0
+            ? servers.map(d => `${d.ip}${d.country_name ? ` (${d.country_name})` : ''}`)
+            : ['No DNS servers detected — try again'],
+          location: hasLeak ? 'ISP / Unknown DNS Server' : 'Trusted DNS Server',
           secure: !hasLeak,
-          simulated: true, // flag so UI can show disclaimer
-        }
+        },
       });
-    }, 2000);
+    } catch (err) {
+      setLeakTest({
+        testing: false,
+        lastTest: new Date().toLocaleString(),
+        results: {
+          leakDetected: false,
+          dnsServers: ['Test failed — check connection'],
+          location: 'Unknown',
+          secure: false,
+          error: err.message,
+        },
+      });
+    }
   };
 
   return (

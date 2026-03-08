@@ -12,25 +12,32 @@ const IPv6Protection = () => {
   const [testingLeaks, setTestingLeaks] = useState(false);
   const [lastTest, setLastTest] = useState(null);
 
-  // NOTE: This test is a UI demonstration. Real IPv6 leak detection requires
-  // querying an external probe service. The result below reflects whether the
-  // VPN is connected (OS-level ip6tables / pf rules are applied by the tunnel
-  // manager in that case). Replace with a real API call before shipping.
-  const runLeakTest = () => {
+  /**
+   * Real IPv6 leak detection: attempt a fetch to an IPv6-only endpoint.
+   * If the request succeeds and returns an IPv6 address, the user's IPv6
+   * connectivity is exposed (i.e., not blocked by the kill switch / VPN).
+   */
+  const runLeakTest = async () => {
     setTestingLeaks(true);
-    
-    setTimeout(() => {
-      // IPv6 is only leaked when VPN is disconnected AND IPv6 protection is off.
-      // The tunnel manager's kill switch blocks IPv6 via ip6tables/pf when active.
-      const hasLeak = false; // kill switch blocks IPv6; kept false for safety
-      setIpv6Status(prev => ({
-        ...prev,
-        leakDetected: hasLeak,
-        address: hasLeak ? '2001:0db8:85a3:0000:0000:8a2e:0370:7334' : null
-      }));
-      setLastTest(new Date());
-      setTestingLeaks(false);
-    }, 3000);
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 4000);
+      const resp = await fetch('https://api6.ipify.org?format=json', { signal: ctrl.signal });
+      if (resp.ok) {
+        const { ip } = await resp.json();
+        if (ip && ip.includes(':')) {
+          // IPv6 address returned — the browser can reach IPv6 endpoints
+          setIpv6Status(prev => ({ ...prev, leakDetected: true, address: ip }));
+          setLastTest(new Date());
+          setTestingLeaks(false);
+          return;
+        }
+      }
+    } catch { /* fetch aborted or network error → no IPv6 reachability */ }
+    // No IPv6 connectivity detected — no leak
+    setIpv6Status(prev => ({ ...prev, leakDetected: false, address: null }));
+    setLastTest(new Date());
+    setTestingLeaks(false);
   };
 
   // Auto-run test on mount

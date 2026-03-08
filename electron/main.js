@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, autoUpdater, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, autoUpdater, dialog, session } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
-const WireGuardTunnel = require('./vpn-tunnel');
+const { WireGuardTunnel } = require('./vpn-tunnel');
+const PqcHandshake        = require('./pqc-handshake');
 
 // One tunnel instance for the lifetime of the app
 const tunnel = new WireGuardTunnel();
@@ -22,6 +23,9 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      devTools: isDev,            // DevTools disabled in production builds
       preload: path.join(__dirname, 'preload.js'),
       // Prevent WebRTC from enumerating local network interfaces, which would
       // expose the user's real LAN/WAN IP even when the VPN tunnel is active.
@@ -31,6 +35,23 @@ function createWindow() {
     show: false, // Don't show until ready
     frame: true,
     titleBarStyle: 'default'
+  });
+
+  // Security: block renderer from navigating to untrusted origins
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const trusted = isDev
+      ? url.startsWith('http://localhost:3000')
+      : url.startsWith(`file://${path.join(__dirname, '../build')}`);
+    if (!trusted) {
+      event.preventDefault();
+      console.warn(`[Security] Blocked renderer navigation to: ${url}`);
+    }
+  });
+
+  // Security: deny all window.open() / target="_blank" attempts from renderer
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.warn(`[Security] Blocked window.open() request to: ${url}`);
+    return { action: 'deny' };
   });
 
   // Load the app
@@ -132,19 +153,39 @@ ipcMain.on('vpn-status-changed', (event, status) => {
 
 // Handle VPN connection request from renderer
 ipcMain.handle('vpn-connect', async (event, { serverId, protocol, token, killSwitch }) => {
+  const pqc = new PqcHandshake();
+
   try {
     const apiBase = process.env.API_URL || 'http://localhost:3001/api';
 
-    // Step 1 – generate keys in main process and get peer config from API server
+    // Step 1 – generate WireGuard X25519 keypair in main process
     const keyPair = tunnel.generateKeyPair();
 
+    // Step 2 – attempt PQC ML-KEM-768 keypair generation (FIPS 203)
+    let pqcEncapKeyB64 = null;
+    if (pqc.available) {
+      try {
+        ({ encapKeyB64: pqcEncapKeyB64 } = pqc.generateKeypair());
+      } catch (e) {
+        console.warn('[IPC vpn-connect] PQC keypair gen failed (degrading):', e.message);
+      }
+    }
+
+    // Step 3 – fetch peer config from API server, including PQC encap key
     const res = await fetch(`${apiBase}/vpn/connect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ serverId, protocol: protocol || 'wireguard', clientPublicKey: keyPair.publicKey }),
+      body: JSON.stringify({
+        serverId,
+        protocol:        protocol || 'wireguard',
+        clientPublicKey: keyPair.publicKey,
+        // PQC fields — server may ignore if it doesn't support PQC yet
+        pqcEncapKey:     pqcEncapKeyB64,
+        pqcAlgorithm:    pqcEncapKeyB64 ? 'ml-kem-768' : null,
+      }),
     });
 
     if (!res.ok) {
@@ -152,27 +193,54 @@ ipcMain.handle('vpn-connect', async (event, { serverId, protocol, token, killSwi
       throw new Error(err.error || `API returned ${res.status}`);
     }
 
-    const { serverPublicKey, serverEndpoint, assignedIP, dns } = await res.json();
+    const {
+      serverPublicKey, serverEndpoint, assignedIP, dns,
+      // Optional PQC response: server encapsulates using our encapKey
+      pqcCiphertext,
+    } = await res.json();
 
-    // Inject the pre-generated private key so tunnel.connect() uses it
+    // Step 4 – derive hybrid PSK if server returned a PQC ciphertext
+    let hybridPSK = null;
+    if (pqcCiphertext && pqcEncapKeyB64) {
+      try {
+        hybridPSK = pqc.deriveHybridPSK(pqcCiphertext, keyPair.publicKey);
+        console.log('[IPC vpn-connect] PQC hybrid PSK derived (ML-KEM-768 + HKDF-SHA256)');
+      } catch (e) {
+        console.warn('[IPC vpn-connect] PQC PSK derivation failed (degrading):', e.message);
+      }
+    }
+
+    // Step 5 – inject the pre-generated private key so tunnel.connect() uses it
     tunnel.keyPair = keyPair;
 
-    // Step 2 – bring up the actual WireGuard tunnel
+    // Step 6 – bring up the actual WireGuard tunnel
     const result = await tunnel.connect({
       serverPublicKey,
       serverEndpoint,
       assignedIP,
       dns,
       enableKillSwitch: !!killSwitch,
+      presharedKey:     hybridPSK, // null when server doesn't support PQC yet
     });
 
     // Update tray tooltip
-    if (tray) tray.setToolTip(`Nebula VPN – Connected (${assignedIP})`);
+    if (tray) {
+      const pqcLabel = hybridPSK ? ' + PQC' : '';
+      tray.setToolTip(`Nebula VPN – Connected (${assignedIP}${pqcLabel})`);
+    }
 
-    return { success: true, ip: result.assignedIP, publicKey: result.publicKey };
+    return {
+      success:    true,
+      ip:         result.assignedIP,
+      publicKey:  result.publicKey,
+      pqcEnabled: !!hybridPSK,
+    };
   } catch (err) {
     console.error('[IPC vpn-connect] Error:', err.message);
     return { success: false, error: err.message };
+  } finally {
+    // Always wipe PQC secret key from memory after use
+    pqc.wipe();
   }
 });
 
@@ -219,6 +287,132 @@ ipcMain.handle('vpn-kill-switch', async (event, { enable, serverIP }) => {
     return { success: true, active: tunnel.killSwitchActive };
   } catch (err) {
     console.error('[IPC vpn-kill-switch] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ── Split tunneling ──────────────────────────────────────────────────────
+
+/**
+ * Enable per-app VPN bypass.
+ * @param {{ apps: Array<{id:string, name:string, execPath?:string}> }} payload
+ */
+ipcMain.handle('vpn-split-tunnel-enable', async (event, payload) => {
+  try {
+    const apps = JSON.parse(JSON.stringify(payload?.apps ?? []));
+    if (!tunnel._splitTunnel) {
+      const { SplitTunnelManager } = require('./vpn-tunnel');
+      tunnel._splitTunnel = new SplitTunnelManager(process.platform, 'nebula0');
+    }
+    await tunnel._splitTunnel.enable(apps);
+    return { success: true, active: true, apps: apps.length };
+  } catch (err) {
+    console.error('[IPC vpn-split-tunnel-enable] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('vpn-split-tunnel-disable', async () => {
+  try {
+    if (tunnel._splitTunnel?.active) {
+      await tunnel._splitTunnel.disable();
+    }
+    tunnel._splitTunnel = null;
+    return { success: true, active: false };
+  } catch (err) {
+    console.error('[IPC vpn-split-tunnel-disable] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ── DNS-over-HTTPS / DoT proxy ──────────────────────────────────────────
+
+/**
+ * Start local DoH/DoT proxy and redirect system DNS through it.
+ * @param {{ url: string, mode?: 'doh'|'dot', dotHost?: string, dotPort?: number }} payload
+ */
+ipcMain.handle('vpn-doh-start', async (event, payload) => {
+  try {
+    const { url = 'https://1.1.1.1/dns-query', mode = 'doh',
+            dotHost = '1.1.1.1', dotPort = 853 } = JSON.parse(JSON.stringify(payload ?? {}));
+    if (!tunnel._dohProxy) {
+      const { DohProxy } = require('./vpn-tunnel');
+      tunnel._dohProxy = new DohProxy();
+    }
+    if (!tunnel._dohProxy.active) {
+      await tunnel._dohProxy.start(url, mode, dotHost, dotPort);
+      if (tunnel._dohProxy.port !== 53) {
+        await tunnel._dohProxy.applyNatRedirect(process.platform);
+      }
+      // Override system DNS to point at the local proxy
+      await tunnel.setDNS([tunnel._dohProxy.host]).catch(() => {});
+    }
+    return { success: true, active: true, host: tunnel._dohProxy.host, port: tunnel._dohProxy.port };
+  } catch (err) {
+    console.error('[IPC vpn-doh-start] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('vpn-doh-stop', async () => {
+  try {
+    if (tunnel._dohProxy?.active) {
+      if (tunnel._dohProxy.port !== 53) {
+        await tunnel._dohProxy.removeNatRedirect(process.platform).catch(() => {});
+      }
+      tunnel._dohProxy.stop();
+    }
+    tunnel._dohProxy = null;
+    // Restore DNS to the tunnel's assigned DNS (if still connected)
+    if (tunnel.connected) {
+      await tunnel.restoreDNS().catch(() => {});
+    }
+    return { success: true, active: false };
+  } catch (err) {
+    console.error('[IPC vpn-doh-stop] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ── Shadowsocks obfuscation relay ────────────────────────────────────────
+
+/**
+ * Start Shadowsocks relay.  The VPN must be reconnected after this for the
+ * new (obfuscated) endpoint to take effect.
+ * @param {{ ssServer:string, ssPort:number, password:string, method?:string,
+ *           wgServer:string, wgPort:number, localPort?:number,
+ *           ssLocalPath?:string }} payload
+ */
+ipcMain.handle('vpn-obfuscation-start', async (event, payload) => {
+  try {
+    const cfg = JSON.parse(JSON.stringify(payload ?? {}));
+    if (!tunnel._ssRelay) {
+      const { ShadowsocksRelay } = require('./vpn-tunnel');
+      tunnel._ssRelay = new ShadowsocksRelay();
+    }
+    if (!tunnel._ssRelay.active) {
+      await tunnel._ssRelay.start(cfg);
+    }
+    return {
+      success:          true,
+      active:           true,
+      tunneledEndpoint: tunnel._ssRelay.tunneledEndpoint,
+    };
+  } catch (err) {
+    console.error('[IPC vpn-obfuscation-start] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('vpn-obfuscation-stop', async () => {
+  try {
+    if (tunnel._ssRelay?.active) {
+      tunnel._ssRelay.stop();
+    }
+    tunnel._ssRelay = null;
+    return { success: true, active: false };
+  } catch (err) {
+    console.error('[IPC vpn-obfuscation-stop] Error:', err.message);
     return { success: false, error: err.message };
   }
 });
@@ -302,6 +496,34 @@ if (!isDev) {
 
   autoUpdater.on('error', (err) => {
     console.error('[autoUpdater] Error:', err.message);
+  });
+}
+
+// Security: inject strict Content-Security-Policy for production file:// content
+if (!isDev) {
+  app.on('ready', () => {
+    const apiOrigin = (process.env.API_URL || 'http://localhost:3001').replace(/\/api$/, '');
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            `default-src 'self' file:; ` +
+            `script-src 'self' 'unsafe-inline' file:; ` +
+            `style-src 'self' 'unsafe-inline' file:; ` +
+            `img-src 'self' data: blob: file:; ` +
+            `font-src 'self' data: file:; ` +
+            `connect-src 'self' file: ${apiOrigin}; ` +
+            `object-src 'none'; ` +
+            `frame-ancestors 'none'; ` +
+            `base-uri 'none';`
+          ],
+          // Remove headers that leak information
+          'X-Powered-By': [],
+          'Server': [],
+        }
+      });
+    });
   });
 }
 

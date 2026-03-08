@@ -1,65 +1,200 @@
 import React, { useState, useCallback } from 'react';
 import './IPLeakTest.css';
 
-const SIMULATED_REAL_IP   = '203.0.113.42';     // RFC 5737 documentation range
-const SIMULATED_REAL_ISP  = 'InternetXYZ Corp';
-const SIMULATED_REAL_LOC  = 'Sydney, AU';
-const SIMULATED_VPN_IP    = '185.220.101.12';
-const SIMULATED_VPN_LOC   = 'Frankfurt, DE';
-const SIMULATED_VPN_ISP   = 'Nebula VPN';
+// ── Real probe helpers ────────────────────────────────────────────────────────
 
-const DNS_SERVERS_CLEAN   = ['103.86.96.100 (Nebula)', '103.86.99.100 (Nebula)'];
-const DNS_SERVERS_LEAKED  = ['203.0.113.1 (InternetXYZ)', '203.0.113.2 (InternetXYZ)'];
+/** AbortSignal with a timeout (works in all supported runtimes). */
+function abortAfter(ms) {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
 
-const delay = (ms) => new Promise(res => setTimeout(res, ms));
+/** Fetch public IP + ISP + location from ipapi.co (CORS-enabled, free tier). */
+async function fetchIPInfo() {
+  const resp = await fetch('https://ipapi.co/json/', {
+    headers: { Accept: 'application/json' },
+    signal: abortAfter(8000),
+  });
+  if (!resp.ok) throw new Error(`IP lookup returned ${resp.status}`);
+  return resp.json();
+}
+
+/**
+ * Detect public IPs exposed via WebRTC by creating an offer/answer exchange
+ * against a STUN server and harvesting ICE candidates.
+ * Returns an array of unique IP strings.
+ */
+async function detectWebRTCIPs() {
+  if (typeof RTCPeerConnection === 'undefined') return [];
+  return new Promise((resolve) => {
+    const ips = new Set();
+    const pc  = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    pc.createDataChannel('');
+    pc.createOffer()
+      .then(offer => pc.setLocalDescription(offer))
+      .catch(() => resolve([]));
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) { pc.close(); resolve([...ips]); return; }
+      const m = /([0-9]{1,3}(?:\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+      if (m) ips.add(m[1]);
+    };
+    // Resolve after 5 s even if gathering isn't complete
+    setTimeout(() => { pc.close(); resolve([...ips]); }, 5000);
+  });
+}
+
+/**
+ * DNS-leak test via bash.ws (the same backend used by ipleak.net).
+ * Triggers DNS queries from the browser, then asks bash.ws which resolvers
+ * answered — those are the user's active DNS servers.
+ * Returns an array of { ip, country_name } objects.
+ */
+async function runDNSLeakProbe() {
+  try {
+    const id = (typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID().replace(/-/g, '')
+      : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+    // Trigger 6 DNS lookups to bash.ws infrastructure
+    await Promise.allSettled(
+      Array.from({ length: 6 }, (_, i) =>
+        fetch(`https://${id}.${i}.bash.ws`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {})
+      )
+    );
+    // Allow time for resolver results to be logged server-side
+    await new Promise(r => setTimeout(r, 2500));
+
+    const resp = await fetch(`https://bash.ws/dnsleak/test/${id}?json`, {
+      signal: abortAfter(8000),
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Attempt a fetch to an IPv6-only endpoint.
+ * If it succeeds and returns an IPv6 address the user's IPv6 is exposed.
+ */
+async function detectIPv6() {
+  try {
+    const resp = await fetch('https://api6.ipify.org?format=json', {
+      signal: abortAfter(4000),
+    });
+    if (resp.ok) {
+      const { ip } = await resp.json();
+      if (ip && ip.includes(':')) return { leaked: true, address: ip };
+    }
+  } catch { /* no IPv6 reachability — no leak */ }
+  return { leaked: false, address: null };
+}
+
+/** True for RFC-1918 / link-local / loopback addresses. */
+function isPrivateIP(ip) {
+  return /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|169\.254\.)/.test(ip);
+}
+
+/**
+ * Returns true if `ip` belongs to a known VPN or privacy-friendly DNS provider.
+ * Adjust this list to match the DNS servers configured in your WireGuard setup.
+ */
+function isExpectedDNS(ip) {
+  const trusted = [
+    '1.1.1.1', '1.0.0.1',           // Cloudflare (default Nebula DNS)
+    '9.9.9.9', '149.112.112.112',   // Quad9
+    '8.8.8.8', '8.8.4.4',           // Google
+    '208.67.222.222', '208.67.220.220', // OpenDNS
+  ];
+  return trusted.some(t => ip === t || ip.startsWith(t));
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 const IPLeakTest = ({ isConnected }) => {
-  const [status, setStatus]     = useState('idle'); // idle | running | done
-  const [results, setResults]   = useState(null);
-  const [progress, setProgress] = useState(0);
+  const [status, setStatus]         = useState('idle'); // idle | running | done | error
+  const [results, setResults]       = useState(null);
+  const [progress, setProgress]     = useState(0);
   const [currentStep, setCurrentStep] = useState('');
+  const [errorMsg, setErrorMsg]     = useState('');
 
   const runTest = useCallback(async () => {
     setStatus('running');
     setResults(null);
+    setErrorMsg('');
     setProgress(0);
 
-    const steps = [
-      { label: 'Detecting your real IP address…',      pct: 15, ms: 700 },
-      { label: 'Checking VPN tunnel IP…',              pct: 30, ms: 600 },
-      { label: 'Testing DNS leak…',                    pct: 50, ms: 900 },
-      { label: 'Checking WebRTC leak…',                pct: 70, ms: 700 },
-      { label: 'IPv6 leak detection…',                 pct: 85, ms: 600 },
-      { label: 'Analysing results…',                   pct: 100, ms: 500 },
-    ];
+    try {
+      // Step 1: Public IP
+      setCurrentStep('Detecting your public IP address…');
+      setProgress(10);
+      const ipData = await fetchIPInfo();
+      setProgress(25);
 
-    for (const step of steps) {
-      setCurrentStep(step.label);
-      await delay(step.ms);
-      setProgress(step.pct);
+      // Step 2: WebRTC
+      setCurrentStep('Checking WebRTC for IP leaks…');
+      const webRtcIPs = await detectWebRTCIPs();
+      setProgress(50);
+
+      // Step 3: DNS
+      setCurrentStep('Testing DNS resolvers for leaks…');
+      const dnsServers = await runDNSLeakProbe();
+      setProgress(75);
+
+      // Step 4: IPv6
+      setCurrentStep('Checking IPv6 exposure…');
+      const ipv6Result = await detectIPv6();
+      setProgress(90);
+
+      // ── Analyse ──
+      setCurrentStep('Analysing results…');
+      const publicIP = ipData.ip || 'Unknown';
+
+      // WebRTC leak: any non-private IP found via RTCPeerConnection
+      const webRtcLeakedIPs = webRtcIPs.filter(ip => !isPrivateIP(ip));
+      const webRtcLeaked    = webRtcLeakedIPs.length > 0;
+
+      // DNS leak: any returned resolver is NOT a known VPN/trusted DNS
+      const dnsLeaked = dnsServers.length > 0 &&
+        dnsServers.some(d => d.ip && !isExpectedDNS(d.ip));
+
+      const ipv6Leaked  = ipv6Result.leaked;
+      const ipv6Address = ipv6Result.address;
+
+      const leakCount = [webRtcLeaked, dnsLeaked, ipv6Leaked].filter(Boolean).length;
+      const score     = Math.max(0, 100 - leakCount * 25 - (!isConnected ? 25 : 0));
+
+      setProgress(100);
+      setResults({
+        visibleIP:  publicIP,
+        visibleISP: ipData.org     || 'Unknown ISP',
+        visibleLoc: [ipData.city, ipData.country_name].filter(Boolean).join(', ') || 'Unknown',
+        // Legacy field names kept for JSX compatibility
+        realIP:  publicIP,
+        realISP: ipData.org     || 'Unknown ISP',
+        realLoc: [ipData.city, ipData.country_name].filter(Boolean).join(', ') || 'Unknown',
+        vpnIP:   publicIP,
+        vpnLoc:  [ipData.city, ipData.country_name].filter(Boolean).join(', ') || 'Unknown',
+        vpnISP:  ipData.org     || 'Unknown ISP',
+        dnsLeaked,
+        dnsServers: dnsServers.map(d =>
+          `${d.ip}${d.country_name ? ` (${d.country_name})` : ''}`
+        ),
+        webRtcLeaked,
+        webRtcIP: webRtcLeakedIPs[0] || null,
+        ipv6Leaked,
+        ipv6Address,
+        score,
+      });
+      setStatus('done');
+    } catch (err) {
+      console.error('[IPLeakTest] test failed:', err);
+      setErrorMsg(err.message || 'Test failed — check your connection and try again.');
+      setStatus('error');
     }
-
-    // Simulate results — when connected VPN is clean; when not, leaks may appear.
-    const webRtcLeaked = !isConnected; // WebRTC always leaks when disconnected
-    const dnsLeaked    = !isConnected;
-    const ipv6Leaked   = false;        // kill switch handles IPv6
-
-    setResults({
-      realIP:      SIMULATED_REAL_IP,
-      realISP:     SIMULATED_REAL_ISP,
-      realLoc:     SIMULATED_REAL_LOC,
-      vpnIP:       isConnected ? SIMULATED_VPN_IP    : SIMULATED_REAL_IP,
-      vpnLoc:      isConnected ? SIMULATED_VPN_LOC   : SIMULATED_REAL_LOC,
-      vpnISP:      isConnected ? SIMULATED_VPN_ISP   : SIMULATED_REAL_ISP,
-      dnsLeaked,
-      dnsServers:  dnsLeaked ? DNS_SERVERS_LEAKED : DNS_SERVERS_CLEAN,
-      webRtcLeaked,
-      webRtcIP:    webRtcLeaked ? SIMULATED_REAL_IP : null,
-      ipv6Leaked,
-      ipv6Address: ipv6Leaked ? '2001:db8::1' : null,
-      score:       isConnected ? 100 : 45,
-    });
-    setStatus('done');
     setCurrentStep('');
   }, [isConnected]);
 
@@ -221,6 +356,14 @@ const IPLeakTest = ({ isConnected }) => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Error state */}
+      {status === 'error' && (
+        <div className="ilt-idle">
+          <div className="ilt-idle-icon">⚠️</div>
+          <p style={{ color: '#d32f2f' }}>{errorMsg}</p>
         </div>
       )}
 
