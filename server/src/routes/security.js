@@ -97,4 +97,55 @@ router.get('/breaches', authMiddleware, (req, res) => {
   hibpReq.end();
 });
 
+// ── IP info proxy — avoids CORS and mixed-content issues on the client ──────
+// No auth required: the caller's own IP is always what's returned.
+// Rate-limit is handled by the global Express limiter in index.js.
+router.get('/ip-info', (req, res) => {
+  // ipwho.is: free, HTTPS, CORS-enabled, 10k req/month
+  const options = {
+    hostname: 'ipwho.is',
+    path: '/',
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      // Forward the real client IP so ipwho.is returns the client's info,
+      // not the server's IP.
+      'X-Forwarded-For': req.ip || req.headers['x-forwarded-for'] || '',
+    },
+  };
+
+  const proxyReq = https.request(options, (proxyRes) => {
+    let body = '';
+    proxyRes.on('data', chunk => { body += chunk; });
+    proxyRes.on('end', () => {
+      if (proxyRes.statusCode !== 200) {
+        return res.status(502).json({ error: 'IP lookup service unavailable' });
+      }
+      try {
+        const d = JSON.parse(body);
+        res.json({
+          ip:           d.ip           || null,
+          org:          d.connection?.isp || d.org || null,
+          city:         d.city         || null,
+          country_name: d.country      || null,
+        });
+      } catch {
+        res.status(502).json({ error: 'Invalid response from IP lookup service' });
+      }
+    });
+  });
+
+  proxyReq.on('error', (err) => {
+    logger.error('IP info proxy error:', err);
+    res.status(502).json({ error: 'Failed to reach IP lookup service' });
+  });
+
+  proxyReq.setTimeout(8000, () => {
+    proxyReq.destroy();
+    res.status(504).json({ error: 'IP lookup timed out' });
+  });
+
+  proxyReq.end();
+});
+
 module.exports = router;

@@ -10,14 +10,40 @@ function abortAfter(ms) {
   return ctrl.signal;
 }
 
-/** Fetch public IP + ISP + location from ipapi.co (CORS-enabled, free tier). */
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
+/**
+ * Fetch public IP + ISP + location.
+ * Primary:  our own backend proxy (/api/security/ip-info) — avoids CORS and
+ *           mixed-content blocks entirely.
+ * Fallback: ipwho.is directly over HTTPS (free, CORS-enabled, no key needed).
+ */
 async function fetchIPInfo() {
-  const resp = await fetch('https://ipapi.co/json/', {
+  // Primary: backend proxy
+  try {
+    const resp = await fetch(`${API_BASE_URL}/security/ip-info`, {
+      signal: abortAfter(8000),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.ip) return data;
+    }
+  } catch { /* fall through to direct call */ }
+
+  // Fallback: ipwho.is — HTTPS, CORS-enabled, 10k req/month free
+  const resp = await fetch('https://ipwho.is/', {
     headers: { Accept: 'application/json' },
     signal: abortAfter(8000),
   });
   if (!resp.ok) throw new Error(`IP lookup returned ${resp.status}`);
-  return resp.json();
+  const d = await resp.json();
+  if (!d.ip) throw new Error('IP lookup returned no data');
+  return {
+    ip:           d.ip,
+    org:          d.connection?.isp || d.org || null,
+    city:         d.city            || null,
+    country_name: d.country         || null,
+  };
 }
 
 /**
@@ -45,24 +71,54 @@ async function detectWebRTCIPs() {
 }
 
 /**
- * DNS-leak test via bash.ws (the same backend used by ipleak.net).
- * Triggers DNS queries from the browser, then asks bash.ws which resolvers
- * answered — those are the user's active DNS servers.
+ * DNS-leak test.
+ * Primary:  dnsleaktest.com API — works reliably on iOS Safari.
+ * Fallback: bash.ws — fewer restrictions but occasionally blocked.
  * Returns an array of { ip, country_name } objects.
  */
 async function runDNSLeakProbe() {
+  // Primary: dnsleaktest.com
+  try {
+    const tokenResp = await fetch('https://www.dnsleaktest.com/api/v1/test/start', {
+      signal: abortAfter(6000),
+    });
+    if (tokenResp.ok) {
+      const { token } = await tokenResp.json();
+      if (token) {
+        // Trigger DNS lookups
+        await Promise.allSettled(
+          Array.from({ length: 6 }, (_, i) =>
+            fetch(`https://${i}.${token}.test.dnsleaktest.com`, {
+              mode: 'no-cors',
+              cache: 'no-store',
+            }).catch(() => {})
+          )
+        );
+        await new Promise(r => setTimeout(r, 2000));
+
+        const resultsResp = await fetch(
+          `https://www.dnsleaktest.com/api/v1/test/${token}/results`,
+          { signal: abortAfter(6000) }
+        );
+        if (resultsResp.ok) {
+          const data = await resultsResp.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
+      }
+    }
+  } catch { /* fall through to bash.ws */ }
+
+  // Fallback: bash.ws (ipleak.net backend)
   try {
     const id = (typeof crypto.randomUUID === 'function')
       ? crypto.randomUUID().replace(/-/g, '')
       : Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-    // Trigger 6 DNS lookups to bash.ws infrastructure
     await Promise.allSettled(
       Array.from({ length: 6 }, (_, i) =>
         fetch(`https://${id}.${i}.bash.ws`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {})
       )
     );
-    // Allow time for resolver results to be logged server-side
     await new Promise(r => setTimeout(r, 2500));
 
     const resp = await fetch(`https://bash.ws/dnsleak/test/${id}?json`, {
@@ -131,22 +187,36 @@ const IPLeakTest = ({ isConnected }) => {
       // Step 1: Public IP
       setCurrentStep('Detecting your public IP address…');
       setProgress(10);
-      const ipData = await fetchIPInfo();
+      let ipData;
+      try {
+        ipData = await fetchIPInfo();
+      } catch (e) {
+        throw new Error(`IP lookup failed: ${e.message}. Check your connection and try again.`);
+      }
       setProgress(25);
 
       // Step 2: WebRTC
       setCurrentStep('Checking WebRTC for IP leaks…');
-      const webRtcIPs = await detectWebRTCIPs();
+      let webRtcIPs = [];
+      try {
+        webRtcIPs = await detectWebRTCIPs();
+      } catch { /* WebRTC unavailable — treat as no data */ }
       setProgress(50);
 
       // Step 3: DNS
       setCurrentStep('Testing DNS resolvers for leaks…');
-      const dnsServers = await runDNSLeakProbe();
+      let dnsServers = [];
+      try {
+        dnsServers = await runDNSLeakProbe();
+      } catch { /* DNS probe failed — report as inconclusive */ }
       setProgress(75);
 
       // Step 4: IPv6
       setCurrentStep('Checking IPv6 exposure…');
-      const ipv6Result = await detectIPv6();
+      let ipv6Result = { leaked: false, address: null };
+      try {
+        ipv6Result = await detectIPv6();
+      } catch { /* IPv6 check failed — treat as no leak */ }
       setProgress(90);
 
       // ── Analyse ──
@@ -158,8 +228,10 @@ const IPLeakTest = ({ isConnected }) => {
       const webRtcLeaked    = webRtcLeakedIPs.length > 0;
 
       // DNS leak: any returned resolver is NOT a known VPN/trusted DNS
+      // If dnsServers is empty the probe was inconclusive — don't flag as leaked
       const dnsLeaked = dnsServers.length > 0 &&
         dnsServers.some(d => d.ip && !isExpectedDNS(d.ip));
+      const dnsInconclusive = dnsServers.length === 0;
 
       const ipv6Leaked  = ipv6Result.leaked;
       const ipv6Address = ipv6Result.address;
@@ -180,6 +252,7 @@ const IPLeakTest = ({ isConnected }) => {
         vpnLoc:  [ipData.city, ipData.country_name].filter(Boolean).join(', ') || 'Unknown',
         vpnISP:  ipData.org     || 'Unknown ISP',
         dnsLeaked,
+        dnsInconclusive,
         dnsServers: dnsServers.map(d =>
           `${d.ip}${d.country_name ? ` (${d.country_name})` : ''}`
         ),
@@ -206,10 +279,10 @@ const IPLeakTest = ({ isConnected }) => {
   };
 
   const renderCheck = (passed, passText, failText, detail = null) => (
-    <div className={`ilt-check ${passed ? 'pass' : 'fail'}`}>
-      <span className="ilt-check-icon">{passed ? '✅' : '⚠️'}</span>
+    <div className={`ilt-check ${passed === null ? 'inconclusive' : passed ? 'pass' : 'fail'}`}>
+      <span className="ilt-check-icon">{passed === null ? '❓' : passed ? '✅' : '⚠️'}</span>
       <div className="ilt-check-body">
-        <span className="ilt-check-text">{passed ? passText : failText}</span>
+        <span className="ilt-check-text">{passed === null ? failText : passed ? passText : failText}</span>
         {detail && <span className="ilt-check-detail">{detail}</span>}
       </div>
     </div>
@@ -295,14 +368,22 @@ const IPLeakTest = ({ isConnected }) => {
           <div className="ilt-section">
             <h3 className="ilt-section-title">🔍 Leak Tests</h3>
             <div className="ilt-checks">
-              {renderCheck(
-                !results.dnsLeaked,
-                'DNS — No Leak',
-                'DNS Leak Detected',
-                results.dnsLeaked
-                  ? `Leaking to: ${results.dnsServers.join(', ')}`
-                  : `Using: ${results.dnsServers.join(', ')}`
-              )}
+              {results.dnsInconclusive
+                ? renderCheck(
+                    null,
+                    '',
+                    'DNS — Inconclusive',
+                    'DNS probe could not reach the test server. Try again on a different network.'
+                  )
+                : renderCheck(
+                    !results.dnsLeaked,
+                    'DNS — No Leak',
+                    'DNS Leak Detected',
+                    results.dnsLeaked
+                      ? `Leaking to: ${results.dnsServers.join(', ')}`
+                      : `Using: ${results.dnsServers.join(', ')}`
+                  )
+              }
               {renderCheck(
                 !results.webRtcLeaked,
                 'WebRTC — No Leak',
