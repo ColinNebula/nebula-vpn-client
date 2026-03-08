@@ -22,7 +22,8 @@ const ALLOWED_INVOKE_CHANNELS = [
   'get-system-info',
   'set-auto-launch',
   'get-app-version',
-  'check-for-updates'
+  'check-for-updates',
+  'restart-and-install'
 ];
 
 const ALLOWED_SEND_CHANNELS = [
@@ -37,7 +38,10 @@ const ALLOWED_RECEIVE_CHANNELS = [
   'vpn-disconnect',
   'open-settings',
   'update-available',
-  'update-downloaded'
+  'update-not-available',
+  'update-progress',
+  'update-downloaded',
+  'update-error'
 ];
 
 /**
@@ -234,9 +238,13 @@ contextBridge.exposeInMainWorld('electron', {
     getInfo: () => secureInvoke('get-system-info'),
     getVersion: () => secureInvoke('get-app-version'),
     setAutoLaunch: (enabled) => secureInvoke('set-auto-launch', Boolean(enabled)),
-    checkForUpdates: () => secureInvoke('check-for-updates'),
-    onUpdateAvailable: (callback) => secureOn('update-available', callback),
-    onUpdateDownloaded: (callback) => secureOn('update-downloaded', callback)
+    checkForUpdates:      () => secureInvoke('check-for-updates'),
+    restartAndInstall:    () => secureInvoke('restart-and-install'),
+    onUpdateAvailable:    (cb) => secureOn('update-available', cb),
+    onUpdateNotAvailable: (cb) => secureOn('update-not-available', cb),
+    onUpdateProgress:     (cb) => secureOn('update-progress', cb),
+    onUpdateDownloaded:   (cb) => secureOn('update-downloaded', cb),
+    onUpdateError:        (cb) => secureOn('update-error', cb),
   },
 
   // Settings - event only

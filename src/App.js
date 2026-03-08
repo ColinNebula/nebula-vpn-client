@@ -71,6 +71,7 @@ import IPLeakTest from './components/IPLeakTest';
 import ConnectionProfiles from './components/ConnectionProfiles';
 import WarrantCanary from './components/WarrantCanary';
 import TransparencyReport from './components/TransparencyReport';
+import UpdateNotification from './components/UpdateNotification';
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
@@ -1657,6 +1658,9 @@ function App() {
           </div>
         </div>
       </main>
+
+      {/* Persistent update banner — renders in Electron only */}
+      <UpdateNotification />
     </div>
   );
 }

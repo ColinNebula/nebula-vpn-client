@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, autoUpdater, dialog, session } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, session } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const isDev = require('electron-is-dev');
 const { WireGuardTunnel } = require('./vpn-tunnel');
@@ -432,17 +433,22 @@ ipcMain.handle('get-app-version', () => {
 });
 
 // Check for updates
-ipcMain.handle('check-for-updates', () => {
+ipcMain.handle('check-for-updates', async () => {
   if (isDev) {
     return { checking: false, message: 'Updates disabled in development' };
   }
   try {
-    autoUpdater.checkForUpdates();
+    await autoUpdater.checkForUpdates();
     return { checking: true };
   } catch (err) {
     console.warn('[autoUpdater] check failed:', err.message);
     return { checking: false, error: err.message };
   }
+});
+
+// Restart and apply a downloaded update
+ipcMain.handle('restart-and-install', () => {
+  autoUpdater.quitAndInstall(false, true);
 });
 
 // Log events from renderer (fire-and-forget)
@@ -466,38 +472,54 @@ ipcMain.handle('set-auto-launch', async (event, enabled) => {
   return { success: true };
 });
 
-// ── Auto-updater setup ───────────────────────────────────────────────────
+// ── Auto-updater setup (electron-updater) ───────────────────────────────
+autoUpdater.autoDownload = true;      // download silently in background
+autoUpdater.autoInstallOnAppQuit = true; // install on next quit if not restarted
+autoUpdater.logger = { info: (m) => console.log('[updater]', m), warn: (m) => console.warn('[updater]', m), error: (m) => console.error('[updater]', m) };
+
 if (!isDev) {
-  // Feed URL should be set via environment variable or electron-builder config.
-  // e.g. process.env.UPDATE_FEED_URL = 'https://updates.yourserver.com/'
-  if (process.env.UPDATE_FEED_URL) {
-    autoUpdater.setFeedURL({ url: process.env.UPDATE_FEED_URL });
-  }
-
-  autoUpdater.on('update-available', () => {
-    if (mainWindow) mainWindow.webContents.send('update-available');
-  });
-
-  autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
-    if (mainWindow) mainWindow.webContents.send('update-downloaded', { releaseName, releaseNotes });
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Ready',
-      message: `Version ${releaseName} has been downloaded.`,
-      detail: 'Restart Nebula VPN to apply the update.',
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0
-    }).then(({ response }) => {
-      if (response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    });
-  });
-
-  autoUpdater.on('error', (err) => {
-    console.error('[autoUpdater] Error:', err.message);
+  // Check for updates once the window is fully shown, then every 4 hours
+  app.once('browser-window-show', () => {
+    setTimeout(() => autoUpdater.checkForUpdates().catch((e) => console.warn('[updater] initial check failed:', e.message)), 3000);
+    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
   });
 }
+
+autoUpdater.on('update-available', (info) => {
+  console.log('[updater] update available:', info.version);
+  if (mainWindow) mainWindow.webContents.send('update-available', {
+    version: info.version,
+    releaseDate: info.releaseDate,
+    releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : '',
+  });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  if (mainWindow) mainWindow.webContents.send('update-not-available', { version: info.version });
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  if (mainWindow) mainWindow.webContents.send('update-progress', {
+    percent:       Math.round(progress.percent),
+    transferred:   progress.transferred,
+    total:         progress.total,
+    bytesPerSecond: progress.bytesPerSecond,
+  });
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('[updater] update downloaded:', info.version);
+  if (mainWindow) mainWindow.webContents.send('update-downloaded', {
+    version:      info.version,
+    releaseDate:  info.releaseDate,
+    releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : '',
+  });
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('[updater] error:', err.message);
+  if (mainWindow) mainWindow.webContents.send('update-error', { message: err.message });
+});
 
 // Security: inject strict Content-Security-Policy for production file:// content
 if (!isDev) {
