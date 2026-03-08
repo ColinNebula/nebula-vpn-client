@@ -1,0 +1,68 @@
+=====================================================
+=       NEBULA VPN — WARRANT CANARY STATEMENT       =
+=====================================================
+Statement Version : 2
+Statement Date    : 2026-03-07
+Valid Until       : 2026-06-05  (90-day cycle)
+Next Update Due   : 2026-06-05
+
+CERTIFICATION
+─────────────
+As of the Statement Date above, Nebula VPN Technology, Inc.
+certifies the following:
+
+ [1]  We have NOT received any National Security Letters (NSLs).
+ [2]  We have NOT received any court orders under the Foreign
+      Intelligence Surveillance Act (FISA) or equivalent foreign
+      surveillance laws.
+ [3]  We have NOT been compelled to install a back door, secret
+      intercept capability, or surveillance software in any of our
+      systems, applications, or infrastructure.
+ [4]  We have NOT been subject to a search or seizure of any
+      servers or storage media belonging to Nebula VPN.
+ [5]  We have NOT been placed under any gag order preventing us
+      from disclosing receipt of legal process related to user data.
+ [6]  We are NOT collecting or retaining VPN connection logs,
+      timestamps, bandwidth totals, or any IP metadata attributable
+      to individual users.
+ [7]  Our published source code has NOT been secretly modified to
+      incorporate surveillance, key escrow, or data exfiltration
+      capabilities.
+ [8]  No user encryption keys, session tokens, or personally
+      identifiable information have been provided to any government
+      entity without a publicly-disclosed court order.
+
+TRANSPARENCY STATISTICS — Q1 2026 (2026-01-01 to 2026-03-07)
+─────────────────────────────────────────────────────────────
+  Legal demand letters (all jurisdictions)  :  0
+  Valid court orders received               :  0
+  Emergency disclosure requests honored     :  0
+  User account data disclosed               :  0
+  User VPN session data disclosed           :  0
+  Infrastructure access granted to agencies :  0
+
+HOW TO VERIFY
+─────────────
+1. The absence of a current, in-date canary statement should be
+   treated as a signal that one or more of the above certifications
+   can no longer be made.
+
+2. Each statement is signed with our PGP key (fingerprint below).
+   The signature is appended to this file.  Verify with:
+     gpg --import nebula-vpn.com/pgp.asc
+     gpg --verify canary.txt
+
+PGP Fingerprint : (key to be published at nebula-vpn.com/pgp.asc)
+
+Update cadence  : 90 days.  A missed update should be treated as
+                  a canary failure.
+
+─── Contact ──────────────────────────────────────────────────
+  Security issues : security@nebula-vpn.com
+  General privacy : privacy@nebula-vpn.com
+  PGP public key  : https://nebula-vpn.com/pgp.asc
+──────────────────────────────────────────────────────────────
+
+-----BEGIN PGP SIGNATURE-----
+(PGP signing key to be generated and published — placeholder)
+-----END PGP SIGNATURE-----
