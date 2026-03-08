@@ -335,6 +335,11 @@ function App() {
     apiService.verifyToken()
       .then(data => {
         const u = data.user;
+        // Update session cache with freshly-verified role+plan
+        localStorage.setItem(`nebula_session_${u.email}`, JSON.stringify({
+          role: u.role || 'user',
+          plan: u.plan || 'free',
+        }));
         const userObj = {
           email: u.email,
           plan: u.plan || 'free',
@@ -400,11 +405,26 @@ function App() {
     console.log('State updated - showSplashScreen should now be false');
   };
 
+  // Helper: read the last successfully-verified role+plan for a given email.
+  // Written after every server-verified login so offline mode inherits real privileges.
+  const readSessionCache = (email) => {
+    try {
+      return JSON.parse(localStorage.getItem(`nebula_session_${email}`) || '{}');
+    } catch {
+      return {};
+    }
+  };
+
   const handleLogin = async (credentials) => {
     console.log('🔐 Login form submitted, authenticating...');
     try {
       const data = await apiService.login(credentials.email, credentials.password);
       const u = data.user;
+      // Cache role+plan so offline mode can restore them for this account
+      localStorage.setItem(`nebula_session_${u.email}`, JSON.stringify({
+        role: u.role || 'user',
+        plan: u.plan || 'free',
+      }));
       setUser({
         email: u.email,
         plan: u.plan || 'free',
@@ -435,20 +455,23 @@ function App() {
       addLog('Server unreachable — running in offline mode', 'warning');
 
       // Still enforce basic offline credentials: reject obviously wrong attempts
-      // (no password entered at all)
       if (!credentials.password) {
         throw new Error('Password is required');
       }
 
+      // Restore last known role+plan from cache so admin keeps their access level
+      const cached = readSessionCache(credentials.email);
+      const offlineRole = cached.role || 'user';
+      const offlinePlan = cached.plan || 'free';
       setUser({
         email: credentials.email,
-        plan: 'free',
-        role: 'user',
+        plan: offlinePlan,
+        role: offlineRole,
         firstName: credentials.email.split('@')[0],
         lastName: '',
         verified: true
       });
-      setCurrentPlan('free');
+      setCurrentPlan(offlinePlan);
       setIsAuthenticated(true);
       setShowSignup(false);
       // Restore whatever was saved locally for this email (offline-mode best-effort)
@@ -476,17 +499,27 @@ function App() {
 
   const handleSignup = (userData) => {
     console.log('🎉 New user signup:', userData);
+    const signupRole = userData.role || 'user';
+    const signupPlan = userData.plan || 'free';
+    // Cache role+plan so offline mode inherits them
+    if (userData.email) {
+      localStorage.setItem(`nebula_session_${userData.email}`, JSON.stringify({
+        role: signupRole,
+        plan: signupPlan,
+      }));
+    }
     // Create user from signup data
     setUser({
       email: userData.email,
       firstName: userData.firstName,
       lastName: userData.lastName,
-      plan: userData.plan || 'free',
+      role: signupRole,
+      plan: signupPlan,
       country: userData.country,
       verified: userData.verified,
       createdAt: userData.createdAt
     });
-    setCurrentPlan(userData.plan || 'free');
+    setCurrentPlan(signupPlan);
     setIsAuthenticated(true);
     setShowSignup(false);
     console.log('✅ Account created successfully!');
@@ -501,6 +534,10 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Clear session cache on explicit logout so cached role doesn't persist
+    if (user?.email) {
+      localStorage.removeItem(`nebula_session_${user.email}`);
+    }
     setIsAuthenticated(false);
     setUser(null);
     setIsConnected(false);
@@ -518,6 +555,11 @@ function App() {
     try {
       const data = await apiService.oauthLogin(provider, profile);
       const u = data.user;
+      // Cache role+plan so offline mode can restore them
+      localStorage.setItem(`nebula_session_${u.email}`, JSON.stringify({
+        role: u.role || 'user',
+        plan: u.plan || 'free',
+      }));
       setUser({
         email: u.email,
         plan: u.plan || 'free',
@@ -541,18 +583,21 @@ function App() {
         addLog(`${provider} sign-in failed: ${err.message}`, 'error');
         throw err;
       }
-      // Network unavailable — fall back to offline mode
+      // Network unavailable — fall back to offline mode using last known role+plan
       console.warn('⚠️ Backend unreachable, using offline mode for social auth');
       addLog('Server unreachable — running in offline mode', 'warning');
+      const cached = readSessionCache(profile.email);
+      const offlineRole = cached.role || 'user';
+      const offlinePlan = cached.plan || 'free';
       setUser({
         email: profile.email,
-        plan: 'free',
-        role: 'user',
+        plan: offlinePlan,
+        role: offlineRole,
         firstName: profile.name ? profile.name.split(' ')[0] : profile.email.split('@')[0],
         lastName: profile.name ? profile.name.split(' ').slice(1).join(' ') : '',
         verified: true
       });
-      setCurrentPlan('free');
+      setCurrentPlan(offlinePlan);
       setIsAuthenticated(true);
       setShowSignup(false);
       restorePrefs({}, loadPrefs(profile.email), allServers);
