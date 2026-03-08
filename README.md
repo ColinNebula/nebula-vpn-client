@@ -192,10 +192,10 @@ This project is proprietary software developed by Nebula Media 3D. All rights re
 
 For technical support or business inquiries:
 
-- **Email**: support@nebula-media-3d.com
-- **Developer**: Colin Nebula (colin@nebula-media-3d.com)
+- **Email**: support@nebula3ddev.com
+- **Developer**: Colin Nebula (info@nebula3ddev.com)
 - **Company**: Nebula Media 3D
-- **Documentation**: [docs.nebula-media-3d.com](https://docs.nebula-media-3d.com)
+- **Documentation**: [info.nebula3ddev.com](https://info.nebula3ddev.com)
 
 ## 🏆 Acknowledgments
 
