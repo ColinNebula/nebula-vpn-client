@@ -43,7 +43,81 @@ root.render(
   </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
+
+// ── Service Worker registration with update prompt ────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+
+          newWorker.addEventListener('statechange', () => {
+            // A new SW is installed and waiting — prompt the user
+            if (
+              newWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              const banner = document.createElement('div');
+              banner.id = 'sw-update-banner';
+              Object.assign(banner.style, {
+                position: 'fixed',
+                bottom: '16px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: '#1a1a2e',
+                color: '#fff',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                zIndex: '99999',
+                fontSize: '14px',
+                fontFamily: 'sans-serif',
+              });
+
+              const msg = document.createElement('span');
+              msg.textContent = '🚀 A new version of Nebula VPN is available.';
+
+              const btn = document.createElement('button');
+              btn.textContent = 'Update now';
+              Object.assign(btn.style, {
+                background: '#6366f1',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 14px',
+                cursor: 'pointer',
+                fontWeight: '600',
+              });
+
+              btn.addEventListener('click', () => {
+                // Tell the waiting SW to take over immediately
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                banner.remove();
+              });
+
+              banner.appendChild(msg);
+              banner.appendChild(btn);
+              document.body.appendChild(banner);
+            }
+          });
+        });
+
+        // When the new SW takes over, reload to get the fresh assets
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      })
+      .catch((err) => console.error('SW registration failed:', err));
+  });
+}

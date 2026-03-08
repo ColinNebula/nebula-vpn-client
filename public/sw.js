@@ -1,51 +1,87 @@
-const CACHE_NAME = 'nebula-vpn-v1.0.0';
-const urlsToCache = [
-  '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+// Bump this version string on every deploy — it forces the SW to update.
+const CACHE_VERSION = 'nebula-vpn-v1.0.2';
+const STATIC_CACHE  = `${CACHE_VERSION}-static`;
+const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
+
+const PRECACHE_URLS = [
   '/manifest.json',
-  '/logo.svg'
+  '/logo.svg',
 ];
 
-// Install event - cache resources
+// ── Install: pre-cache only minimal shell assets ──────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
+    // Do NOT call skipWaiting here — we wait for the user to accept the update.
   );
 });
 
-// Fetch event - serve cached content when offline
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
-  );
-});
-
-// Activate event - clean up old caches
+// ── Activate: delete every cache from previous versions ──────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((k) => k !== STATIC_CACHE && k !== DYNAMIC_CACHE)
+          .map((k) => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// ── Message: UI sends SKIP_WAITING after user accepts the update ──────────
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// ── Fetch: network-first for HTML navigation; cache-first for static assets
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Only handle same-origin requests
+  if (url.origin !== self.location.origin) return;
+
+  // Network-first for HTML navigation (ensures new deploys are picked up)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(DYNAMIC_CACHE).then((c) => c.put(request, clone));
+          return response;
         })
-      );
-    })
+        .catch(() => caches.match(request).then((r) => r || caches.match('/')))
+    );
+    return;
+  }
+
+  // Cache-first for versioned static assets (/static/...)
+  if (url.pathname.startsWith('/static/')) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          const clone = response.clone();
+          caches.open(STATIC_CACHE).then((c) => c.put(request, clone));
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Network-first for everything else (API calls, etc.) — fall back to cache
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(DYNAMIC_CACHE).then((c) => c.put(request, clone));
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
 });
 
