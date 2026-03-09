@@ -197,78 +197,122 @@ const InstallPWA = () => {
     setShowInstallButton(false);
   };
 
+  const detectBrowser = () => {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('edg/')) return 'edge';
+    if (ua.includes('chrome')) return 'chrome';
+    if (ua.includes('firefox')) return 'firefox';
+    if (ua.includes('safari')) return 'safari';
+    return 'other';
+  };
+
   const getInstallInstructions = () => {
+    const browser = detectBrowser();
     switch (platform) {
       case 'ios':
         return {
-          title: 'Install on iPhone/iPad',
+          title: 'Install on iPhone / iPad',
           steps: [
-            'Tap the Share button (square with arrow) at the bottom',
-            'Scroll down and tap "Add to Home Screen"',
-            'Tap "Add" in the top right corner',
-            'Nebula VPN will appear on your home screen!'
+            { text: 'Open this page in Safari (not Chrome)', detail: 'PWA install only works in Safari on iOS' },
+            { text: 'Tap the Share button at the bottom of the screen', detail: 'It looks like a box with an arrow pointing up ⬆️' },
+            { text: 'Scroll down in the share sheet and tap "Add to Home Screen"', detail: null },
+            { text: 'Tap "Add" in the top-right corner', detail: 'You can rename it first if you like' },
           ],
           icon: '📱',
-          browserNote: 'Works best in Safari'
+          browserNote: 'Safari only — does not work in Chrome or Firefox on iOS',
+          tip: null,
         };
       case 'android':
         return {
           title: 'Install on Android',
           steps: [
-            'Tap the menu icon (⋮) in the top right',
-            'Select "Add to Home screen" or "Install app"',
-            'Confirm by tapping "Add" or "Install"',
-            'Launch from your home screen!'
+            { text: 'Open this page in Chrome or Edge', detail: null },
+            { text: 'Tap the three-dot menu ⋮ in the top-right corner', detail: null },
+            { text: 'Tap "Add to Home screen" or "Install app"', detail: 'The exact wording depends on your browser version' },
+            { text: 'Tap "Install" or "Add" to confirm', detail: null },
           ],
           icon: '🤖',
-          browserNote: 'Works in Chrome, Edge, Firefox'
+          browserNote: 'Works in Chrome, Edge, or Samsung Internet',
+          tip: null,
         };
       case 'windows':
-        return {
-          title: 'Install on Windows',
-          steps: [
-            'Click the install icon (⊕) in the address bar',
-            'Or click the menu (⋯) → Apps → Install this site',
-            'Click "Install" in the popup',
-            'Access from Start Menu or Desktop!'
-          ],
-          icon: '🪟',
-          browserNote: 'Works in Chrome, Edge'
-        };
+        if (browser === 'edge') {
+          return {
+            title: 'Install on Windows — Microsoft Edge',
+            steps: [
+              { text: 'Look for the install icon in the address bar', detail: 'It looks like a "+" or a computer screen with a down arrow — on the right side of the address bar' },
+              { text: 'Click it to open the install dialog', detail: 'If you don\'t see it, click the ⋯ menu (top-right) → Apps → Install this site as an app' },
+              { text: 'Click "Install" in the popup', detail: null },
+              { text: 'Nebula VPN will open as its own window and appear in your Start Menu', detail: null },
+            ],
+            icon: '🪟',
+            browserNote: 'Microsoft Edge — recommended for Windows',
+            tip: 'Tip: Edge gives the best Windows PWA experience with taskbar pinning.',
+          };
+        } else if (browser === 'chrome') {
+          return {
+            title: 'Install on Windows — Google Chrome',
+            steps: [
+              { text: 'Look for the install icon in the address bar', detail: 'It looks like a computer with a down arrow on the far right of the address bar' },
+              { text: 'Click it — or click the ⋮ menu → "Save and share" → "Install page as app…"', detail: null },
+              { text: 'Click "Install" in the confirmation popup', detail: null },
+              { text: 'Nebula VPN will launch as an app and be pinned to your taskbar', detail: null },
+            ],
+            icon: '🪟',
+            browserNote: 'Google Chrome',
+            tip: 'Tip: If you don\'t see the install icon, make sure you\'re not in Incognito mode.',
+          };
+        } else {
+          return {
+            title: 'Install on Windows',
+            steps: [
+              { text: 'Open this page in Microsoft Edge or Google Chrome', detail: 'Firefox and Internet Explorer do not support PWA install' },
+              { text: 'Look for a "+" or install icon on the right side of the address bar', detail: null },
+              { text: 'Click it and select "Install"', detail: null },
+              { text: 'Nebula VPN will appear in your Start Menu', detail: null },
+            ],
+            icon: '🪟',
+            browserNote: 'Use Edge or Chrome for best results',
+            tip: 'You are currently using ' + (browser === 'firefox' ? 'Firefox, which does not support app install.' : 'an unsupported browser.') + ' Please switch to Edge or Chrome.',
+          };
+        }
       case 'mac':
         return {
           title: 'Install on macOS',
           steps: [
-            'Click the install icon in the address bar',
-            'Or go to File → Install Nebula VPN',
-            'Click "Install" to confirm',
-            'Find it in Launchpad or Applications!'
+            { text: 'Open this page in Chrome or Edge', detail: 'Safari 17+ also supports install on macOS Sonoma or later' },
+            { text: 'Click the install icon in the address bar', detail: 'Or go to the browser menu → "Install Nebula VPN…"' },
+            { text: 'Click "Install" to confirm', detail: null },
+            { text: 'Find Nebula VPN in Launchpad or your Applications folder', detail: null },
           ],
           icon: '🍎',
-          browserNote: 'Works in Chrome, Edge, Safari 17+'
+          browserNote: 'Works in Chrome, Edge, or Safari 17+',
+          tip: null,
         };
       case 'linux':
         return {
           title: 'Install on Linux',
           steps: [
-            'Click the install icon in the address bar',
-            'Or click menu → More tools → Create shortcut',
-            'Check "Open as window" option',
-            'Launch from your applications menu!'
+            { text: 'Open this page in Chrome or Chromium', detail: null },
+            { text: 'Click the install icon on the right side of the address bar', detail: 'Or click ⋮ menu → More tools → Create shortcut…' },
+            { text: 'Check "Open as window" and click "Create"', detail: null },
+            { text: 'Launch from your applications menu', detail: null },
           ],
           icon: '🐧',
-          browserNote: 'Works in Chrome, Edge'
+          browserNote: 'Works in Chrome, Chromium, or Edge',
+          tip: null,
         };
       default:
         return {
-          title: 'Install App',
+          title: 'Install Nebula VPN',
           steps: [
-            'Look for the install icon in your browser',
-            'Click to add to your device',
-            'Launch anytime without opening browser!'
+            { text: 'Look for an install icon in your browser address bar', detail: null },
+            { text: 'Click it to install the app', detail: null },
+            { text: 'Launch anytime without opening a browser!', detail: null },
           ],
           icon: '💻',
-          browserNote: ''
+          browserNote: '',
+          tip: null,
         };
     }
   };
@@ -408,12 +452,22 @@ const InstallPWA = () => {
               )}
             </div>
           </div>
+
+          {instructions.tip && (
+            <div className="install-tip">
+              <span className="tip-icon">💡</span>
+              <span>{instructions.tip}</span>
+            </div>
+          )}
           
           <ol className="instructions-list">
             {instructions.steps.map((step, index) => (
               <li key={index}>
                 <span className="step-number">{index + 1}</span>
-                <span className="step-text">{step}</span>
+                <div className="step-body">
+                  <span className="step-text">{step.text}</span>
+                  {step.detail && <span className="step-detail">{step.detail}</span>}
+                </div>
               </li>
             ))}
           </ol>

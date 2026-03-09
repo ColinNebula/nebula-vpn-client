@@ -1,5 +1,5 @@
 // Bump this version string on every deploy — it forces the SW to update.
-const CACHE_VERSION = 'nebula-vpn-v1.0.2';
+const CACHE_VERSION = 'nebula-vpn-v1.0.3';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
