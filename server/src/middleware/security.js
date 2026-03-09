@@ -21,7 +21,7 @@ const securityHeaders = (req, res, next) => {
     "style-src 'self' 'unsafe-inline'", // Required for some UI frameworks
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.nebulavpn.com wss:",
+    "connect-src 'self' https://api.nebula3ddev.com https://colinnebula.github.io wss:",
     "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",
