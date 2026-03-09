@@ -194,6 +194,45 @@
   border-radius: 8px;
 }
 
+.ilt-ip-redacted {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+  transition: filter 0.2s ease;
+}
+
+.ilt-reveal-btn {
+  margin-top: 10px;
+  background: none;
+  border: 1px solid rgba(211,47,47,0.35);
+  color: var(--text-secondary, #888);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ilt-reveal-btn:hover {
+  background: rgba(211,47,47,0.1);
+  color: var(--text-primary, #333);
+}
+
+.ilt-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ilt-reveal-global {
+  margin-top: 0;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-color: rgba(var(--primary-rgb, 63,81,181), 0.4);
+}
+
 /* Checks */
 .ilt-checks { display: flex; flex-direction: column; gap: 10px; }
 

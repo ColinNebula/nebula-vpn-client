@@ -183,6 +183,7 @@ router.get('/verify', (req, res) => {
         name: user.name,
         plan: user.plan,
         role: user.role,
+        twoFactorEnabled: !!user.twoFactorEnabled,
         settings: user.settings || {}
       }
     });
@@ -304,6 +305,7 @@ router.post('/2fa/setup', authMiddleware, async (req, res) => {
 
     // Store secret temporarily until verified (not yet enabled)
     user.twoFactorTempSecret = secret.base32;
+    users.set(user.email, user); // persist temp secret
 
     const otpauthUrl = secret.otpauth_url;
     const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
@@ -365,6 +367,7 @@ router.post('/2fa/verify', authMiddleware, async (req, res) => {
     user.twoFactorSecret = secret;
     user.twoFactorEnabled = true;
     delete user.twoFactorTempSecret;
+    users.set(user.email, user); // persist to SQLite
 
     logger.info(`2FA enabled for ${req.user.email}`);
     res.json({ success: true, message: '2FA has been enabled' });
@@ -402,6 +405,7 @@ router.post('/2fa/disable', authMiddleware, async (req, res) => {
     user.twoFactorEnabled = false;
     delete user.twoFactorSecret;
     delete user.twoFactorBackupCodes;
+    users.set(user.email, user); // persist to SQLite
 
     logger.info(`2FA disabled for ${req.user.email}`);
     res.json({ success: true, message: '2FA has been disabled' });

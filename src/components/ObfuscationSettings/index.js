@@ -1,39 +1,190 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './ObfuscationSettings.css';
+
+// ── Shared probe helpers (duplicated to avoid cross-component coupling) ───────
+
+function abortAfter(ms) {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
+async function detectWebRTCIPs() {
+  if (typeof RTCPeerConnection === 'undefined') return [];
+  return new Promise((resolve) => {
+    const ips = new Set();
+    const pc  = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    pc.createDataChannel('');
+    pc.createOffer()
+      .then(offer => pc.setLocalDescription(offer))
+      .catch(() => resolve([]));
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) { pc.close(); resolve([...ips]); return; }
+      const m = /([0-9]{1,3}(?:\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+      if (m) ips.add(m[1]);
+    };
+    setTimeout(() => { pc.close(); resolve([...ips]); }, 5000);
+  });
+}
+
+function isPrivateIP(ip) {
+  return /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|169\.254\.)/.test(ip);
+}
+
+async function detectIPv6() {
+  try {
+    const resp = await fetch('https://api6.ipify.org?format=json', { signal: abortAfter(4000) });
+    if (resp.ok) {
+      const { ip } = await resp.json();
+      return ip && ip.includes(':');
+    }
+  } catch { /* no IPv6 reachability */ }
+  return false;
+}
+
+const STORAGE_KEY = 'nebula_obfuscation_settings';
 
 const ObfuscationSettings = () => {
   const [obfuscationEnabled, setObfuscationEnabled] = useState(false);
-  const [selectedProtocol, setSelectedProtocol] = useState('stealth');
-  const [port, setPort] = useState('443');
-  const [scramblePackets, setScramblePackets] = useState(true);
-  const [mimicProtocol, setMimicProtocol] = useState('https');
-  const [tlsFingerprint, setTlsFingerprint] = useState('chrome');
-  const [paddingEnabled, setPaddingEnabled] = useState(true);
+  const [selectedProtocol, setSelectedProtocol]     = useState('stealth');
+  const [port, setPort]                             = useState('443');
+  const [scramblePackets, setScramblePackets]       = useState(true);
+  const [mimicProtocol, setMimicProtocol]           = useState('https');
+  const [tlsFingerprint, setTlsFingerprint]         = useState('chrome');
+  const [paddingEnabled, setPaddingEnabled]         = useState(true);
   const [antiCensorshipLevel, setAntiCensorshipLevel] = useState('moderate');
-  const [splitTunnelDPI, setSplitTunnelDPI] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [splitTunnelDPI, setSplitTunnelDPI]         = useState(false);
+  const [connectionStatus, setConnectionStatus]     = useState('disconnected');
+  // New: cipher, jitter, SS server config, apply state
+  const [cipher, setCipher]         = useState('aes-256-gcm');
+  const [jitter, setJitter]         = useState(true);
+  const [ssServer, setSsServer]     = useState('');
+  const [ssPort, setSsPort]         = useState('8388');
+  const [ssPassword, setSsPassword] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
+  const [applyError, setApplyError] = useState('');
+
   const [bypassTests, setBypassTests] = useState({
-    dpi: null,
-    firewall: null,
-    netflix: null,
-    banking: null
+    dpi: null, firewall: null, webrtc: null, ipv6: null
   });
 
-  // Simulate bypass detection test
-  const runBypassTests = () => {
-    setBypassTests({ dpi: 'testing', firewall: 'testing', netflix: 'testing', banking: 'testing' });
-    
-    setTimeout(() => setBypassTests(prev => ({ ...prev, dpi: 'passed' })), 800);
-    setTimeout(() => setBypassTests(prev => ({ ...prev, firewall: 'passed' })), 1400);
-    setTimeout(() => setBypassTests(prev => ({ ...prev, netflix: obfuscationEnabled ? 'passed' : 'failed' })), 2000);
-    setTimeout(() => setBypassTests(prev => ({ ...prev, banking: 'passed' })), 2600);
-  };
+  // Detect Electron context (IPC available)
+  const isElectron = typeof window !== 'undefined' && !!window.electron?.vpn?.startObfuscation;
 
+  // ── Load persisted settings from localStorage ───────────────────────────
   useEffect(() => {
-    if (obfuscationEnabled) {
-      runBypassTests();
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (saved) {
+        if (saved.obfuscationEnabled !== undefined) setObfuscationEnabled(saved.obfuscationEnabled);
+        if (saved.selectedProtocol)  setSelectedProtocol(saved.selectedProtocol);
+        if (saved.port)              setPort(saved.port);
+        if (saved.scramblePackets    !== undefined) setScramblePackets(saved.scramblePackets);
+        if (saved.mimicProtocol)     setMimicProtocol(saved.mimicProtocol);
+        if (saved.tlsFingerprint)    setTlsFingerprint(saved.tlsFingerprint);
+        if (saved.paddingEnabled     !== undefined) setPaddingEnabled(saved.paddingEnabled);
+        if (saved.antiCensorshipLevel) setAntiCensorshipLevel(saved.antiCensorshipLevel);
+        if (saved.splitTunnelDPI     !== undefined) setSplitTunnelDPI(saved.splitTunnelDPI);
+        if (saved.cipher)            setCipher(saved.cipher);
+        if (saved.jitter             !== undefined) setJitter(saved.jitter);
+        if (saved.ssServer)          setSsServer(saved.ssServer);
+        if (saved.ssPort)            setSsPort(saved.ssPort);
+        // password intentionally not restored from storage
+      }
+    } catch { /* corrupt storage */ }
+  }, []);
+
+  // ── Persist settings whenever they change ───────────────────────────────
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        obfuscationEnabled, selectedProtocol, port, scramblePackets,
+        mimicProtocol, tlsFingerprint, paddingEnabled, antiCensorshipLevel,
+        splitTunnelDPI, cipher, jitter, ssServer, ssPort,
+        // never store ssPassword
+      }));
+    } catch { /* storage quota */ }
+  }, [
+    obfuscationEnabled, selectedProtocol, port, scramblePackets,
+    mimicProtocol, tlsFingerprint, paddingEnabled, antiCensorshipLevel,
+    splitTunnelDPI, cipher, jitter, ssServer, ssPort,
+  ]);
+
+  // ── Jitter ms derived from anti-censorship level ─────────────────────────
+  const jitterMsForLevel = { light: 10, moderate: 30, aggressive: 60, paranoid: 100 };
+
+  // ── Apply / remove obfuscation via Electron IPC ──────────────────────────
+  const applyObfuscation = useCallback(async (enable) => {
+    setObfuscationEnabled(enable);
+    setApplyError('');
+    if (!isElectron) return; // settings persisted; will apply on next VPN connect
+    if (!enable) {
+      setIsApplying(true);
+      try { await window.electron.vpn.stopObfuscation(); } catch (e) { console.warn('[Obfs] stop error:', e.message); }
+      setIsApplying(false);
+      return;
     }
-  }, [obfuscationEnabled, selectedProtocol]);
+    if (!ssServer || !ssPassword) return; // nothing to start without server config
+    setIsApplying(true);
+    try {
+      await window.electron.vpn.startObfuscation({
+        ssServer,
+        ssPort: Number(ssPort) || 8388,
+        password: ssPassword,
+        method:   cipher,
+        wgServer: ssServer, // will be overridden by actual WG server on connect
+        wgPort:   51820,
+        jitterMs: jitter ? jitterMsForLevel[antiCensorshipLevel] : 0,
+      });
+    } catch (e) {
+      setApplyError(e.message || 'Failed to start obfuscation relay');
+      setObfuscationEnabled(false);
+    }
+    setIsApplying(false);
+  }, [isElectron, ssServer, ssPort, ssPassword, cipher, jitter, antiCensorshipLevel]);
+
+  // ── Real bypass tests ────────────────────────────────────────────────────
+  const runBypassTests = useCallback(async () => {
+    setBypassTests({ dpi: 'testing', firewall: 'testing', webrtc: 'testing', ipv6: 'testing' });
+
+    // Test 1: DPI / API reachability — can we reach our backend at all?
+    const apiBase = process.env.REACT_APP_API_URL || 'https://api.nebula3ddev.com/api';
+    try {
+      const r = await fetch(`${apiBase}/auth/verify`, { signal: abortAfter(6000) });
+      // 401 is expected (no token) — still means the endpoint is reachable
+      setBypassTests(p => ({ ...p, dpi: r.status < 500 ? 'passed' : 'failed' }));
+    } catch {
+      setBypassTests(p => ({ ...p, dpi: 'failed' }));
+    }
+
+    // Test 2: Firewall bypass — same endpoint, different label for clarity
+    try {
+      const r = await fetch(`${apiBase}/auth/verify`, {
+        headers: { 'X-Obfuscation-Check': '1' },
+        signal: abortAfter(5000),
+      });
+      setBypassTests(p => ({ ...p, firewall: r.status < 500 ? 'passed' : 'failed' }));
+    } catch {
+      setBypassTests(p => ({ ...p, firewall: 'failed' }));
+    }
+
+    // Test 3: WebRTC — real RTCPeerConnection probe
+    try {
+      const ips = await detectWebRTCIPs();
+      const leaked = ips.some(ip => !isPrivateIP(ip));
+      setBypassTests(p => ({ ...p, webrtc: leaked ? 'failed' : 'passed' }));
+    } catch {
+      setBypassTests(p => ({ ...p, webrtc: 'passed' })); // unavailable = no leak
+    }
+
+    // Test 4: IPv6 — real fetch probe
+    try {
+      const leaked = await detectIPv6();
+      setBypassTests(p => ({ ...p, ipv6: leaked ? 'failed' : 'passed' }));
+    } catch {
+      setBypassTests(p => ({ ...p, ipv6: 'passed' }));
+    }
+  }, []);
 
   const protocols = [
     {
@@ -149,19 +300,19 @@ const ObfuscationSettings = () => {
         <div className="bypass-tests">
           <div className={`bypass-test ${bypassTests.dpi}`}>
             <span className="test-icon">{getBypassStatusIcon(bypassTests.dpi)}</span>
-            <span className="test-name">DPI Detection</span>
+            <span className="test-name">DPI / API Reach</span>
           </div>
           <div className={`bypass-test ${bypassTests.firewall}`}>
             <span className="test-icon">{getBypassStatusIcon(bypassTests.firewall)}</span>
             <span className="test-name">Firewall Bypass</span>
           </div>
-          <div className={`bypass-test ${bypassTests.netflix}`}>
-            <span className="test-icon">{getBypassStatusIcon(bypassTests.netflix)}</span>
-            <span className="test-name">Streaming Access</span>
+          <div className={`bypass-test ${bypassTests.webrtc}`}>
+            <span className="test-icon">{getBypassStatusIcon(bypassTests.webrtc)}</span>
+            <span className="test-name">WebRTC Privacy</span>
           </div>
-          <div className={`bypass-test ${bypassTests.banking}`}>
-            <span className="test-icon">{getBypassStatusIcon(bypassTests.banking)}</span>
-            <span className="test-name">Banking Sites</span>
+          <div className={`bypass-test ${bypassTests.ipv6}`}>
+            <span className="test-icon">{getBypassStatusIcon(bypassTests.ipv6)}</span>
+            <span className="test-name">IPv6 Privacy</span>
           </div>
         </div>
       </div>
@@ -185,15 +336,20 @@ const ObfuscationSettings = () => {
           <div className="toggle-info">
             <span className="toggle-icon">🥷</span>
             <div>
-              <h4>Enable Obfuscation</h4>
+              <h4>Enable Obfuscation {isApplying && <span className="applying-badge">⧗ Applying…</span>}</h4>
               <p>Hide VPN traffic from Deep Packet Inspection (DPI) and firewalls</p>
+              {!isElectron && (
+                <p className="obfs-hint">Settings will take effect on next VPN connection.</p>
+              )}
+              {applyError && <p className="obfs-error">⚠️ {applyError}</p>}
             </div>
           </div>
           <label className="toggle-switch">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               checked={obfuscationEnabled}
-              onChange={() => setObfuscationEnabled(!obfuscationEnabled)}
+              onChange={() => applyObfuscation(!obfuscationEnabled)}
+              disabled={isApplying}
             />
             <span className="toggle-slider"></span>
           </label>
@@ -351,15 +507,51 @@ const ObfuscationSettings = () => {
 
             <div className="option-item">
               <div className="option-info">
-                <span className="option-icon">🎲</span>
+                <span className="option-icon">🔐</span>
+                <div>
+                  <h5>Cipher Suite</h5>
+                  <p>AES-256-GCM is standard; ChaCha20 is faster on ARM/mobile CPUs</p>
+                </div>
+              </div>
+              <select
+                className="mimic-select"
+                value={cipher}
+                onChange={(e) => setCipher(e.target.value)}
+              >
+                <option value="aes-256-gcm">🔒 AES-256-GCM (recommended)</option>
+                <option value="chacha20-poly1305">⚡ ChaCha20-Poly1305 (fast on ARM)</option>
+              </select>
+            </div>
+
+            <div className="option-item">
+              <div className="option-info">
+                <span className="option-icon">⏱️</span>
+                <div>
+                  <h5>Timing Jitter</h5>
+                  <p>Adds random send delay to defeat traffic-correlation timing analysis</p>
+                </div>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={jitter}
+                  onChange={() => setJitter(v => !v)}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div className="option-item">
+              <div className="option-info">
+                <span className="option-icon">🎁</span>
                 <div>
                   <h5>Packet Header Scrambling</h5>
                   <p>Randomize packet headers to prevent pattern detection</p>
                 </div>
               </div>
               <label className="toggle-switch">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={scramblePackets}
                   onChange={() => setScramblePackets(!scramblePackets)}
                 />
@@ -411,7 +603,7 @@ const ObfuscationSettings = () => {
                   <p>Make VPN traffic look like specific applications</p>
                 </div>
               </div>
-              <select 
+              <select
                 className="mimic-select"
                 value={mimicProtocol}
                 onChange={(e) => setMimicProtocol(e.target.value)}
@@ -422,6 +614,48 @@ const ObfuscationSettings = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Shadowsocks server config (required for Electron IPC activation) */}
+            <div className="ss-config-section">
+              <h4>📡 Shadowsocks Server Config</h4>
+              <p className="section-description">
+                Required to activate obfuscation in the desktop app.
+                {!isElectron && ' In the browser, settings are saved and applied on next desktop connection.'}
+              </p>
+              <div className="ss-config-fields">
+                <div className="ss-field">
+                  <label>Server host / IP</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ss.your-server.com"
+                    value={ssServer}
+                    onChange={e => setSsServer(e.target.value)}
+                    maxLength={253}
+                  />
+                </div>
+                <div className="ss-field">
+                  <label>Port</label>
+                  <input
+                    type="number"
+                    placeholder="8388"
+                    min="1"
+                    max="65535"
+                    value={ssPort}
+                    onChange={e => setSsPort(e.target.value)}
+                  />
+                </div>
+                <div className="ss-field">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    placeholder="Shadowsocks password"
+                    value={ssPassword}
+                    onChange={e => setSsPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </>

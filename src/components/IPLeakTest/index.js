@@ -176,12 +176,14 @@ const IPLeakTest = ({ isConnected }) => {
   const [progress, setProgress]     = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   const [errorMsg, setErrorMsg]     = useState('');
+  const [showRealIP, setShowRealIP] = useState(false);
 
   const runTest = useCallback(async () => {
     setStatus('running');
     setResults(null);
     setErrorMsg('');
     setProgress(0);
+    setShowRealIP(false);
 
     try {
       // Step 1: Public IP
@@ -348,17 +350,35 @@ const IPLeakTest = ({ isConnected }) => {
 
           {/* IP Section */}
           <div className="ilt-section">
-            <h3 className="ilt-section-title">🌐 IP Addresses</h3>
+            <h3 className="ilt-section-title">
+              🌐 IP Addresses
+              <button
+                className="ilt-reveal-btn ilt-reveal-global"
+                onClick={() => setShowRealIP(v => !v)}
+                title={showRealIP ? 'Hide all sensitive data' : 'Reveal all sensitive data'}
+              >
+                {showRealIP ? '🙈 Hide all' : '👁 Reveal all'}
+              </button>
+            </h3>
             <div className="ilt-ip-grid">
               <div className="ilt-ip-card real">
                 <div className="ilt-ip-card-label">Your Real IP</div>
-                <div className="ilt-ip-value">{results.realIP}</div>
-                <div className="ilt-ip-meta">{results.realISP} · {results.realLoc}</div>
+                <div className={`ilt-ip-value${showRealIP ? '' : ' ilt-ip-redacted'}`}>
+                  {showRealIP ? results.realIP : '••••••••••••'}
+                </div>
+                <div className={`ilt-ip-meta${showRealIP ? '' : ' ilt-ip-redacted'}`}>
+                  {showRealIP ? `${results.realISP} · ${results.realLoc}` : '•••••••••••• · ••••••••'}
+                </div>
+
               </div>
               <div className={`ilt-ip-card ${isConnected ? 'protected' : 'real'}`}>
                 <div className="ilt-ip-card-label">Visible IP (what sites see)</div>
-                <div className="ilt-ip-value">{results.vpnIP}</div>
-                <div className="ilt-ip-meta">{results.vpnISP} · {results.vpnLoc}</div>
+                <div className={`ilt-ip-value${showRealIP ? '' : ' ilt-ip-redacted'}`}>
+                  {showRealIP ? results.vpnIP : '••••••••••••'}
+                </div>
+                <div className={`ilt-ip-meta${showRealIP ? '' : ' ilt-ip-redacted'}`}>
+                  {showRealIP ? `${results.vpnISP} · ${results.vpnLoc}` : '•••••••••••• · ••••••••'}
+                </div>
                 {isConnected && <div className="ilt-ip-shield">🛡️ Protected</div>}
               </div>
             </div>
@@ -388,13 +408,17 @@ const IPLeakTest = ({ isConnected }) => {
                 !results.webRtcLeaked,
                 'WebRTC — No Leak',
                 'WebRTC Leak Detected',
-                results.webRtcLeaked ? `Exposed real IP: ${results.webRtcIP}` : 'WebRTC traffic is masked'
+                results.webRtcLeaked
+                  ? (showRealIP ? `Exposed IP: ${results.webRtcIP}` : 'Real IP exposed — click Reveal to see address')
+                  : 'WebRTC traffic is masked'
               )}
               {renderCheck(
                 !results.ipv6Leaked,
                 'IPv6 — No Leak',
                 'IPv6 Leak Detected',
-                results.ipv6Leaked ? `Exposed: ${results.ipv6Address}` : 'IPv6 traffic is blocked or tunnelled'
+                results.ipv6Leaked
+                  ? (showRealIP ? `Exposed: ${results.ipv6Address}` : 'IPv6 address exposed — click Reveal to see address')
+                  : 'IPv6 traffic is blocked or tunnelled'
               )}
               {renderCheck(
                 isConnected,

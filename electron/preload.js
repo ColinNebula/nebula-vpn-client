@@ -221,10 +221,11 @@ contextBridge.exposeInMainWorld('electron', {
         ssServer:  cfg.ssServer.slice(0, 253),
         ssPort:    Math.max(1, Math.min(65535, Number(cfg.ssPort)  || 8388)),
         password:  cfg.password,                // handled server-side, no UI display
-        method:    String(cfg.method  || 'aes-256-gcm').slice(0, 30),
+        method:    ['aes-256-gcm', 'chacha20-poly1305'].includes(cfg.method) ? cfg.method : 'aes-256-gcm',
         wgServer:  String(cfg.wgServer || '').slice(0, 253),
         wgPort:    Math.max(1, Math.min(65535, Number(cfg.wgPort)  || 51820)),
         localPort: Math.max(1024, Math.min(65535, Number(cfg.localPort) || 51821)),
+        jitterMs:  Math.min(200, Math.max(0, Number(cfg.jitterMs) || 0)),
         ssLocalPath: typeof cfg.ssLocalPath === 'string' ? cfg.ssLocalPath.slice(0, 260) : undefined,
       };
       return secureInvoke('vpn-obfuscation-start', safe);

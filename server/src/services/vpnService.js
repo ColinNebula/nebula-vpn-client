@@ -162,7 +162,15 @@ class VPNService {
    * @param {string} [params.clientPublicKey]  – Client's Curve25519 public key (base64).
    *                                             If omitted (legacy), a throwaway key is used.
    */
-  async connect({ userId, serverId, protocol = 'wireguard', clientPublicKey }) {
+  async connect({ userId, serverId, protocol = 'wireguard', clientPublicKey }) {    // Fail loudly instead of returning placeholder values that produce a
+    // "connected" UI state while routing no traffic through the tunnel.
+    if (!this.serverPubKey || this.serverPubKey === 'REPLACE_WITH_SERVER_PUBLIC_KEY' ||
+        !this.endpoint     || this.endpoint     === 'YOUR_SERVER_IP:51820') {
+      throw new Error(
+        'VPN server is not configured. ' +
+        'Set WG_SERVER_PUBLIC_KEY and WG_SERVER_ENDPOINT in server/.env and restart.'
+      );
+    }
     try {
       if (this.connections.has(userId)) {
         await this.disconnect(userId);

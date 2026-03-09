@@ -74,6 +74,9 @@ class WireGuardTunnel {
     this._dohProxy    = null;   // DohProxy instance
     this._splitTunnel = null;   // SplitTunnelManager instance
     this._ssRelay     = null;   // ShadowsocksRelay instance
+
+    // IPv6 leak prevention – list of adapter names we disabled on connect
+    this._ipv6DisabledAdapters = [];
   }
 
   _resolveConfigDir() {
@@ -239,13 +242,69 @@ class WireGuardTunnel {
           `netsh advfirewall firewall add rule name="${name}" dir=out ${cmd}`
         ).catch(e => console.warn('[KillSwitch] Windows add rule failed:', e.message));
       }
+      // Belt-and-suspenders: block any residual IPv6 outbound not covered by adapter disabling.
+      // PowerShell New-NetFirewallRule handles IPv6 address families better than netsh.
+      await execAsync(
+        `powershell -NoProfile -NonInteractive -Command "if (-not (Get-NetFirewallRule -Name 'NebulaVPN-BlockIPv6' -ErrorAction SilentlyContinue)) { New-NetFirewallRule -Name 'NebulaVPN-BlockIPv6' -DisplayName 'Nebula VPN Block IPv6' -Direction Outbound -Action Block -AddressFamily IPv6 -Enabled True | Out-Null }"`
+      ).catch(e => console.warn('[KillSwitch] IPv6 block rule failed:', e.message));
     } else {
       for (const { name } of rules) {
         await execAsync(
           `netsh advfirewall firewall delete rule name="${name}"`
         ).catch(() => {}); // ignore "rule not found" errors
       }
+      await execAsync(
+        `powershell -NoProfile -NonInteractive -Command "Remove-NetFirewallRule -Name 'NebulaVPN-BlockIPv6' -ErrorAction SilentlyContinue"`
+      ).catch(() => {});
     }
+  }
+
+  // ── IPv6 leak prevention (Windows) ───────────────────────────────────────
+
+  /**
+   * Disable IPv6 on all physical network adapters.
+   * Called on VPN connect to prevent IPv6 traffic from bypassing the tunnel.
+   * The WireGuard interface is skipped so the tunnel itself is unaffected.
+   */
+  async _disableIPv6Windows() {
+    const adapters = await this._getWindowsAdapters();
+    this._ipv6DisabledAdapters = [];
+    for (const adapter of adapters) {
+      // Skip the VPN tunnel interface and loopback
+      const lower = adapter.toLowerCase();
+      if (lower === this.tunnelName.toLowerCase() ||
+          lower.includes('wireguard') ||
+          lower === 'loopback pseudo-interface 1') continue;
+
+      await execAsync(
+        `netsh interface ipv6 set interface "${adapter}" disabled`
+      ).then(() => {
+        this._ipv6DisabledAdapters.push(adapter);
+        console.log(`[IPv6] Disabled on "${adapter}"`);
+      }).catch(e => {
+        // "The system cannot find the file specified" = adapter has no IPv6 → skip
+        if (!e.message.includes('cannot find')) {
+          console.warn(`[IPv6] Could not disable on "${adapter}":`, e.message);
+        }
+      });
+    }
+    console.log(`[IPv6] Leak prevention active – ${this._ipv6DisabledAdapters.length} adapter(s) locked`);
+  }
+
+  /**
+   * Re-enable IPv6 on the adapters that were disabled by _disableIPv6Windows().
+   * Called on VPN disconnect.
+   */
+  async _restoreIPv6Windows() {
+    for (const adapter of this._ipv6DisabledAdapters) {
+      await execAsync(
+        `netsh interface ipv6 set interface "${adapter}" enabled`
+      ).catch(e => console.warn(`[IPv6] Could not re-enable on "${adapter}":`, e.message));
+    }
+    if (this._ipv6DisabledAdapters.length > 0) {
+      console.log(`[IPv6] Re-enabled on ${this._ipv6DisabledAdapters.length} adapter(s)`);
+    }
+    this._ipv6DisabledAdapters = [];
   }
 
   async _ksLinux(action) {
@@ -465,6 +524,14 @@ class WireGuardTunnel {
     });
 
     await this._up();
+
+    // Block IPv6 on physical adapters immediately after tunnel is up.
+    // This prevents the window of exposure between tunnel up and kill switch
+    // activation, and protects users who don't use the kill switch.
+    if (this.platform === 'win32') {
+      await this._disableIPv6Windows();
+    }
+
     await this.setDNS(effectiveDns);
 
     if (enableKillSwitch) {
@@ -499,6 +566,11 @@ class WireGuardTunnel {
         console.error('[WireGuard] Split tunnel teardown error:', e.message));
     }
     this._splitTunnel = null;
+
+    // Restore IPv6 on physical adapters before bringing the tunnel down
+    if (this.platform === 'win32') {
+      await this._restoreIPv6Windows();
+    }
 
     if (this.killSwitchActive) {
       await this.disableKillSwitch().catch(e =>
@@ -969,6 +1041,8 @@ class ShadowsocksRelay {
     this._ssPort     = null;
     this._wgServer   = null;   // encoded SS address header for the WG endpoint
     this._wgAddrBuf  = null;
+    this._method     = 'aes-256-gcm'; // 'aes-256-gcm' | 'chacha20-poly1305'
+    this._jitterMs   = 0;             // max random send delay (0 = disabled)
   }
 
   get active() { return this._active; }
@@ -976,23 +1050,31 @@ class ShadowsocksRelay {
   /**
    * Start the Shadowsocks relay.
    * @param {object} cfg
-   * @param {string}  cfg.ssServer   - IP or hostname of the Shadowsocks server
-   * @param {number}  cfg.ssPort     - Shadowsocks server port
-   * @param {string}  cfg.password   - Shadowsocks password
-   * @param {string}  [cfg.method]   - Cipher; only 'aes-256-gcm' supported (default)
-   * @param {string}  cfg.wgServer   - WireGuard server IP (final destination)
-   * @param {number}  cfg.wgPort     - WireGuard server UDP port
-   * @param {number}  [cfg.localPort=51821] - Local UDP port for WireGuard to connect to
-   * @param {string}  [cfg.ssLocalPath]     - Optional path to ss-local binary
+   * @param {string}  cfg.ssServer        - IP or hostname of the Shadowsocks server
+   * @param {number}  cfg.ssPort          - Shadowsocks server port
+   * @param {string}  cfg.password        - Shadowsocks password
+   * @param {string}  [cfg.method]        - Cipher: 'aes-256-gcm' (default) or 'chacha20-poly1305'
+   * @param {string}  cfg.wgServer        - WireGuard server IP (final destination)
+   * @param {number}  cfg.wgPort          - WireGuard server UDP port
+   * @param {number}  [cfg.localPort=51821]  - Local UDP port for WireGuard to connect to
+   * @param {string}  [cfg.ssLocalPath]      - Optional path to ss-local binary
+   * @param {number}  [cfg.jitterMs=0]       - Max random delay (ms) added per outgoing packet
+   *                                           to resist timing-correlation traffic analysis.
+   *                                           0 = disabled; recommended range 10–80 ms.
    */
   async start(cfg) {
     const { ssServer, ssPort, password, wgServer, wgPort,
-            localPort = 51821, ssLocalPath } = cfg;
+            localPort = 51821, ssLocalPath, jitterMs = 0 } = cfg;
     this.localPort  = localPort;
     this._ssServer  = ssServer;
     this._ssPort    = ssPort;
     this._masterKey = this._deriveKey(password, 32);
     this._wgAddrBuf = this._encodeIPv4Addr(wgServer, wgPort);
+    this._jitterMs  = Math.min(200, Math.max(0, Number(jitterMs) || 0));
+
+    // Set cipher — only allow the two supported AEAD ciphers
+    const SUPPORTED_CIPHERS = ['aes-256-gcm', 'chacha20-poly1305'];
+    this._method = SUPPORTED_CIPHERS.includes(cfg.method) ? cfg.method : 'aes-256-gcm';
 
     // Prefer external ss-local binary if available (more performant)
     const binary = ssLocalPath || await this._findSsLocal();
@@ -1058,17 +1140,25 @@ class ShadowsocksRelay {
     this._localSock  = dgram.createSocket('udp4');
     this._remoteSock = dgram.createSocket('udp4');
 
-    // WireGuard → encrypt → SS server
+    // WireGuard → encrypt → SS server (with optional timing jitter)
     this._localSock.on('message', (msg) => {
-      try {
-        const salt    = crypto.randomBytes(32);
-        const subkey  = this._hkdf(this._masterKey, salt);
-        // Payload = SS address header + WireGuard UDP datagram
-        const payload = Buffer.concat([this._wgAddrBuf, msg]);
-        const { ct, tag } = this._gcmEncrypt(subkey, payload);
-        const packet  = Buffer.concat([salt, ct, tag]);
-        this._remoteSock.send(packet, this._ssPort, this._ssServer);
-      } catch (e) { console.warn('[SSRelay] encrypt error:', e.message); }
+      const forward = () => {
+        try {
+          const salt    = crypto.randomBytes(32);
+          const subkey  = this._hkdf(this._masterKey, salt);
+          // Payload = SS address header + WireGuard UDP datagram
+          const payload = Buffer.concat([this._wgAddrBuf, msg]);
+          const { ct, tag } = this._gcmEncrypt(subkey, payload);
+          const packet  = Buffer.concat([salt, ct, tag]);
+          this._remoteSock.send(packet, this._ssPort, this._ssServer);
+        } catch (e) { console.warn('[SSRelay] encrypt error:', e.message); }
+      };
+      if (this._jitterMs > 0) {
+        // Random delay [0, jitterMs) breaks timing-correlation traffic analysis
+        setTimeout(forward, Math.random() * this._jitterMs);
+      } else {
+        forward();
+      }
     });
 
     this._localSock.on('message', (_, rinfo) => { this._wgClient = rinfo; });
@@ -1135,20 +1225,24 @@ class ShadowsocksRelay {
     return key;
   }
 
+  /**
+   * AEAD encrypt using the configured cipher (aes-256-gcm or chacha20-poly1305).
+   * Both ciphers use a 12-byte nonce and produce a 16-byte auth tag.
+   */
   _gcmEncrypt(key, plain) {
-    // Each UDP packet uses a fresh random 12-byte nonce
-    const nonce  = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce);
-    const ct     = Buffer.concat([nonce, cipher.update(plain), cipher.final()]);
-    const tag    = cipher.getAuthTag();
+    const nonce   = crypto.randomBytes(12);
+    const opts    = this._method === 'chacha20-poly1305' ? { authTagLength: 16 } : undefined;
+    const cipher  = crypto.createCipheriv(this._method, key, nonce, opts);
+    const ct      = Buffer.concat([nonce, cipher.update(plain), cipher.final()]);
+    const tag     = cipher.getAuthTag();
     return { ct, tag };
   }
 
   _gcmDecrypt(key, ct, tag) {
-    // First 12 bytes of ciphertext are the nonce
-    const nonce   = ct.slice(0, 12);
-    const payload = ct.slice(12);
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, nonce);
+    const nonce    = ct.slice(0, 12);
+    const payload  = ct.slice(12);
+    const opts     = this._method === 'chacha20-poly1305' ? { authTagLength: 16 } : undefined;
+    const decipher = crypto.createDecipheriv(this._method, key, nonce, opts);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(payload), decipher.final()]);
   }
