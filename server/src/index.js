@@ -55,9 +55,9 @@ app.use(helmet({
       upgradeInsecureRequests: []
     }
   },
-  crossOriginEmbedderPolicy: true,
-  crossOriginOpenerPolicy: true,
-  crossOriginResourcePolicy: { policy: 'same-origin' },
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
   dnsPrefetchControl: { allow: false },
   hsts: {
     maxAge: 31536000,
@@ -86,12 +86,13 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Stricter rate limit for auth endpoints
+// Stricter rate limit for auth endpoints — count ALL attempts (success and failure)
+// to prevent password-spraying attacks across many valid accounts
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isDev ? 500 : 10,
   message: { error: 'Too many authentication attempts' },
-  skipSuccessfulRequests: true
+  skipSuccessfulRequests: false
 });
 
 // Body parsing with limits

@@ -5,12 +5,13 @@ const crypto = require('crypto');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const logger = require('../utils/logger');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, revokeToken } = require('../middleware/auth');
+const { UserStore } = require('../db');
 
 const router = express.Router();
 
-// In-memory user store (replace with database in production)
-const users = new Map();
+// SQLite-backed user store
+const users = new UserStore();
 
 // ── Seed default admin account on startup ────────────────────────────
 ;(async () => {
@@ -68,7 +69,8 @@ router.post('/register', async (req, res) => {
     }
 
     if (users.has(email)) {
-      return res.status(409).json({ error: 'User already exists' });
+      // Generic message to prevent email enumeration
+      return res.status(409).json({ error: 'Registration failed. Please try a different email or log in.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -168,7 +170,7 @@ router.get('/verify', (req, res) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     const user = users.get(decoded.email);
 
     if (!user) {
@@ -196,6 +198,13 @@ router.get('/verify', (req, res) => {
 // must be sent by the client and validated here using the provider's SDK:
 //   • Google  – google-auth-library: verifyIdToken()
 //   • Apple   – apple-signin-auth: verifyIdToken()
+// Logout — revoke the token server-side so it can't be reused even if stolen
+router.post('/logout', authMiddleware, (req, res) => {
+  revokeToken(req.token);
+  logger.info(`User logged out: ${req.user.email}`);
+  res.json({ ok: true });
+});
+
 //   • Microsoft – @azure/msal-node
 //
 // Until that verification is in place the endpoint is disabled to prevent

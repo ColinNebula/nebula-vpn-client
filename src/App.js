@@ -533,7 +533,9 @@ function App() {
     }, 3000);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Revoke token server-side (best-effort) then clear local state
+    await apiService.logout().catch(() => {});
     // Clear session cache on explicit logout so cached role doesn't persist
     if (user?.email) {
       localStorage.removeItem(`nebula_session_${user.email}`);

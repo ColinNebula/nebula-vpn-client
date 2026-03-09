@@ -108,9 +108,9 @@ router.get('/ip-info', (req, res) => {
     method: 'GET',
     headers: {
       'Accept': 'application/json',
-      // Forward the real client IP so ipwho.is returns the client's info,
-      // not the server's IP.
-      'X-Forwarded-For': req.ip || req.headers['x-forwarded-for'] || '',
+      // Use the verified server-side req.ip only — never trust client-supplied
+      // X-Forwarded-For header (SSRF / spoofing risk).
+      'X-Forwarded-For': req.ip || '',
     },
   };
 

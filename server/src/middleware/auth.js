@@ -1,6 +1,23 @@
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 
+// In-memory token revocation list.
+// Entries are pruned when the token's own exp timestamp passes,
+// so memory stays bounded to the number of actively-logged-out tokens.
+const revokedTokens = new Set();
+
+const revokeToken = (token) => {
+  revokedTokens.add(token);
+  // Auto-purge after the token's natural expiry (max 7 days = 604800s)
+  try {
+    const decoded = jwt.decode(token);
+    if (decoded?.exp) {
+      const msRemaining = decoded.exp * 1000 - Date.now();
+      if (msRemaining > 0) setTimeout(() => revokedTokens.delete(token), msRemaining);
+    }
+  } catch { /* ignore */ }
+};
+
 const authMiddleware = (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -9,8 +26,13 @@ const authMiddleware = (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (revokedTokens.has(token)) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.user = decoded;
+    req.token = token; // expose for logout handler
     next();
   } catch (error) {
     logger.error('Auth error:', error);
@@ -47,5 +69,5 @@ const planMiddleware = (requiredPlan) => {
   };
 };
 
-module.exports = { authMiddleware, adminMiddleware, planMiddleware };
+module.exports = { authMiddleware, adminMiddleware, planMiddleware, revokeToken };
 

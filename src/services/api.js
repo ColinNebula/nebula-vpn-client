@@ -105,7 +105,17 @@ class APIService {
     return this.handleResponse(response);
   }
 
-  logout() {
+  async logout() {
+    // Revoke the token server-side first so it can't be reused if stolen
+    const token = this.token || localStorage.getItem('token');
+    if (token) {
+      try {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+        });
+      } catch { /* best-effort — clear locally regardless */ }
+    }
     this.token = null;
     localStorage.removeItem('token');
   }
