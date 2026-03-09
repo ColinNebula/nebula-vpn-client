@@ -1,11 +1,14 @@
 // Bump this version string on every deploy — it forces the SW to update.
-const CACHE_VERSION = 'nebula-vpn-v1.0.3';
+const CACHE_VERSION = 'nebula-vpn-v1.0.4';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
+// Resolve URLs relative to the SW's own scope (works on any subpath, e.g. GitHub Pages)
+const BASE = self.registration.scope.replace(/\/$/, '');
+
 const PRECACHE_URLS = [
-  '/manifest.json',
-  '/logo.svg',
+  `${BASE}/manifest.json`,
+  `${BASE}/logo.svg`,
 ];
 
 // ── Install: pre-cache only minimal shell assets ──────────────────────────
