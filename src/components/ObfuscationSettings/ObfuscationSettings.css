@@ -108,8 +108,15 @@
 .bypass-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 12px;
+  gap: 12px;
+}
+
+.bypass-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .bypass-title {
@@ -118,8 +125,13 @@
   font-weight: 600;
 }
 
+.bypass-subtitle {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.45);
+}
+
 .test-btn {
-  padding: 6px 12px;
+  padding: 6px 14px;
   background: rgba(255, 255, 255, 0.1);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -127,51 +139,324 @@
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.test-btn:hover {
+.test-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.test-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Bypass test grid ─────────────────────────────────────── */
 .bypass-tests {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .bypass-test {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background 0.25s, border-color 0.25s;
+  min-width: 0;
 }
 
-.test-icon {
+/* Status variants */
+.bypass-test.bt-passed {
+  background: rgba(76, 175, 80, 0.12);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.bypass-test.bt-failed {
+  background: rgba(244, 67, 54, 0.12);
+  border-color: rgba(244, 67, 54, 0.3);
+}
+
+.bypass-test.bt-testing {
+  background: rgba(33, 150, 243, 0.1);
+  border-color: rgba(33, 150, 243, 0.25);
+}
+
+/* Icon badge */
+.test-icon-badge {
   font-size: 1rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.test-icon-badge.spinning {
+  display: inline-block;
+  animation: spin 1.2s linear infinite;
+}
+
+/* Text body */
+.test-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .test-name {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.bypass-test.passed .test-name {
-  color: #4CAF50;
+.bypass-test.bt-passed .test-name { color: #66BB6A; }
+.bypass-test.bt-failed .test-name  { color: #EF5350; }
+
+.test-detail {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.bypass-test.failed .test-name {
-  color: #f44336;
+.bypass-test.bt-failed .test-detail { color: rgba(239, 83, 80, 0.7); }
+
+/* Status pill */
+.test-pill {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.35);
 }
 
-.bypass-test.testing .test-icon {
-  animation: spin 1s linear infinite;
-}
+.test-pill.passed  { background: rgba(76,175,80,0.2);  color: #81C784; }
+.test-pill.failed  { background: rgba(244,67,54,0.2);  color: #E57373; }
+.test-pill.testing { background: rgba(33,150,243,0.2); color: #64B5F6; }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Obfuscation health bar ───────────────────────────────── */
+.obfs-health-bar {
+  display: flex;
+  gap: 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.health-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 6px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+.health-stat:last-child { border-right: none; }
+
+.health-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #81C784;
+  font-variant-numeric: tabular-nums;
+}
+
+.health-lbl {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ── Country preset picker ───────────────────────────────── */
+.presets-section {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.presets-section h4 {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 4px;
+}
+
+.presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.preset-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.preset-btn:hover {
+  background: rgba(99,179,237,0.15);
+  border-color: rgba(99,179,237,0.4);
+  color: white;
+}
+
+.preset-btn.active {
+  background: rgba(99,179,237,0.2);
+  border-color: rgba(99,179,237,0.5);
+  color: white;
+}
+
+.preset-flag { font-size: 1rem; }
+.preset-name { font-weight: 500; }
+.preset-check { color: #81C784; font-weight: 700; margin-left: 2px; }
+
+/* ── Transport mode selector ─────────────────────────────── */
+.transport-section {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.transport-section h4 {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 4px;
+}
+
+.transport-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.transport-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.transport-option input[type="radio"] { display: none; }
+
+.transport-option.selected {
+  background: rgba(99,179,237,0.15);
+  border-color: rgba(99,179,237,0.4);
+}
+
+.transport-option:hover:not(.selected) {
+  background: rgba(255,255,255,0.08);
+}
+
+.transport-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+.transport-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.transport-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+}
+
+.transport-desc {
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.2;
+}
+
+/* ── DNS-over-HTTPS section ──────────────────────────────── */
+.doh-section {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.doh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.doh-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.doh-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.doh-option input[type="radio"] { display: none; }
+
+.doh-option.selected {
+  background: rgba(99,179,237,0.15);
+  border-color: rgba(99,179,237,0.4);
+}
+
+.doh-option:hover:not(.selected) { background: rgba(255,255,255,0.08); }
+
+.doh-name {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.8);
 }
 
 .status-banner {
@@ -787,5 +1072,44 @@
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+  }
+
+  .bypass-tests {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .transport-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .obfs-health-bar {
+    flex-wrap: wrap;
+  }
+
+  .health-stat {
+    flex: 1 1 30%;
+  }
+
+  .presets-grid {
+    gap: 6px;
+  }
+
+  .preset-btn {
+    font-size: 0.7rem;
+    padding: 5px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bypass-tests {
+    grid-template-columns: 1fr;
+  }
+
+  .transport-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .health-stat {
+    flex: 1 1 45%;
   }
 }

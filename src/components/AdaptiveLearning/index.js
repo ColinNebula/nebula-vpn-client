@@ -4,7 +4,7 @@ import './AdaptiveLearning.css';
 const STORAGE_KEY = 'nebula_usage_log';
 const MAX_LOG_ENTRIES = 500;
 
-// â”€â”€â”€ Heatmap Component (24-hour usage grid) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Heatmap Component (24-hour usage grid) ───────────────────────────────────
 const UsageHeatmap = ({ log }) => {
   const hourCounts = Array.from({ length: 24 }, (_, h) =>
     log.filter((e) => e.hour === h).length
@@ -38,7 +38,7 @@ const UsageHeatmap = ({ log }) => {
   );
 };
 
-// â”€â”€â”€ Derive preferences from real usage log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Derive preferences from real usage log ───────────────────────────────────
 const derivePreferences = (log) => {
   if (log.length < 3) return null;
 
@@ -62,7 +62,7 @@ const derivePreferences = (log) => {
     },
     {
       category: 'Usage Pattern',
-      learned: eveningCount > morningCount ? 'Evening-heavy usage â€” optimised for 6PMâ€“midnight' : 'Morning-heavy usage â€” optimised for 6AMâ€“10AM',
+      learned: eveningCount > morningCount ? 'Evening-heavy usage — optimised for 6PM–midnight' : 'Morning-heavy usage — optimised for 6AM–10AM',
       confidence: Math.min(95, 55 + recentSessions.length * 2),
       actions: recentSessions.length,
     },
@@ -75,7 +75,7 @@ const derivePreferences = (log) => {
   ];
 };
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 const AdaptiveLearning = () => {
   const [usageLog, setUsageLog] = useState([]);
   const [learningStatus, setLearningStatus] = useState({
@@ -159,9 +159,9 @@ const AdaptiveLearning = () => {
   return (
     <div className="adaptive-learning">
       <div className="learning-header">
-        <h3>ðŸ§  Adaptive Learning</h3>
+        <h3>🧠 Adaptive Learning</h3>
         <div className="learning-indicator">
-          <span className="learning-pulse">ðŸ”„</span>
+          <span className="learning-pulse">🔄</span>
           <span>Continuously Learning</span>
         </div>
       </div>
@@ -170,7 +170,7 @@ const AdaptiveLearning = () => {
         {/* Metrics overview */}
         <div className="learning-overview">
           <div className="overview-card">
-            <h4>ðŸŽ¯ Learning Performance</h4>
+            <h4>🎯 Learning Performance</h4>
             <div className="performance-metrics">
               <div className="metric">
                 <span className="metric-value">{learningStatus.adaptationScore.toFixed(1)}%</span>
@@ -194,16 +194,16 @@ const AdaptiveLearning = () => {
 
         {/* 24h Usage Heatmap */}
         <div className="heatmap-section">
-          <h4>ðŸ• 24-Hour Usage Heatmap</h4>
+          <h4>🕐 24-Hour Usage Heatmap</h4>
           <p className="heatmap-description">
-            Built from {usageLog.length} real sessions â€” darker cells = more usage at that hour.
+            Built from {usageLog.length} real sessions — darker cells = more usage at that hour.
           </p>
           <UsageHeatmap log={usageLog} />
         </div>
 
         {/* Learned Preferences */}
         <div className="user-preferences">
-          <h4>ðŸŽ¨ Learned Preferences</h4>
+          <h4>🎨 Learned Preferences</h4>
           <div className="preferences-list">
             {showPreferences.map((pref, index) => (
               <div key={index} className="preference-item">
@@ -229,14 +229,14 @@ const AdaptiveLearning = () => {
 
         {/* Adaptive Actions */}
         <div className="adaptive-actions">
-          <h4>âš¡ Recent Adaptive Actions</h4>
+          <h4>⚡ Recent Adaptive Actions</h4>
           <div className="actions-timeline">
             {adaptiveActions.map((action) => (
               <div key={action.id} className={`action-item ${action.impact}`}>
                 <div className="action-indicator">
-                  {action.impact === 'positive' && 'âœ…'}
-                  {action.impact === 'neutral' && 'â„¹ï¸'}
-                  {action.impact === 'negative' && 'âš ï¸'}
+                  {action.impact === 'positive' && '✅'}
+                  {action.impact === 'neutral' && 'ℹ️'}
+                  {action.impact === 'negative' && '⚠️'}
                 </div>
                 <div className="action-content">
                   <div className="action-description">{action.action}</div>
@@ -250,16 +250,16 @@ const AdaptiveLearning = () => {
 
         {/* Learning Modules */}
         <div className="learning-modules">
-          <h4>ðŸ”§ Learning Modules</h4>
+          <h4>🔧 Learning Modules</h4>
           <div className="modules-grid">
             {learningModules.map((module, index) => (
               <div key={index} className="module-card">
                 <div className="module-header">
                   <span className="module-name">{module.name}</span>
                   <span className={`module-status ${module.status}`}>
-                    {module.status === 'active' && 'ðŸŸ¢'}
-                    {module.status === 'learning' && 'ðŸŸ¡'}
-                    {module.status === 'training' && 'ðŸ”µ'}
+                    {module.status === 'active' && '🟢'}
+                    {module.status === 'learning' && '🟡'}
+                    {module.status === 'training' && '🔵'}
                     {module.status}
                   </span>
                 </div>
@@ -277,7 +277,7 @@ const AdaptiveLearning = () => {
 
         {/* Privacy Controls */}
         <div className="learning-controls privacy-controls-section">
-          <h4>ðŸ”’ Privacy & Learning Controls</h4>
+          <h4>🔒 Privacy & Learning Controls</h4>
           <div className="controls-grid">
             {Object.entries(privacySettings).map(([key, val]) => (
               <div key={key} className="control-item">
@@ -296,7 +296,7 @@ const AdaptiveLearning = () => {
             className={`clear-data-btn ${clearConfirm ? 'confirm' : ''}`}
             onClick={handleClearData}
           >
-            {clearConfirm ? 'âš ï¸ Click again to confirm deletion' : 'ðŸ—‘ï¸ Clear All Learned Data'}
+            {clearConfirm ? '⚠️ Click again to confirm deletion' : '🗑️ Clear All Learned Data'}
           </button>
         </div>
       </div>

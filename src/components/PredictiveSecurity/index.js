@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import './PredictiveSecurity.css';
 
-// â”€â”€â”€ Threat definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Threat definitions ───────────────────────────────────────────────────────
 const THREAT_TYPES = [
   { type: 'Anomalous Traffic Pattern', category: 'network',    baseSeverity: 'high',   action: 'blocked'   },
   { type: 'Suspicious DNS Query',       category: 'network',    baseSeverity: 'medium', action: 'monitored' },
@@ -20,7 +20,7 @@ const fmtTs = (ts) => {
   return `${Math.floor(diff / 3600)}h ago`;
 };
 
-// â”€â”€â”€ Sparkline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Sparkline ────────────────────────────────────────────────────────────────
 const RiskSparkline = ({ data, width = 200, height = 50 }) => {
   if (!data || data.length < 2) return null;
   const min = Math.max(0, Math.min(...data) - 3);
@@ -44,7 +44,7 @@ const RiskSparkline = ({ data, width = 200, height = 50 }) => {
   );
 };
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 const PredictiveSecurity = () => {
   const nextIdRef = useRef(10);
 
@@ -137,11 +137,11 @@ const PredictiveSecurity = () => {
   return (
     <div className="predictive-security">
       <div className="security-header">
-        <h3>ðŸ”® Predictive Security</h3>
+        <h3>🔮 Predictive Security</h3>
         <div className={`threat-indicator ${threatLevel}`}>
-          {threatLevel === 'low' && 'ðŸŸ¢'}
-          {threatLevel === 'medium' && 'ðŸŸ¡'}
-          {threatLevel === 'high' && 'ðŸ”´'}
+          {threatLevel === 'low' && '🟢'}
+          {threatLevel === 'medium' && '🟡'}
+          {threatLevel === 'high' && '🔴'}
           Threat Level: {threatLevel.toUpperCase()}
         </div>
       </div>
@@ -168,7 +168,7 @@ const PredictiveSecurity = () => {
 
       <div className="security-dashboard">
         <div className="risk-assessment">
-          <h4>âš ï¸ AI Risk Assessment</h4>
+          <h4>⚠️ AI Risk Assessment</h4>
           <div className="risk-meter">
             <svg width="180" height="180" viewBox="0 0 180 180">
               <path d="M 20 160 A 70 70 0 0 1 160 160" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="12" />
@@ -201,13 +201,13 @@ const PredictiveSecurity = () => {
         </div>
 
         <div className="ai-detections">
-          <h4>ðŸ¤– Live Threat Feed</h4>
+          <h4>🤖 Live Threat Feed</h4>
           <div className="detections-list">
             {aiDetections.slice(0, 6).map((detection) => (
               <div key={detection.id} className={`detection-item ${detection.baseSeverity}`}>
                 <div className="detection-header">
                   <span className="detection-type">
-                    {detection.escalated && <span className="escalated-badge">â†‘ ESCALATED</span>}
+                    {detection.escalated && <span className="escalated-badge">↑ ESCALATED</span>}
                     {detection.type}
                   </span>
                   <span className="detection-confidence">{detection.confidence}%</span>
@@ -224,7 +224,7 @@ const PredictiveSecurity = () => {
         </div>
 
         <div className="behavior-analysis">
-          <h4>ðŸ§  Behavioral Analysis</h4>
+          <h4>🧠 Behavioral Analysis</h4>
           <div className="behavior-metrics">
             <div className="behavior-score">
               <span className="behavior-value">{behaviorAnalysis.normalityScore.toFixed(1)}%</span>
@@ -242,7 +242,7 @@ const PredictiveSecurity = () => {
             </div>
             {behaviorAnalysis.deviationAlert && (
               <div className="deviation-alert">
-                âš ï¸ Behavioral deviation detected â€” Enhanced monitoring active
+                ⚠️ Behavioral deviation detected — Enhanced monitoring active
               </div>
             )}
           </div>
@@ -250,7 +250,7 @@ const PredictiveSecurity = () => {
       </div>
 
       <div className="ml-models-security">
-        <h4>ðŸ§  Predictive Models</h4>
+        <h4>🧠 Predictive Models</h4>
         <div className="models-grid">
           {predictiveModels.map((model, index) => (
             <div key={index} className="model-card">
@@ -261,7 +261,7 @@ const PredictiveSecurity = () => {
               <div className="model-metrics">
                 <span className="model-accuracy">{model.accuracy}%</span>
                 <span className={`model-status ${model.status}`}>
-                  {model.status === 'active' ? 'ðŸŸ¢' : 'ðŸ”„'} {model.status}
+                  {model.status === 'active' ? '🟢' : '🔄'} {model.status}
                 </span>
               </div>
             </div>

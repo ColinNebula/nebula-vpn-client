@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import './AINetworkOptimizer.css';
 
-// â”€â”€â”€ Scoring Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Scoring Engine ───────────────────────────────────────────────────────────
 // Stable hash from a string (used for deterministic "reliability" score)
 const hashStr = (s) => s.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 0);
 
@@ -16,7 +16,7 @@ const calculateAIScore = (server, mode = 'adaptive') => {
   const loadScore = Math.max(0, 100 - load);
   // Reliability: deterministic from server name so it's stable across renders
   const reliabilityScore = 72 + ((hashStr(server.name || 'default') % 28));
-  // Time-of-day: peak hours (7pmâ€“11pm) degrade score; off-peak (2amâ€“8am) boost
+  // Time-of-day: peak hours (7pm–11pm) degrade score; off-peak (2am–8am) boost
   const hour = new Date().getHours();
   const timeScore = hour >= 19 && hour <= 23 ? 72 : hour >= 2 && hour <= 8 ? 96 : 84;
 
@@ -49,7 +49,7 @@ const getFeatureBreakdown = (server, mode) => {
   ];
 };
 
-// â”€â”€â”€ Sparkline Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Sparkline Component ──────────────────────────────────────────────────────
 const Sparkline = ({ data, width = 180, height = 50, color = 'var(--accent-color)' }) => {
   if (!data || data.length < 2) return null;
   const min = Math.min(...data) - 2;
@@ -77,7 +77,7 @@ const Sparkline = ({ data, width = 180, height = 50, color = 'var(--accent-color
   );
 };
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
   const [aiMode, setAiMode] = useState('adaptive');
   const [optimizationData, setOptimizationData] = useState({
@@ -176,19 +176,19 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
   return (
     <div className="ai-network-optimizer">
       <div className="optimizer-header">
-        <h3>ðŸ¤– AI Network Optimizer</h3>
+        <h3>🤖 AI Network Optimizer</h3>
         <div className="ai-controls">
           <select
             value={aiMode}
             onChange={(e) => setAiMode(e.target.value)}
             className="ai-mode-selector"
           >
-            <option value="adaptive">ðŸ§  Adaptive Learning</option>
-            <option value="performance">âš¡ Performance Priority</option>
-            <option value="efficiency">ðŸ”‹ Efficiency Mode</option>
+            <option value="adaptive">🧠 Adaptive Learning</option>
+            <option value="performance">⚡ Performance Priority</option>
+            <option value="efficiency">🔋 Efficiency Mode</option>
           </select>
           <button className="optimize-btn" onClick={triggerAIOptimization} disabled={!!optimizationFeedback}>
-            {optimizationFeedback === 'analyzing' ? 'â³ Analyzing...' : optimizationFeedback === 'complete' ? 'âœ… Done!' : 'ðŸš€ Optimize Now'}
+            {optimizationFeedback === 'analyzing' ? '⏳ Analyzing...' : optimizationFeedback === 'complete' ? '✅ Done!' : '🚀 Optimize Now'}
           </button>
         </div>
       </div>
@@ -238,14 +238,14 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
 
         {/* ML Models Status */}
         <div className="ml-models">
-          <h4>ðŸ§  Machine Learning Models</h4>
+          <h4>🧠 Machine Learning Models</h4>
           <div className="models-list">
             {mlModels.map((model, index) => (
               <div key={index} className="model-card">
                 <div className="model-header">
                   <span className="model-name">{model.name}</span>
                   <span className={`model-status ${model.status}`}>
-                    {model.status === 'active' ? 'ðŸŸ¢' : 'ðŸ”„'} {model.status}
+                    {model.status === 'active' ? '🟢' : '🔄'} {model.status}
                   </span>
                 </div>
                 <div className="model-metrics">
@@ -259,7 +259,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
             ))}
           </div>
           <button className="retrain-btn" onClick={retrainModels} disabled={retrainFeedback}>
-            {retrainFeedback ? 'ðŸ”„ Training in progress...' : 'ðŸ”„ Retrain Models'}
+            {retrainFeedback ? '🔄 Training in progress...' : '🔄 Retrain Models'}
           </button>
         </div>
       </div>
@@ -267,7 +267,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
       {/* Feature Importance */}
       {featureBreakdown && (
         <div className="feature-importance">
-          <h4>ðŸ“Š Score Breakdown â€” {optimizationData.recommendedServer?.name}</h4>
+          <h4>📊 Score Breakdown — {optimizationData.recommendedServer?.name}</h4>
           <div className="feature-grid">
             {featureBreakdown.map((f, i) => (
               <div key={i} className="feature-card">
@@ -289,12 +289,12 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
 
       {/* AI Recommendations */}
       <div className="ai-recommendations">
-        <h4>ðŸ’¡ AI Recommendations</h4>
+        <h4>💡 AI Recommendations</h4>
         <div className="recommendations-grid">
           {optimizationData.recommendedServer && (
             <div className="recommendation-card optimal-server">
               <div className="rec-header">
-                <span className="rec-icon">ðŸŽ¯</span>
+                <span className="rec-icon">🎯</span>
                 <h5>Optimal Server Selection</h5>
               </div>
               <div className="rec-content">
@@ -317,11 +317,11 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
 
           <div className="recommendation-card traffic-optimization">
             <div className="rec-header">
-              <span className="rec-icon">ðŸ“Š</span>
+              <span className="rec-icon">📊</span>
               <h5>Traffic Optimization</h5>
             </div>
             <div className="rec-content">
-              <p>Adaptive traffic shaping improves throughput by 12â€“18% during peak hours by deprioritizing background traffic.</p>
+              <p>Adaptive traffic shaping improves throughput by 12–18% during peak hours by deprioritizing background traffic.</p>
               <label className="rec-toggle">
                 <input type="checkbox" checked={adaptiveSettings.trafficShaping}
                   onChange={(e) => setAdaptiveSettings((prev) => ({ ...prev, trafficShaping: e.target.checked }))} />
@@ -332,7 +332,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
 
           <div className="recommendation-card load-balancing">
             <div className="rec-header">
-              <span className="rec-icon">âš–ï¸</span>
+              <span className="rec-icon">⚖️</span>
               <h5>Smart Load Balancing</h5>
             </div>
             <div className="rec-content">
@@ -349,10 +349,10 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
 
       {/* Predictive Analytics */}
       <div className="predictive-analytics">
-        <h4>ðŸ”® Predictive Analytics</h4>
+        <h4>🔮 Predictive Analytics</h4>
         <div className="predictions-grid">
           <div className="prediction-card">
-            <div className="prediction-icon">ðŸ“ˆ</div>
+            <div className="prediction-icon">📈</div>
             <div className="prediction-content">
               <div className="prediction-value">{predictions.nextHourTraffic} MB</div>
               <div className="prediction-label">Predicted Traffic (Next Hour)</div>
@@ -360,7 +360,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
             </div>
           </div>
           <div className="prediction-card">
-            <div className="prediction-icon">â±ï¸</div>
+            <div className="prediction-icon">⏱️</div>
             <div className="prediction-content">
               <div className="prediction-value">{predictions.peakLatency}ms</div>
               <div className="prediction-label">Peak Latency Forecast</div>
@@ -368,7 +368,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
             </div>
           </div>
           <div className="prediction-card">
-            <div className="prediction-icon">ðŸ“Š</div>
+            <div className="prediction-icon">📊</div>
             <div className="prediction-content">
               <div className="prediction-value">{predictions.bandwidthUtilization}%</div>
               <div className="prediction-label">Bandwidth Utilization</div>
@@ -376,7 +376,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
             </div>
           </div>
           <div className="prediction-card">
-            <div className="prediction-icon">ðŸ”—</div>
+            <div className="prediction-icon">🔗</div>
             <div className="prediction-content">
               <div className="prediction-value">{predictions.connectionStability}%</div>
               <div className="prediction-label">Connection Stability</div>
@@ -388,7 +388,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
 
       {/* Adaptive Settings */}
       <div className="adaptive-settings">
-        <h4>âš™ï¸ Adaptive Learning Settings</h4>
+        <h4>⚙️ Adaptive Learning Settings</h4>
         <div className="settings-grid">
           <label className="setting-item">
             <input type="checkbox" checked={adaptiveSettings.autoServerSwitch}

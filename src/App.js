@@ -72,6 +72,7 @@ import ConnectionProfiles from './components/ConnectionProfiles';
 import WarrantCanary from './components/WarrantCanary';
 import TransparencyReport from './components/TransparencyReport';
 import UpdateNotification from './components/UpdateNotification';
+import DonateModal from './components/DonateModal';
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
@@ -92,6 +93,7 @@ function App() {
   const [splitTunnelApps, setSplitTunnelApps] = useState([]);
   const [multiHopServers, setMultiHopServers] = useState([]);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showDonateModal, setShowDonateModal] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [currentPlan, setCurrentPlan] = useState('free');
@@ -772,6 +774,12 @@ function App() {
         currentPlan={currentPlan}
       />
 
+      {/* Donate Modal */}
+      <DonateModal
+        isOpen={showDonateModal}
+        onClose={() => setShowDonateModal(false)}
+      />
+
       {/* Promotional Banner */}
       <PromoBanner 
         currentPlan={currentPlan}
@@ -830,6 +838,9 @@ function App() {
                 👑 Admin
               </button>
             )}
+            <button className="donate-btn" onClick={() => setShowDonateModal(true)} title="Support Nebula VPN">
+              ❤️ Donate
+            </button>
             <button className="admin-btn" onClick={() => setShowAdminPanel(true)}>
               ⚙️ Settings
             </button>
