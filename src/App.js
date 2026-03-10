@@ -78,6 +78,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [user, setUser] = useState(null);
+  const [oauthLoginError, setOAuthLoginError] = useState(null); // error from provider redirect
   const [isConnected, setIsConnected] = useState(false);
   const [selectedServer, setSelectedServer] = useState(null);
   const [connectionTime, setConnectionTime] = useState(0);
@@ -325,6 +326,36 @@ function App() {
       // Allow a tick before re-enabling saves so React batches the state updates
       setTimeout(() => { isRestoringPrefs.current = false; }, 100);
     }
+  }, []);
+
+  // ── OAuth redirect callback — store token before session restore runs ──────
+  // After a provider sign-in the backend redirects here with ?_oauthToken=<JWT>.
+  // We store it in localStorage and clean the URL; the session-restore effect
+  // below will pick it up and call verifyToken() as normal.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthToken = params.get('_oauthToken');
+    const oauthError = params.get('oauth_error');
+
+    if (oauthToken) {
+      // Store for session restore — clean token from visible URL immediately
+      localStorage.setItem('token', oauthToken);
+      apiService.token = oauthToken;
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (oauthError) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      const messages = {
+        google_not_configured:    'Google sign-in is not yet configured on the server.',
+        microsoft_not_configured: 'Microsoft sign-in is not yet configured on the server.',
+        apple_not_configured:     'Apple sign-in is not yet configured on the server.',
+        state_mismatch:           'Sign-in session expired. Please try again.',
+        auth_failed:              'Social sign-in failed. Please try again or use email login.',
+      };
+      console.error('OAuth error:', oauthError);
+      setOAuthLoginError(messages[oauthError] || 'Sign-in failed. Please try again.');
+      window.__oauthError = messages[oauthError] || 'Sign-in failed. Please try again.';
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Restore session from token on first mount ──────────────────────────────
@@ -718,7 +749,8 @@ function App() {
         onLogin={handleLogin} 
         onSwitchToSignup={() => setShowSignup(true)}
         onSocialLogin={handleSocialAuth}
-        isDarkMode={isDarkMode} 
+        isDarkMode={isDarkMode}
+        initialError={oauthLoginError}
       />
     );
   }

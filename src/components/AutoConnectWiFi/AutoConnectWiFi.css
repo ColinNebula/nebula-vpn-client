@@ -518,3 +518,202 @@
     background: #f9f9f9;
   }
 }
+
+/* ── Captive portal warning ────────────────────────────────────── */
+.captive-portal-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(211, 47, 47, 0.15);
+  border: 1px solid rgba(211, 47, 47, 0.6);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  animation: captive-pulse 2s ease-in-out infinite;
+}
+
+@keyframes captive-pulse {
+  0%, 100% { border-color: rgba(211, 47, 47, 0.6); }
+  50%       { border-color: rgba(211, 47, 47, 1); }
+}
+
+.captive-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.captive-body {
+  flex: 1;
+}
+
+.captive-body strong {
+  display: block;
+  color: #ff6b6b;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.captive-body p {
+  color: var(--text-secondary, #aaa);
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.captive-body code {
+  background: rgba(0,0,0,0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.captive-connect-btn {
+  flex-shrink: 0;
+  background: #d32f2f;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.captive-connect-btn:hover {
+  background: #b71c1c;
+}
+
+/* ── Threat panel ────────────────────────────────────────────────── */
+.threat-panel {
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: rgba(255,255,255,0.03);
+}
+
+.threat-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.threat-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.threat-info {
+  flex: 1;
+}
+
+.threat-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.threat-detail {
+  font-size: 12px;
+  color: var(--text-secondary, #aaa);
+}
+
+.threat-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.threat-reasons li {
+  font-size: 12px;
+  color: var(--text-secondary, #aaa);
+  padding: 2px 0;
+}
+
+.threat-reasons li::before {
+  content: '• ';
+  color: #f57c00;
+}
+
+/* Protection checklist */
+.protection-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 10px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-secondary, #aaa);
+}
+
+.check-row span:first-child {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.check-row.pass   span:first-child { opacity: 1; }
+.check-row.fail   { color: #ff6b6b; }
+.check-row.warn   { color: #f57c00; }
+.check-row.unknown { opacity: 0.6; }
+
+/* ── Network status card extras ─────────────────────────────────── */
+.network-bssid {
+  font-size: 10px;
+  color: var(--text-secondary, #666);
+  font-family: monospace;
+}
+
+.scanning-indicator {
+  font-size: 16px;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.last-scan-time {
+  font-size: 11px;
+  color: var(--text-secondary, #666);
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rescan-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-secondary, #aaa);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.rescan-btn:hover:not(:disabled) {
+  border-color: rgba(255,255,255,0.35);
+  color: #fff;
+}
+
+.rescan-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

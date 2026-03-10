@@ -19,6 +19,8 @@ const ALLOWED_INVOKE_CHANNELS = [
   'vpn-doh-stop',
   'vpn-obfuscation-start',
   'vpn-obfuscation-stop',
+  'wifi-scan',
+  'check-captive-portal',
   'get-system-info',
   'set-auto-launch',
   'get-app-version',
@@ -41,7 +43,10 @@ const ALLOWED_RECEIVE_CHANNELS = [
   'update-not-available',
   'update-progress',
   'update-downloaded',
-  'update-error'
+  'update-error',
+  'system-resume',
+  'system-lock-screen',
+  'network-status-change',
 ];
 
 /**
@@ -285,7 +290,32 @@ contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
   
   // Check if running in Electron
-  isElectron: true
+  isElectron: true,
+
+  // ── Network / WiFi ──────────────────────────────────────────────────
+  network: {
+    /**
+     * Scan the current WiFi adapter and return SSID, BSSID, signal, security.
+     * @returns {{ ssid, bssid, signal, security, isOpen, frequency }}
+     */
+    scan: () => secureInvoke('wifi-scan'),
+
+    /**
+     * Test for captive portal (hotel/airport login page).
+     * @returns {{ captive: boolean|null, redirectTo: string|null }}
+     *   captive=true  → definitely behind a portal
+     *   captive=false → clean internet
+     *   captive=null  → inconclusive (offline or VPN already active)
+     */
+    checkCaptivePortal: () => secureInvoke('check-captive-portal'),
+
+    /** Fired when the system wakes from sleep. */
+    onResume:              (cb) => secureOn('system-resume', cb),
+    /** Fired when the screen is locked. */
+    onLockScreen:          (cb) => secureOn('system-lock-screen', cb),
+    /** Fired every ~3 s with { online: boolean }. */
+    onStatusChange:        (cb) => secureOn('network-status-change', cb),
+  },
 });
 
 // Prevent prototype pollution
@@ -294,6 +324,7 @@ Object.freeze(window.electron.vpn);
 Object.freeze(window.electron.system);
 Object.freeze(window.electron.settings);
 Object.freeze(window.electron.log);
+Object.freeze(window.electron.network);
 
 // Security logging
 console.log('[Preload] Secure bridge initialized');

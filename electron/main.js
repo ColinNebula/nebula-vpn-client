@@ -1,9 +1,14 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, session } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, session, net, powerMonitor } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
+const https = require('https');
+const { exec } = require('child_process');
+const { promisify } = require('util');
 const isDev = require('electron-is-dev');
 const { WireGuardTunnel } = require('./vpn-tunnel');
 const PqcHandshake        = require('./pqc-handshake');
+
+const execAsync = promisify(exec);
 
 // One tunnel instance for the lifetime of the app
 const tunnel = new WireGuardTunnel();
@@ -463,6 +468,121 @@ ipcMain.on('analytics-event', (event, payload) => {
   // Intentionally a no-op in the main process; extend as needed.
 });
 
+// ── WiFi / network scan ──────────────────────────────────────────────────
+
+/**
+ * Return current WiFi adapter info from the OS.
+ * Windows: netsh wlan show interfaces
+ * Linux:   iwconfig / nmcli
+ * macOS:   airport -I
+ */
+ipcMain.handle('wifi-scan', async () => {
+  try {
+    let ssid = null, bssid = null, signal = null, security = null, frequency = null;
+
+    if (process.platform === 'win32') {
+      const { stdout } = await execAsync('netsh wlan show interfaces', { timeout: 5000 });
+      const ssidMatch     = stdout.match(/^\s+SSID\s+:\s+(.+)$/m);
+      const bssidMatch    = stdout.match(/^\s+BSSID\s+:\s+([\da-f:]+)/im);
+      const signalMatch   = stdout.match(/^\s+Signal\s+:\s+(\d+)%/m);
+      const securityMatch = stdout.match(/^\s+Authentication\s+:\s+(.+)$/m);
+      const radioMatch    = stdout.match(/^\s+Radio type\s+:\s+(.+)$/m);
+      ssid     = ssidMatch  ? ssidMatch[1].trim()     : null;
+      bssid    = bssidMatch ? bssidMatch[1].trim()    : null;
+      signal   = signalMatch ? parseInt(signalMatch[1], 10) : null;
+      security = securityMatch ? securityMatch[1].trim() : null;
+      frequency = radioMatch   ? radioMatch[1].trim()   : null;
+    } else if (process.platform === 'linux') {
+      const { stdout } = await execAsync(
+        'nmcli -t -f active,ssid,bssid,signal,security dev wifi 2>/dev/null | grep "^yes"',
+        { timeout: 5000 }
+      ).catch(() => ({ stdout: '' }));
+      const parts = stdout.trim().split(':');
+      if (parts.length >= 4) {
+        ssid     = parts[1] || null;
+        bssid    = parts[2] || null;
+        signal   = parts[3] ? parseInt(parts[3], 10) : null;
+        security = parts[4] || null;
+      }
+    } else if (process.platform === 'darwin') {
+      const airportPath = '/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport';
+      const { stdout } = await execAsync(`${airportPath} -I`, { timeout: 5000 })
+        .catch(() => ({ stdout: '' }));
+      const ssidMatch   = stdout.match(/^\s+SSID:\s+(.+)$/m);
+      const bssidMatch  = stdout.match(/^\s+BSSID:\s+([\da-f:]+)/im);
+      const signalMatch = stdout.match(/^\s+agrCtlRSSI:\s+(-?\d+)/m);
+      const authMatch   = stdout.match(/^\s+link auth:\s+(.+)$/m);
+      ssid     = ssidMatch  ? ssidMatch[1].trim()  : null;
+      bssid    = bssidMatch ? bssidMatch[1].trim() : null;
+      signal   = signalMatch ? parseInt(signalMatch[1], 10) : null;
+      security = authMatch  ? authMatch[1].trim()  : null;
+    }
+
+    // Determine if the network is open (no encryption)
+    const isOpen = security
+      ? /open|none/i.test(security)
+      : false;
+
+    return { success: true, ssid, bssid, signal, security, frequency, isOpen };
+  } catch (err) {
+    return { success: true, ssid: null, bssid: null, signal: null, security: null, isOpen: false, error: err.message };
+  }
+});
+
+// ── Captive portal detection ──────────────────────────────────────────────
+
+/**
+ * Detect captive portals (hotel/airport login pages) by making a plain HTTP
+ * request to a known-good endpoint.  If the response is redirected or
+ * returns unexpected content we are behind a captive portal.
+ *
+ * Uses three canary endpoints (OS vendors' own portal checks) for reliability.
+ */
+ipcMain.handle('check-captive-portal', async () => {
+  const CANARIES = [
+    // Cloudflare  — returns exactly "success\n"
+    { url: 'http://captive.cloudflare.com/cdn-cgi/trace', expect: /visit_scheme=http/ },
+    // Apple iOS 14+ — returns exactly "<HTML>...<BODY>Success</BODY></HTML>"
+    { url: 'http://captive.apple.com/', expect: /Success/i },
+    // Android / Google — returns HTTP 204
+    { url: 'http://connectivitycheck.gstatic.com/generate_204', expect: null, expectStatus: 204 },
+  ];
+
+  const check = (canary) => new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve({ captive: null, timedOut: true }), 4000);
+    // Use http (not https) — if https works we might already be tunnelled
+    const req = require('http').get(canary.url, { timeout: 4000 }, (res) => {
+      clearTimeout(timeout);
+      // Any redirect to a non-standard location means captive portal
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400) {
+        return resolve({ captive: true, redirectTo: res.headers.location || '(unknown)' });
+      }
+      if (canary.expectStatus && res.statusCode !== canary.expectStatus) {
+        return resolve({ captive: true });
+      }
+      if (!canary.expect) return resolve({ captive: false });
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { body += chunk; if (body.length > 4096) req.destroy(); });
+      res.on('end', () => resolve({ captive: !canary.expect.test(body) }));
+    });
+    req.on('error', () => { clearTimeout(timeout); resolve({ captive: null, error: true }); });
+    req.on('timeout', () => { req.destroy(); clearTimeout(timeout); resolve({ captive: null, timedOut: true }); });
+  });
+
+  try {
+    const results = await Promise.all(CANARIES.map(check));
+    // If any test definitively says captive → captive
+    const definitelyCaptive = results.some(r => r.captive === true);
+    // If all timed out or errored → offline or VPN already active (treat as unknown)
+    const allFailed = results.every(r => r.captive === null);
+    const redirectTo = results.find(r => r.redirectTo)?.redirectTo || null;
+    return { success: true, captive: allFailed ? null : definitelyCaptive, redirectTo };
+  } catch (err) {
+    return { success: false, captive: null, error: err.message };
+  }
+});
+
 // Auto-launch on system startup
 ipcMain.handle('set-auto-launch', async (event, enabled) => {
   app.setLoginItemSettings({
@@ -548,6 +668,30 @@ if (!isDev) {
     });
   });
 }
+
+// ── Power monitor: notify renderer on system resume (wake from sleep) ───────
+// This lets the UI re-check the network and re-connect the VPN immediately
+// instead of waiting for the next user interaction, closing the exposure window.
+app.whenReady().then(() => {
+  powerMonitor.on('resume', () => {
+    console.log('[PowerMonitor] System resumed – notifying renderer');
+    if (mainWindow) mainWindow.webContents.send('system-resume');
+  });
+
+  powerMonitor.on('lock-screen', () => {
+    if (mainWindow) mainWindow.webContents.send('system-lock-screen');
+  });
+});
+
+// ── Network online/offline events ───────────────────────────────────────────
+app.on('ready', () => {
+  // Electron's net module fires these on the main process
+  // Forward them to the renderer so AutoConnectWiFi can re-scan and reconnect
+  setInterval(() => {
+    const online = net.isOnline();
+    if (mainWindow) mainWindow.webContents.send('network-status-change', { online });
+  }, 3000); // poll every 3 s — lightweight, net.isOnline() is synchronous
+});
 
 // App ready
 app.whenReady().then(() => {

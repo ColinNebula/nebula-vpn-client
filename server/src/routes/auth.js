@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const axios = require('axios');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const logger = require('../utils/logger');
@@ -285,6 +286,187 @@ router.post('/oauth', async (req, res) => {
     res.status(500).json({ error: 'OAuth authentication failed' });
   }
 });
+
+// ── OAuth 2.0 Authorization Code Flow ──────────────────────────────────────
+// Redirect-based flow: browser → backend /start → provider → backend /callback → frontend
+
+const OAUTH_ALLOWED_APP_URLS = (process.env.ALLOWED_ORIGINS || '').split(',').map(u => u.trim()).filter(Boolean);
+
+// In-memory CSRF state store { state → { provider, appUrl, expiresAt } }
+const oauthStateStore = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of oauthStateStore) {
+    if (v.expiresAt < now) oauthStateStore.delete(k);
+  }
+}, 600_000);
+
+function oauthSafeAppUrl(raw) {
+  try {
+    const url = new URL(raw);
+    if (OAUTH_ALLOWED_APP_URLS.some(allowed => raw.startsWith(allowed))) return url.href;
+  } catch {}
+  return OAUTH_ALLOWED_APP_URLS[0] || 'https://colinnebula.github.io/nebula-vpn-client/';
+}
+
+function oauthProviderConfig(provider) {
+  const clientId = process.env[`${provider.toUpperCase()}_CLIENT_ID`];
+  const cfgs = {
+    google: {
+      authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenUrl: 'https://oauth2.googleapis.com/token',
+      scopes: 'openid email profile',
+      clientId,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      usesIdToken: true,
+    },
+    github: {
+      authUrl: 'https://github.com/login/oauth/authorize',
+      tokenUrl: 'https://github.com/login/oauth/access_token',
+      scopes: 'read:user user:email',
+      clientId,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      usesIdToken: false, // GitHub uses access_token + user API, no id_token
+    },
+  };
+  return cfgs[provider] || null;
+}
+
+// Redirect user to provider sign-in page
+router.get('/oauth/:provider/start', (req, res) => {
+  const { provider } = req.params;
+  const config = oauthProviderConfig(provider);
+  const appUrl = oauthSafeAppUrl(req.query.app_url || '');
+
+  if (!config || !config.clientId) {
+    logger.warn(`OAuth start: ${provider} not configured`);
+    return res.redirect(`${appUrl}?oauth_error=${encodeURIComponent(provider + '_not_configured')}`);
+  }
+
+  // Limit state store size to prevent memory exhaustion
+  if (oauthStateStore.size >= 5000) {
+    const oldest = oauthStateStore.keys().next().value;
+    oauthStateStore.delete(oldest);
+  }
+
+  const state = crypto.randomBytes(20).toString('hex');
+  oauthStateStore.set(state, { provider, appUrl, expiresAt: Date.now() + 600_000 });
+
+  const backendBase = process.env.BACKEND_BASE_URL || 'https://api.nebula3ddev.com/api';
+  const redirectUri = `${backendBase}/auth/oauth/${provider}/callback`;
+
+  const params = new URLSearchParams({
+    client_id: config.clientId,
+    redirect_uri: redirectUri,
+    scope: config.scopes,
+    response_type: 'code',
+    state,
+    ...(provider === 'google' ? { access_type: 'online', prompt: 'select_account' } : {}),
+  });
+
+  logger.info(`OAuth ${provider} flow started`);
+  res.redirect(`${config.authUrl}?${params}`);
+});
+
+// Handle provider callback — GET for Google/Microsoft, POST for Apple (form_post)
+const handleOAuthCallback = async (req, res) => {
+  const { provider } = req.params;
+  // Merge query + body so both GET and Apple's form POST work uniformly
+  const { code, state, error } = { ...req.query, ...req.body };
+
+  const storedState = state ? oauthStateStore.get(state) : null;
+  const appUrl = storedState?.appUrl || oauthSafeAppUrl('');
+
+  if (error || !storedState || storedState.provider !== provider) {
+    logger.warn(`OAuth ${provider} callback: ${error || 'invalid state'}`);
+    return res.redirect(`${appUrl}?oauth_error=${encodeURIComponent(error || 'state_mismatch')}`);
+  }
+  oauthStateStore.delete(state);
+
+  if (!code) return res.redirect(`${appUrl}?oauth_error=no_code`);
+
+  const config = oauthProviderConfig(provider);
+  const backendBase = process.env.BACKEND_BASE_URL || 'https://api.nebula3ddev.com/api';
+  const redirectUri = `${backendBase}/auth/oauth/${provider}/callback`;
+
+  try {
+    const tokenRes = await axios.post(
+      config.tokenUrl,
+      new URLSearchParams({
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, timeout: 10_000 }
+    );
+
+    const { id_token, access_token } = tokenRes.data;
+
+    let email = '';
+    let name  = '';
+    let sub   = '';
+
+    if (config.usesIdToken) {
+      // Google: parse the signed id_token JWT
+      if (!id_token) throw new Error('No id_token in provider response');
+      const decoded = jwt.decode(id_token);
+      if (!decoded) throw new Error('Could not decode id_token');
+      email = (decoded.email || '').trim().toLowerCase();
+      name  = decoded.name || decoded.given_name || '';
+      sub   = String(decoded.sub || email).slice(0, 128);
+    } else {
+      // GitHub: exchange gives only access_token — call the user API
+      if (!access_token) throw new Error('No access_token in provider response');
+      const [userRes, emailsRes] = await Promise.all([
+        axios.get('https://api.github.com/user', {
+          headers: { Authorization: `Bearer ${access_token}`, 'User-Agent': 'Nebula-VPN' }, timeout: 8_000,
+        }),
+        axios.get('https://api.github.com/user/emails', {
+          headers: { Authorization: `Bearer ${access_token}`, 'User-Agent': 'Nebula-VPN' }, timeout: 8_000,
+        }),
+      ]);
+      name  = (userRes.data.name || userRes.data.login || '').trim();
+      sub   = String(userRes.data.id || '').slice(0, 128);
+      // Pick the primary verified email; fall back to public email field
+      const primaryEmail = (emailsRes.data || []).find(e => e.primary && e.verified);
+      email = (primaryEmail?.email || userRes.data.email || '').trim().toLowerCase();
+    }
+
+    const emailRegex = /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/;
+    if (!email || !emailRegex.test(email)) throw new Error('No valid email in OAuth token');
+
+    const safeName = (typeof name === 'string' ? name : '').replace(/[\x00-\x1F\x7F]/g, '').slice(0, 100) || email.split('@')[0];
+
+    let user = users.get(email);
+    const isNewUser = !user;
+    if (isNewUser) {
+      user = { email, password: null, name: safeName, role: 'user', plan: 'free', createdAt: new Date(), devices: [], dataUsage: 0, settings: {}, oauthProvider: provider, oauthId: sub };
+      users.set(email, user);
+      logger.info(`New user via ${provider} OAuth: ${email}`);
+    } else {
+      logger.info(`Sign-in via ${provider} OAuth: ${email}`);
+    }
+
+    const token = jwt.sign(
+      { email: user.email, plan: user.plan, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d', algorithm: 'HS256' }
+    );
+
+    const dest = new URL(appUrl);
+    dest.searchParams.set('_oauthToken', token);
+    if (isNewUser) dest.searchParams.set('_oauthNew', '1');
+    dest.searchParams.set('_oauthProvider', provider);
+    res.redirect(dest.toString());
+  } catch (err) {
+    logger.error(`OAuth ${provider} callback error:`, err.message);
+    res.redirect(`${appUrl}?oauth_error=auth_failed`);
+  }
+};
+
+router.get('/oauth/:provider/callback', handleOAuthCallback);
 
 // ── Two-Factor Authentication ─────────────────────────────────────────────
 
