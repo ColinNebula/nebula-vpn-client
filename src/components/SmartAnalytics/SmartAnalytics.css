@@ -22,6 +22,12 @@
   gap: 10px;
 }
 
+.analytics-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .ai-status {
   display: flex;
   align-items: center;
@@ -35,6 +41,32 @@
 
 .ai-indicator {
   animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.export-btn {
+  padding: 8px 16px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 20px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.35);
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .analytics-dashboard {
@@ -123,8 +155,14 @@
   opacity: 0.9;
 }
 
+.insight-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .apply-insight-btn {
-  padding: 8px 16px;
+  padding: 7px 14px;
   border: none;
   border-radius: 6px;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -138,6 +176,42 @@
 .apply-insight-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.applied-label {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.dismiss-btn {
+  padding: 5px 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.dismiss-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.insight-card.applied {
+  opacity: 0.65;
+}
+
+.no-insights {
+  padding: 20px;
+  text-align: center;
+  background: rgba(16,185,129,0.1);
+  border-radius: 10px;
+  font-size: 14px;
+  color: #10b981;
+  border: 1px solid rgba(16,185,129,0.3);
 }
 
 .predictions-section {
@@ -258,11 +332,18 @@
   margin-bottom: 8px;
 }
 
+.kpi-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .kpi-value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
   color: #60a5fa;
-  margin-bottom: 12px;
 }
 
 .kpi-progress {
@@ -323,6 +404,11 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: opacity 0.3s ease;
+}
+
+.report-item.disabled {
+  opacity: 0.5;
 }
 
 .report-info {
