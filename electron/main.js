@@ -272,6 +272,62 @@ ipcMain.handle('vpn-disconnect', async (event, { token } = {}) => {
   }
 });
 
+// Multi-hop VPN connection — connects via the entry node; the server routes
+// traffic through the subsequent hops in the chain.
+ipcMain.handle('vpn-multihop', async (event, { serverIds, protocol, token, killSwitch }) => {
+  const pqc = new PqcHandshake();
+  try {
+    if (!Array.isArray(serverIds) || serverIds.length < 2) {
+      return { success: false, error: 'At least 2 server IDs required' };
+    }
+
+    const apiBase  = process.env.API_URL || 'http://localhost:3001/api';
+    const keyPair  = tunnel.generateKeyPair();
+
+    const res = await fetch(`${apiBase}/vpn/multihop`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        serverIds,
+        protocol:        protocol || 'wireguard',
+        clientPublicKey: keyPair.publicKey,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `API returned ${res.status}`);
+    }
+
+    const { serverPublicKey, serverEndpoint, assignedIP, dns } = await res.json();
+
+    tunnel.keyPair = keyPair;
+
+    const result = await tunnel.connect({
+      serverPublicKey,
+      serverEndpoint,
+      assignedIP,
+      dns,
+      enableKillSwitch: !!killSwitch,
+      presharedKey:     null,
+    });
+
+    if (tray) {
+      tray.setToolTip(`Nebula VPN – Multi-Hop Connected (${assignedIP})`);
+    }
+
+    return { success: true, ip: result.assignedIP, servers: serverIds, type: 'multi-hop' };
+  } catch (err) {
+    console.error('[IPC vpn-multihop] Error:', err.message);
+    return { success: false, error: err.message };
+  } finally {
+    pqc.wipe();
+  }
+});
+
 // Real-time tunnel traffic stats
 ipcMain.handle('vpn-stats', async () => {
   try {

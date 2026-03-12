@@ -10,6 +10,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Whitelist of allowed IPC channels for security
 const ALLOWED_INVOKE_CHANNELS = [
   'vpn-connect',
+  'vpn-multihop',
   'vpn-disconnect',
   'vpn-stats',
   'vpn-kill-switch',
@@ -153,6 +154,28 @@ contextBridge.exposeInMainWorld('electron', {
       }
       return secureInvoke('vpn-connect', {
         serverId:   config.serverId.slice(0, 100),
+        protocol:   String(config.protocol || 'wireguard').slice(0, 20),
+        token:      config.token,
+        killSwitch: Boolean(config.killSwitch),
+      });
+    },
+    /**
+     * Connect through a multi-hop chain of VPN servers.
+     * @param {{ serverIds: string[], protocol?: string, token: string, killSwitch?: boolean }} config
+     */
+    multiHopConnect: (config) => {
+      if (!config || typeof config !== 'object') {
+        return Promise.reject(new Error('Invalid multiHopConnect config'));
+      }
+      if (!Array.isArray(config.serverIds) || config.serverIds.length < 2) {
+        return Promise.reject(new Error('At least 2 server IDs required for multi-hop'));
+      }
+      if (typeof config.token !== 'string' || config.token.length < 10) {
+        return Promise.reject(new Error('Missing auth token'));
+      }
+      const safeIds = config.serverIds.slice(0, 4).map(id => String(id).slice(0, 100));
+      return secureInvoke('vpn-multihop', {
+        serverIds:  safeIds,
         protocol:   String(config.protocol || 'wireguard').slice(0, 20),
         token:      config.token,
         killSwitch: Boolean(config.killSwitch),

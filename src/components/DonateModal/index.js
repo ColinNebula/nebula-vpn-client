@@ -3,9 +3,9 @@ import './DonateModal.css';
 
 // ── Replace these with your real donation URLs ────────────────────────────────
 const DONATE_LINKS = {
-  paypal:  'https://www.paypal.com/donate/?hosted_button_id=YOUR_PAYPAL_BUTTON_ID',
-  github:  'https://github.com/sponsors/YOUR_GITHUB_USERNAME',
-  kofi:    'https://ko-fi.com/YOUR_KOFI_USERNAME',
+  paypal:  'https://www.paypal.com/donate/?hosted_button_id=AWUj4w4vcsGGUUYsMkCZK2c03zfpgk7DR5aj4BEAXnLFvFoa0hCQzHBjh4TJmGfBCmwFTgDiGQ0_cRbt',
+  github:  'https://github.com/sponsors/ColinNebula',
+  kofi:    'https://ko-fi.com/ColinNebula',
 };
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -664,6 +664,53 @@ function App() {
       addLog(`${isConnected ? 'Disconnecting from' : 'Connecting to'} ${selectedServer?.name || 'server'}`, 'info');
     }
     
+    // Use Electron IPC when running in the desktop app; fall back to simulation in browser
+    const isElectronCtx = typeof window !== 'undefined' && !!window.electron?.vpn;
+
+    if (isElectronCtx) {
+      try {
+        const token = localStorage.getItem('token') || '';
+        if (isConnected) {
+          await window.electron.vpn.disconnect({ token });
+          setIsConnected(false);
+          setIsConnecting(false);
+          addLog('Disconnected from VPN', 'warning');
+          if (settings.advancedKillSwitch) {
+            setKillSwitchActive(true);
+            addLog('Advanced Kill Switch activated after disconnect', 'warning');
+          }
+        } else if (multiHopServers.length > 0) {
+          const result = await window.electron.vpn.multiHopConnect({
+            serverIds:  multiHopServers.map(s => String(s.id)),
+            protocol:   'wireguard',
+            token,
+            killSwitch: !!settings.advancedKillSwitch,
+          });
+          if (result?.success === false) throw new Error(result.error || 'Multi-hop connection failed');
+          setKillSwitchActive(false);
+          setIsConnected(true);
+          setIsConnecting(false);
+          addLog(`Successfully connected via multi-hop: ${multiHopServers.map(s => s.name).join(' → ')}`, 'success');
+        } else {
+          const result = await window.electron.vpn.connect({
+            serverId:   String(selectedServer.id),
+            protocol:   selectedServer.protocol || 'wireguard',
+            token,
+            killSwitch: !!settings.advancedKillSwitch,
+          });
+          if (result?.success === false) throw new Error(result.error || 'Connection failed');
+          setKillSwitchActive(false);
+          setIsConnected(true);
+          setIsConnecting(false);
+          addLog(`Successfully connected to ${selectedServer.name}`, 'success');
+        }
+      } catch (err) {
+        setIsConnecting(false);
+        addLog(`Connection error: ${err.message}`, 'error');
+      }
+      return;
+    }
+
     // Simulate connection delay (longer for multi-hop)
     const connectionDelay = multiHopServers.length > 0 ? 4000 : 2000;
     

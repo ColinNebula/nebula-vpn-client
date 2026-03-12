@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import './SmartAnalytics.css';
 
-// â”€â”€â”€ Mini Sparkline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Mini Sparkline ───────────────────────────────────────────────────────────
 const MiniSparkline = ({ data, width = 80, height = 28, color = '#60a5fa' }) => {
   if (!data || data.length < 2) return null;
   const min = Math.min(...data);
@@ -20,11 +20,11 @@ const MiniSparkline = ({ data, width = 80, height = 28, color = '#60a5fa' }) => 
   );
 };
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 const SmartAnalytics = () => {
   const [insights, setInsights] = useState([
     { id: 1, type: 'performance', title: 'Server Switch Recommendation', description: 'AI detected 23% faster speeds available on Singapore server. Latency difference: 18ms vs 45ms current.', priority: 'high', confidence: 94, dismissed: false },
-    { id: 2, type: 'usage', title: 'Peak Usage Pattern Detected', description: 'Your highest activity is 7â€“9 PM. AI recommends scheduling bandwidth-heavy tasks for 2â€“6 AM (off-peak).', priority: 'medium', confidence: 87, dismissed: false },
+    { id: 2, type: 'usage', title: 'Peak Usage Pattern Detected', description: 'Your highest activity is 7–9 PM. AI recommends scheduling bandwidth-heavy tasks for 2–6 AM (off-peak).', priority: 'medium', confidence: 87, dismissed: false },
     { id: 3, type: 'security', title: 'Enhanced Protection Available', description: 'DNS-over-HTTPS not enabled. Activating it would prevent ISP DNS logging and add a privacy layer.', priority: 'medium', confidence: 81, dismissed: false },
     { id: 4, type: 'performance', title: 'Split Tunneling Opportunity', description: 'Streaming apps detected in traffic. Using split tunneling for Netflix/Spotify could improve VPN speed by 19%.', priority: 'low', confidence: 76, dismissed: false },
   ]);
@@ -32,7 +32,7 @@ const SmartAnalytics = () => {
   const [predictions, setPredictions] = useState({
     nextWeekUsage: { value: 47.8, trend: 'up', confidence: 89 },
     averageSpeed: { value: 128.5, trend: 'stable', confidence: 92 },
-    optimalTimes: ['7:00 AM â€“ 9:00 AM', '1:00 PM â€“ 3:00 PM', '11:00 PM â€“ 1:00 AM'],
+    optimalTimes: ['7:00 AM – 9:00 AM', '1:00 PM – 3:00 PM', '11:00 PM – 1:00 AM'],
   });
 
   // KPI metrics with history arrays for sparklines
@@ -117,14 +117,14 @@ const SmartAnalytics = () => {
   return (
     <div className="smart-analytics">
       <div className="analytics-header">
-        <h3>ðŸ“Š Smart Analytics</h3>
+        <h3>📊 Smart Analytics</h3>
         <div className="analytics-header-right">
           <div className="ai-status">
-            <span className="ai-indicator">ðŸ¤–</span>
+            <span className="ai-indicator">🤖</span>
             <span>AI Analysis Active</span>
           </div>
           <button className="export-btn" onClick={exportData} disabled={exporting}>
-            {exporting ? 'â³ Exporting...' : 'ðŸ“¥ Export Data'}
+            {exporting ? '⏳ Exporting...' : '📥 Export Data'}
           </button>
         </div>
       </div>
@@ -132,15 +132,15 @@ const SmartAnalytics = () => {
       <div className="analytics-dashboard">
         {/* AI-Driven Insights */}
         <div className="insights-section">
-          <h4>ðŸ’¡ AI-Driven Insights ({activeInsights.length} active)</h4>
+          <h4>💡 AI-Driven Insights ({activeInsights.length} active)</h4>
           <div className="insights-list">
             {activeInsights.map((insight) => (
               <div key={insight.id} className={`insight-card ${insight.priority} ${insight.applied ? 'applied' : ''}`}>
                 <div className="insight-header">
                   <span className="insight-type">
-                    {insight.type === 'performance' && 'ðŸš€'}
-                    {insight.type === 'usage' && 'ðŸ“ˆ'}
-                    {insight.type === 'security' && 'ðŸ›¡ï¸'}
+                    {insight.type === 'performance' && '🚀'}
+                    {insight.type === 'usage' && '📈'}
+                    {insight.type === 'security' && '🛡️'}
                   </span>
                   <span className="insight-title">{insight.title}</span>
                   <span className="insight-confidence">{insight.confidence}%</span>
@@ -148,29 +148,29 @@ const SmartAnalytics = () => {
                 <p className="insight-description">{insight.description}</p>
                 <div className="insight-actions">
                   {!insight.applied
-                    ? <button className="apply-insight-btn" onClick={() => applyInsight(insight.id)}>âœ… Apply</button>
-                    : <span className="applied-label">âœ… Applied</span>
+                    ? <button className="apply-insight-btn" onClick={() => applyInsight(insight.id)}>✅ Apply</button>
+                    : <span className="applied-label">✅ Applied</span>
                   }
-                  <button className="dismiss-btn" onClick={() => dismissInsight(insight.id)}>âœ•</button>
+                  <button className="dismiss-btn" onClick={() => dismissInsight(insight.id)}>✕</button>
                 </div>
               </div>
             ))}
             {activeInsights.length === 0 && (
-              <div className="no-insights">âœ… All insights addressed â€” you're fully optimised!</div>
+              <div className="no-insights">✅ All insights addressed — you're fully optimised!</div>
             )}
           </div>
         </div>
 
         {/* ML Predictions */}
         <div className="predictions-section">
-          <h4>ðŸ”® ML Predictions</h4>
+          <h4>🔮 ML Predictions</h4>
           <div className="predictions-grid">
             <div className="prediction-card">
               <h5>Next Week Usage</h5>
               <div className="prediction-value">
                 <span className="value">{predictions.nextWeekUsage.value} GB</span>
                 <span className={`trend ${predictions.nextWeekUsage.trend}`}>
-                  {predictions.nextWeekUsage.trend === 'up' ? 'ðŸ“ˆ' : 'ðŸ“‰'} {predictions.nextWeekUsage.trend}
+                  {predictions.nextWeekUsage.trend === 'up' ? '📈' : '📉'} {predictions.nextWeekUsage.trend}
                 </span>
               </div>
               <div className="confidence">Confidence: {predictions.nextWeekUsage.confidence}%</div>
@@ -180,7 +180,7 @@ const SmartAnalytics = () => {
               <div className="prediction-value">
                 <span className="value">{predictions.averageSpeed.value} Mbps</span>
                 <span className={`trend ${predictions.averageSpeed.trend}`}>
-                  ðŸ“Š {predictions.averageSpeed.trend}
+                  📊 {predictions.averageSpeed.trend}
                 </span>
               </div>
               <div className="confidence">Confidence: {predictions.averageSpeed.confidence}%</div>
@@ -198,7 +198,7 @@ const SmartAnalytics = () => {
 
         {/* KPI metrics with sparklines */}
         <div className="kpi-section">
-          <h4>ðŸ“ˆ Key Performance Indicators</h4>
+          <h4>📈 Key Performance Indicators</h4>
           <div className="kpi-grid">
             {kpiMetrics.map((metric, index) => (
               <div key={index} className="kpi-card">
@@ -217,7 +217,7 @@ const SmartAnalytics = () => {
                   ></div>
                 </div>
                 <div className={`kpi-status ${metric.status}`}>
-                  {metric.status === 'exceeding' ? 'âœ… Exceeding' : 'âœ“ Meeting'} Target ({metric.target}{metric.name.includes('Speed') ? ' Mbps' : metric.name.includes('Response') ? 's' : '%'})
+                  {metric.status === 'exceeding' ? '✅ Exceeding' : '✓ Meeting'} Target ({metric.target}{metric.name.includes('Speed') ? ' Mbps' : metric.name.includes('Response') ? 's' : '%'})
                 </div>
               </div>
             ))}
@@ -226,7 +226,7 @@ const SmartAnalytics = () => {
 
         {/* Automated Reports */}
         <div className="reports-section">
-          <h4>ðŸ“§ Automated Reports</h4>
+          <h4>📧 Automated Reports</h4>
           <div className="reports-list">
             {reports.map((report) => (
               <div key={report.id} className={`report-item ${report.enabled ? 'enabled' : 'disabled'}`}>

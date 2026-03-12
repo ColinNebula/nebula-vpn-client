@@ -1,5 +1,46 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './RotatingIP.css';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
+function abortAfter(ms) {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
+/**
+ * Fetch real public IP + ISP + location.
+ * Primary:  our backend proxy (/api/security/ip-info) — no CORS / mixed-content issues.
+ * Fallback: ipwho.is directly over HTTPS.
+ */
+async function fetchPublicIP() {
+  // Primary: backend proxy
+  try {
+    const resp = await fetch(`${API_BASE_URL}/security/ip-info`, {
+      signal: abortAfter(8000),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.ip) return { ip: data.ip, org: data.org || null, city: data.city || null, country: data.country_name || null };
+    }
+  } catch { /* fall through */ }
+
+  // Fallback: ipwho.is — HTTPS, CORS-enabled, 10k req/month free
+  const resp = await fetch('https://ipwho.is/', {
+    headers: { Accept: 'application/json' },
+    signal: abortAfter(8000),
+  });
+  if (!resp.ok) throw new Error(`IP lookup returned ${resp.status}`);
+  const d = await resp.json();
+  if (!d.ip) throw new Error('No IP in response');
+  return {
+    ip:      d.ip,
+    org:     d.connection?.isp || d.org || null,
+    city:    d.city            || null,
+    country: d.country         || null,
+  };
+}
 
 const RotatingIP = ({ 
   isConnected, 
@@ -8,58 +49,70 @@ const RotatingIP = ({
   rotationInterval = 10, // minutes
   onIntervalChange 
 }) => {
-  const [currentIP, setCurrentIP] = useState('192.168.1.xxx');
-  const [ipHistory, setIPHistory] = useState([]);
-  const [nextRotation, setNextRotation] = useState(null);
+  const [ipInfo, setIpInfo]                     = useState(null);   // { ip, org, city, country }
+  const [ipError, setIpError]                   = useState(null);
+  const [ipHistory, setIPHistory]               = useState([]);
+  const [nextRotation, setNextRotation]         = useState(null);
   const [timeUntilRotation, setTimeUntilRotation] = useState(0);
-  const [isRotating, setIsRotating] = useState(false);
-  const [rotationCount, setRotationCount] = useState(0);
+  const [isRotating, setIsRotating]             = useState(false);
+  const [rotationCount, setRotationCount]       = useState(0);
+  const prevConnected                           = useRef(false);
 
-  // Generate a random IP address (simulated)
-  const generateNewIP = useCallback(() => {
-    const octets = [
-      Math.floor(Math.random() * 155) + 100, // 100-254
-      Math.floor(Math.random() * 256),
-      Math.floor(Math.random() * 256),
-      Math.floor(Math.random() * 254) + 1  // 1-254
-    ];
-    return octets.join('.');
+  // Fetch the real public IP and update state
+  const refreshIP = useCallback(async (recordHistory = false) => {
+    setIpError(null);
+    try {
+      const info = await fetchPublicIP();
+      setIpInfo(prev => {
+        if (recordHistory && prev?.ip && prev.ip !== info.ip) {
+          setIPHistory(hist => [{ ip: prev.ip, org: prev.org, timestamp: new Date() }, ...hist.slice(0, 9)]);
+          setRotationCount(c => c + 1);
+        }
+        return info;
+      });
+    } catch (err) {
+      setIpError('Unable to fetch IP');
+    }
   }, []);
 
-  // Rotate IP address
+  // Rotate: ask the VPN tunnel to reconnect (Electron), then re-fetch real IP
   const rotateIP = useCallback(() => {
     setIsRotating(true);
-    
-    setTimeout(() => {
-      const newIP = generateNewIP();
-      setIPHistory(prev => [
-        { ip: currentIP, timestamp: new Date() },
-        ...prev.slice(0, 9) // Keep last 10
-      ]);
-      setCurrentIP(newIP);
-      setRotationCount(prev => prev + 1);
+
+    const doRotate = async () => {
+      // Signal VPN layer to reconnect so a new exit IP is assigned
+      if (window.electron?.vpn?.reconnect) {
+        try { await window.electron.vpn.reconnect(); } catch { /* best-effort */ }
+      }
+      // Brief delay to let the new tunnel come up before querying the exit IP
+      await new Promise(r => setTimeout(r, 2000));
+      await refreshIP(true);
+
       setIsRotating(false);
-      
       if (isEnabled && isConnected) {
         setNextRotation(new Date(Date.now() + rotationInterval * 60 * 1000));
         setTimeUntilRotation(rotationInterval * 60);
       }
-    }, 1500);
-  }, [currentIP, generateNewIP, isEnabled, isConnected, rotationInterval]);
+    };
 
-  // Initialize IP when connected
+    doRotate();
+  }, [refreshIP, isEnabled, isConnected, rotationInterval]);
+
+  // Fetch real IP when VPN connects (and reset when it disconnects)
   useEffect(() => {
-    if (isConnected && !currentIP.includes('xxx')) {
-      return;
-    }
-    if (isConnected) {
-      setCurrentIP(generateNewIP());
+    if (isConnected && !prevConnected.current) {
       setRotationCount(0);
       setIPHistory([]);
+      refreshIP(false);
     }
-  }, [isConnected, generateNewIP, currentIP]);
+    if (!isConnected) {
+      setIpInfo(null);
+      setIpError(null);
+    }
+    prevConnected.current = isConnected;
+  }, [isConnected, refreshIP]);
 
-  // Handle rotation timer
+  // Rotation countdown timer
   useEffect(() => {
     if (!isConnected || !isEnabled) {
       setNextRotation(null);
@@ -67,7 +120,6 @@ const RotatingIP = ({
       return;
     }
 
-    // Set initial next rotation time
     if (!nextRotation) {
       setNextRotation(new Date(Date.now() + rotationInterval * 60 * 1000));
       setTimeUntilRotation(rotationInterval * 60);
@@ -138,16 +190,20 @@ const RotatingIP = ({
 
       {/* Current IP Display */}
       <div className={`current-ip-display ${isRotating ? 'rotating' : ''}`}>
-        <div className="ip-label">Current IP Address</div>
+        <div className="ip-label">Current Exit IP Address</div>
         <div className="ip-address">
           {isRotating ? (
-            <span className="rotating-text">Rotating...</span>
+            <span className="rotating-text">Rotating…</span>
+          ) : !ipInfo && !ipError ? (
+            <span className="rotating-text">Fetching…</span>
+          ) : ipError ? (
+            <span className="ip-error">{ipError}</span>
           ) : (
             <>
-              <span className="ip-value">{currentIP}</span>
+              <span className="ip-value">{ipInfo.ip}</span>
               <button 
                 className="copy-button"
-                onClick={() => navigator.clipboard.writeText(currentIP)}
+                onClick={() => navigator.clipboard.writeText(ipInfo.ip)}
                 title="Copy IP"
               >
                 📋
@@ -155,6 +211,16 @@ const RotatingIP = ({
             </>
           )}
         </div>
+        {ipInfo && !isRotating && (
+          <div className="ip-meta">
+            {ipInfo.org && <span className="ip-isp">{ipInfo.org}</span>}
+            {(ipInfo.city || ipInfo.country) && (
+              <span className="ip-location">
+                {[ipInfo.city, ipInfo.country].filter(Boolean).join(', ')}
+              </span>
+            )}
+          </div>
+        )}
         {rotationCount > 0 && (
           <div className="rotation-count">
             Rotated {rotationCount} time{rotationCount !== 1 ? 's' : ''} this session
@@ -214,7 +280,10 @@ const RotatingIP = ({
           <div className="history-list">
             {ipHistory.slice(0, 5).map((entry, index) => (
               <div key={index} className="history-item">
-                <span className="history-ip">{entry.ip}</span>
+                <div className="history-ip-group">
+                  <span className="history-ip">{entry.ip}</span>
+                  {entry.org && <span className="history-isp">{entry.org}</span>}
+                </div>
                 <span className="history-time">
                   {new Date(entry.timestamp).toLocaleTimeString()}
                 </span>
@@ -227,7 +296,7 @@ const RotatingIP = ({
       {/* Security Note */}
       <div className="security-note">
         <span className="note-icon">🛡️</span>
-        <span>IP rotation makes tracking nearly impossible by changing your public IP periodically without dropping the VPN connection.</span>
+        <span>IP rotation makes tracking nearly impossible by changing your public exit IP periodically without dropping the VPN connection.</span>
       </div>
     </div>
   );

@@ -1,24 +1,29 @@
 import React, { useState } from 'react';
 import './VPNChaining.css';
 
+// ── Full server pool (module-level so applyPreset can always look up by name) ─
+const ALL_SERVER_POOL = [
+  { id: 1,  name: 'US East',     country: 'US', flag: '🇺🇸', latency: 25  },
+  { id: 2,  name: 'UK London',   country: 'UK', flag: '🇬🇧', latency: 45  },
+  { id: 3,  name: 'Germany',     country: 'DE', flag: '🇩🇪', latency: 65  },
+  { id: 4,  name: 'US West',     country: 'US', flag: '🇺🇸', latency: 18  },
+  { id: 5,  name: 'Canada',      country: 'CA', flag: '🇨🇦', latency: 30  },
+  { id: 6,  name: 'France',      country: 'FR', flag: '🇫🇷', latency: 50  },
+  { id: 7,  name: 'Netherlands', country: 'NL', flag: '🇳🇱', latency: 48  },
+  { id: 8,  name: 'Switzerland', country: 'CH', flag: '🇨🇭', latency: 52  },
+  { id: 9,  name: 'Singapore',   country: 'SG', flag: '🇸🇬', latency: 180 },
+  { id: 10, name: 'Japan',       country: 'JP', flag: '🇯🇵', latency: 145 },
+  { id: 11, name: 'Australia',   country: 'AU', flag: '🇦🇺', latency: 220 },
+];
+
 const VPNChaining = () => {
   const [chainingEnabled, setChainingEnabled] = useState(false);
-  const [chainedServers, setChainedServers] = useState([
-    { id: 1, name: 'US East', country: 'US', flag: '🇺🇸', latency: 25, position: 1 },
-    { id: 2, name: 'UK London', country: 'UK', flag: '🇬🇧', latency: 45, position: 2 },
-    { id: 3, name: 'Germany', country: 'DE', flag: '🇩🇪', latency: 65, position: 3 },
-  ]);
+  const [chainedServers, setChainedServers] = useState(
+    ALL_SERVER_POOL.filter(s => s.id <= 3).map((s, i) => ({ ...s, position: i + 1 }))
+  );
 
-  const availableServers = [
-    { id: 4, name: 'US West', country: 'US', flag: '🇺🇸', latency: 18 },
-    { id: 5, name: 'Canada', country: 'CA', flag: '🇨🇦', latency: 30 },
-    { id: 6, name: 'France', country: 'FR', flag: '🇫🇷', latency: 50 },
-    { id: 7, name: 'Netherlands', country: 'NL', flag: '🇳🇱', latency: 48 },
-    { id: 8, name: 'Switzerland', country: 'CH', flag: '🇨🇭', latency: 52 },
-    { id: 9, name: 'Singapore', country: 'SG', flag: '🇸🇬', latency: 180 },
-    { id: 10, name: 'Japan', country: 'JP', flag: '🇯🇵', latency: 145 },
-    { id: 11, name: 'Australia', country: 'AU', flag: '🇦🇺', latency: 220 },
-  ];
+  // Servers not in the chain — recomputed so removed servers become re-addable
+  const availableServers = ALL_SERVER_POOL.filter(s => !chainedServers.find(c => c.id === s.id));
 
   const chainPresets = [
     {
@@ -52,7 +57,8 @@ const VPNChaining = () => {
   ];
 
   const [routingMode, setRoutingMode] = useState('cascade');
-  const [totalLatency] = useState(chainedServers.reduce((sum, s) => sum + s.latency, 0));
+  // Derived directly from current chain — never stale when servers are added/removed
+  const totalLatency = chainedServers.reduce((sum, s) => sum + s.latency, 0);
 
   const addServer = (server) => {
     if (chainedServers.length >= 5) {
@@ -83,10 +89,14 @@ const VPNChaining = () => {
   };
 
   const applyPreset = (preset) => {
-    if (window.confirm(`Apply "${preset.name}" preset with ${preset.hops} hops?`)) {
-      // In real implementation, would load actual server data
-      alert(`Applied "${preset.name}" configuration!`);
+    const matched = preset.servers
+      .map(name => ALL_SERVER_POOL.find(s => s.name === name))
+      .filter(Boolean);
+    if (matched.length === 0) {
+      alert(`No matching servers found for preset "${preset.name}".`);
+      return;
     }
+    setChainedServers(matched.map((s, i) => ({ ...s, position: i + 1 })));
   };
 
   return (
