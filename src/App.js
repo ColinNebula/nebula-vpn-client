@@ -101,7 +101,7 @@ function App() {
     autoConnect: false,
     killSwitch: true,
     advancedKillSwitch: false,
-    protocol: 'OpenVPN',
+    protocol: 'wireguard',
     notifications: true,
     darkMode: false,
     splitTunneling: false,
@@ -682,7 +682,7 @@ function App() {
         } else if (multiHopServers.length > 0) {
           const result = await window.electron.vpn.multiHopConnect({
             serverIds:  multiHopServers.map(s => String(s.id)),
-            protocol:   'wireguard',
+            protocol:   settings.protocol || 'wireguard',
             token,
             killSwitch: !!settings.advancedKillSwitch,
           });
@@ -694,7 +694,7 @@ function App() {
         } else {
           const result = await window.electron.vpn.connect({
             serverId:   String(selectedServer.id),
-            protocol:   selectedServer.protocol || 'wireguard',
+            protocol:   settings.protocol || 'wireguard',
             token,
             killSwitch: !!settings.advancedKillSwitch,
           });

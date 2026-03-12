@@ -272,6 +272,9 @@ const MainDashboard = ({
             ? <span className="status-chip on">🔒 Secure Connection</span>
             : <span className="status-chip off">⚠ Unprotected</span>
           }
+          {settings.protocol && (
+            <span className="proto-chip">{settings.protocol.toUpperCase()}</span>
+          )}
         </div>
 
         {/* Server info */}

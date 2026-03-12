@@ -1,0 +1,148 @@
+.protocol-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* ── Card ── */
+.proto-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border-color, rgba(255,255,255,0.10));
+  background: var(--glass-bg, rgba(255,255,255,0.04));
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  color: var(--text-primary, #e2e8f0);
+}
+
+.proto-card:hover {
+  border-color: rgba(102, 126, 234, 0.55);
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.proto-card.selected {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.14);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.18), 0 4px 20px rgba(102, 126, 234, 0.2);
+}
+
+/* ── Top row ── */
+.proto-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.proto-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.proto-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.proto-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #e2e8f0);
+}
+
+.proto-rec-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+
+.proto-active-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: rgba(74, 222, 128, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+}
+
+/* ── Description ── */
+.proto-description {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-secondary, #94a3b8);
+}
+
+/* ── Speed / Security dots ── */
+.proto-metrics {
+  display: flex;
+  gap: 14px;
+}
+
+.proto-metric {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.proto-metric-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+  min-width: 48px;
+}
+
+.proto-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.proto-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.proto-dot.speed    { background: #667eea; }
+.proto-dot.security { background: #4ade80; }
+.proto-dot.empty    { background: var(--border-color, rgba(255,255,255,0.13)); }
+
+/* ── Tags ── */
+.proto-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.proto-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--glass-bg, rgba(255,255,255,0.07));
+  border: 1px solid var(--border-color, rgba(255,255,255,0.10));
+  color: var(--text-secondary, #94a3b8);
+}
+
+/* ── Compact mode (SettingsPanel inline row) ── */
+@media (max-width: 520px) {
+  .protocol-picker {
+    grid-template-columns: 1fr 1fr;
+  }
+}

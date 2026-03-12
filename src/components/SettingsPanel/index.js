@@ -1,5 +1,6 @@
 import React from 'react';
 import './SettingsPanel.css';
+import ProtocolPicker from '../ProtocolPicker';
 
 const SettingsPanel = ({ settings, onSettingsChange }) => {
   const handleSettingChange = (key, value) => {
@@ -65,20 +66,15 @@ const SettingsPanel = ({ settings, onSettingsChange }) => {
           </label>
         </div>
         
-        <div className="setting-item">
-          <div className="setting-info">
+        <div className="setting-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <div className="setting-info" style={{ marginBottom: '12px' }}>
             <label>VPN Protocol</label>
-            <span className="setting-description">Choose your preferred VPN protocol</span>
+            <span className="setting-description">Select the tunneling protocol used for all connections</span>
           </div>
-          <select
+          <ProtocolPicker
             value={settings.protocol}
-            onChange={(e) => handleSettingChange('protocol', e.target.value)}
-            className="setting-select"
-          >
-            <option value="OpenVPN">OpenVPN</option>
-            <option value="WireGuard">WireGuard</option>
-            <option value="IKEv2">IKEv2</option>
-          </select>
+            onChange={(proto) => handleSettingChange('protocol', proto)}
+          />
         </div>
       </div>
       

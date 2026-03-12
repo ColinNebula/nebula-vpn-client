@@ -94,7 +94,7 @@
 .md-orb-label { font-size: 0.72rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* ── Status chip ── */
-.md-hero-status { margin-top: 20px; z-index: 2; }
+.md-hero-status { margin-top: 20px; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
 
 .status-chip {
   display: inline-flex;
@@ -110,6 +110,21 @@
 .status-chip.on      { background: rgba(74,222,128,0.18); border: 1px solid rgba(74,222,128,0.4); color: #4ade80; }
 .status-chip.off     { background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.35); color: #f87171; }
 .status-chip.paused  { background: rgba(250,204,21,0.15); border: 1px solid rgba(250,204,21,0.4); color: #facc15; }
+
+/* Protocol badge shown beside status chip */
+.proto-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: rgba(102, 126, 234, 0.15);
+  border: 1px solid rgba(102, 126, 234, 0.35);
+  color: #a5b4fc;
+  backdrop-filter: blur(8px);
+}
 
 /* ── Server selector ── */
 .md-hero-server {
