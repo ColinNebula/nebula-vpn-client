@@ -1,5 +1,6 @@
 const express = require('express');
 const https = require('https');
+const axios = require('axios');
 const { authMiddleware } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
@@ -146,6 +147,96 @@ router.get('/ip-info', (req, res) => {
   });
 
   proxyReq.end();
+});
+
+// ── Packages checked against the OSV.dev vulnerability database ─────────────
+// Versions match the actual values in package.json / server/package.json.
+const AUDITED_PACKAGES = [
+  // Server dependencies
+  { name: 'express',          ecosystem: 'npm', version: '4.18.2',  component: 'API Server (Express)' },
+  { name: 'axios',            ecosystem: 'npm', version: '1.6.0',   component: 'HTTP Client (Axios)' },
+  { name: 'jsonwebtoken',     ecosystem: 'npm', version: '9.0.2',   component: 'Auth Library (jsonwebtoken)' },
+  { name: 'bcryptjs',         ecosystem: 'npm', version: '2.4.3',   component: 'Password Hashing (bcryptjs)' },
+  { name: 'ws',               ecosystem: 'npm', version: '8.14.2',  component: 'WebSocket Library (ws)' },
+  { name: 'cors',             ecosystem: 'npm', version: '2.8.5',   component: 'CORS Middleware' },
+  { name: 'helmet',           ecosystem: 'npm', version: '7.1.0',   component: 'Security Headers (Helmet)' },
+  { name: 'better-sqlite3',   ecosystem: 'npm', version: '12.6.2',  component: 'SQLite Database' },
+  { name: 'speakeasy',        ecosystem: 'npm', version: '2.0.0',   component: '2FA Library (Speakeasy)' },
+  // Client dependencies
+  { name: 'react-scripts',    ecosystem: 'npm', version: '5.0.1',   component: 'Build Tools (react-scripts)' },
+  { name: 'electron-updater', ecosystem: 'npm', version: '6.8.3',   component: 'Auto-Updater (electron-updater)' },
+  { name: 'qrcode',           ecosystem: 'npm', version: '1.5.4',   component: 'QR Code Generator' },
+];
+
+function osvSeverity(v) {
+  const s = (v.database_specific?.severity || '').toUpperCase();
+  const MAP = { CRITICAL: 'critical', HIGH: 'high', MODERATE: 'medium', MEDIUM: 'medium', LOW: 'low' };
+  if (MAP[s]) return MAP[s];
+  // Fall back to CVSS v3 vector heuristic
+  const vec = (v.severity || []).find(x => x.type?.includes('CVSS_V3'))?.score || '';
+  if (/[CIA]:H/.test(vec) && /PR:N/.test(vec) && /AV:N/.test(vec)) return 'critical';
+  if (/[CIA]:H/.test(vec)) return 'high';
+  if (/[CIA]:L/.test(vec)) return 'medium';
+  return 'medium';
+}
+
+// POST /api/security/vuln-scan
+// Queries the OSV.dev batch API with real package versions and returns CVE findings.
+router.post('/vuln-scan', authMiddleware, async (req, res) => {
+  try {
+    const queries = AUDITED_PACKAGES.map(({ name, ecosystem, version }) => ({
+      package: { name, ecosystem },
+      version,
+    }));
+
+    const { data } = await axios.post(
+      'https://api.osv.dev/v1/querybatch',
+      { queries },
+      { timeout: 20000 }
+    );
+
+    const results = data.results || [];
+    const findings = [];
+    let seq = 1;
+
+    results.forEach((result, idx) => {
+      const pkg = AUDITED_PACKAGES[idx];
+      for (const v of (result.vulns || [])) {
+        // Prefer a real CVE alias over the OSV/GHSA id
+        const cve = (v.aliases || []).find(a => a.startsWith('CVE-')) || v.id;
+        const hasFixed = (v.affected || []).some(a =>
+          (a.ranges || []).some(r => (r.events || []).some(e => e.fixed !== undefined)));
+        findings.push({
+          id: seq++,
+          cve,
+          osvId: v.id,
+          summary: v.summary || `Vulnerability in ${pkg.name}@${pkg.version}`,
+          severity: osvSeverity(v),
+          component: pkg.component,
+          version: pkg.version,
+          status: hasFixed ? 'patch_available' : 'investigating',
+          references: (v.references || []).slice(0, 2).map(r => r.url),
+          type: 'package',
+        });
+      }
+    });
+
+    logger.info(`Vuln scan: ${AUDITED_PACKAGES.length} packages checked, ${findings.length} CVE(s) found`);
+    res.json({
+      scannedAt: new Date().toISOString(),
+      packagesChecked: AUDITED_PACKAGES.length,
+      findings,
+    });
+  } catch (err) {
+    if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+      return res.status(504).json({ error: 'OSV vulnerability database timed out' });
+    }
+    if (err.response?.status === 429) {
+      return res.status(429).json({ error: 'Rate-limited by OSV — try again in a few seconds' });
+    }
+    logger.error('Vuln scan error:', err.message);
+    res.status(502).json({ error: 'Vulnerability scan failed' });
+  }
 });
 
 module.exports = router;

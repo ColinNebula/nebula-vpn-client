@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import apiService from '../../services/api';
 import './SignupForm.css';
 
 // ─── Provider brand icons (same set as LoginForm) ─────────────────────────────
@@ -53,8 +54,6 @@ const SignupForm = ({ onSignupSuccess, onSwitchToLogin, onSocialAuth }) => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
-  const [verificationSent, setVerificationSent] = useState(false);
   const [socialLoading, setSocialLoading] = useState(null); // 'google' | 'apple' | 'microsoft' | null
 
   const countries = [
@@ -168,8 +167,7 @@ const SignupForm = ({ onSignupSuccess, onSwitchToLogin, onSocialAuth }) => {
   const handleNext = () => {
     if (validateStep(step)) {
       if (step === 3) {
-        // Send verification email before going to step 4
-        sendVerificationEmail();
+        handleSubmit();
       } else {
         setStep(step + 1);
       }
@@ -180,69 +178,36 @@ const SignupForm = ({ onSignupSuccess, onSwitchToLogin, onSocialAuth }) => {
     setStep(step - 1);
   };
 
-  const sendVerificationEmail = () => {
+  const handleSubmit = async () => {
     setIsLoading(true);
-    // Simulate sending verification email
-    setTimeout(() => {
-      setVerificationSent(true);
-      setIsLoading(false);
-      setStep(4);
-    }, 2000);
-  };
-
-  const handleVerificationCodeChange = (index, value) => {
-    if (value.length > 1) return; // Only allow single character
-    
-    const newCode = [...verificationCode];
-    newCode[index] = value;
-    setVerificationCode(newCode);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`code-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
-  };
-
-  const handleVerificationCodeKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
-      const prevInput = document.getElementById(`code-${index - 1}`);
-      if (prevInput) prevInput.focus();
-    }
-  };
-
-  const handleVerifyAndSignup = () => {
-    const code = verificationCode.join('');
-    if (code.length !== 6) {
-      setErrors({ verification: 'Please enter the complete 6-digit code' });
-      return;
-    }
-
-    setIsLoading(true);
-    
-    // Simulate verification and signup
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      // Create user object
+    setErrors({});
+    try {
+      const name = [formData.firstName, formData.lastName].filter(Boolean).join(' ');
+      const data = await apiService.register(formData.email, formData.password, name);
       const userData = {
         email: formData.email,
+        name,
         firstName: formData.firstName,
         lastName: formData.lastName,
         country: formData.country,
-        plan: formData.selectedPlan,
-        verified: true,
+        plan: data.user?.plan || formData.selectedPlan,
+        role: data.user?.role || 'user',
+        token: data.token,
         createdAt: new Date().toISOString()
       };
-
-      // Call success callback
       onSignupSuccess(userData);
-    }, 2000);
-  };
-
-  const resendVerificationCode = () => {
-    setVerificationCode(['', '', '', '', '', '']);
-    sendVerificationEmail();
+    } catch (err) {
+      const msg = err.message || 'Registration failed. Please try again.';
+      // Surface email-already-exists errors on the email field (step 1)
+      if (/email|already|exists|registered/i.test(msg)) {
+        setStep(1);
+        setErrors({ email: 'An account with this email already exists. Please log in.' });
+      } else {
+        setErrors({ form: msg });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialAuth = async (provider) => {
@@ -291,16 +256,11 @@ const SignupForm = ({ onSignupSuccess, onSwitchToLogin, onSocialAuth }) => {
             <span className="step-label">Details</span>
           </div>
           <div className="progress-line"></div>
-          <div className={`progress-step ${step >= 3 ? 'active' : ''} ${step > 3 ? 'completed' : ''}`}>
+          <div className={`progress-step ${step >= 3 ? 'active' : ''}`}>
             <div className="step-circle">
-              {step > 3 ? '✓' : '3'}
+              {step >= 3 ? '3' : '3'}
             </div>
             <span className="step-label">Plan</span>
-          </div>
-          <div className="progress-line"></div>
-          <div className={`progress-step ${step >= 4 ? 'active' : ''}`}>
-            <div className="step-circle">4</div>
-            <span className="step-label">Verify</span>
           </div>
         </div>
 
@@ -566,42 +526,12 @@ const SignupForm = ({ onSignupSuccess, onSwitchToLogin, onSocialAuth }) => {
           </div>
         )}
 
-        {/* Step 4: Email Verification */}
-        {step === 4 && (
-          <div className="signup-step verification-step">
-            <div className="verification-icon">📧</div>
-            <h3>Verify Your Email</h3>
-            <p>We've sent a 6-digit code to <strong>{formData.email}</strong></p>
-            
-            <div className="verification-code-input">
-              {verificationCode.map((digit, index) => (
-                <input
-                  key={index}
-                  id={`code-${index}`}
-                  type="text"
-                  maxLength="1"
-                  value={digit}
-                  onChange={(e) => handleVerificationCodeChange(index, e.target.value)}
-                  onKeyDown={(e) => handleVerificationCodeKeyDown(index, e)}
-                  className="code-digit"
-                />
-              ))}
-            </div>
-            {errors.verification && <span className="error-message">{errors.verification}</span>}
 
-            <button 
-              className="resend-code-btn"
-              onClick={resendVerificationCode}
-              disabled={isLoading}
-            >
-              Didn't receive the code? Resend
-            </button>
-          </div>
-        )}
 
         {/* Navigation Buttons */}
+        {errors.form && <p className="error-message" style={{ textAlign: 'center', marginBottom: 8 }}>{errors.form}</p>}
         <div className="signup-actions">
-          {step > 1 && step < 4 && (
+          {step > 1 && (
             <button 
               className="btn-secondary"
               onClick={handleBack}
@@ -611,25 +541,13 @@ const SignupForm = ({ onSignupSuccess, onSwitchToLogin, onSocialAuth }) => {
             </button>
           )}
           
-          {step < 4 && (
-            <button 
-              className="btn-primary"
-              onClick={handleNext}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Processing...' : step === 3 ? 'Continue' : 'Next'}
-            </button>
-          )}
-
-          {step === 4 && (
-            <button 
-              className="btn-primary"
-              onClick={handleVerifyAndSignup}
-              disabled={isLoading || verificationCode.join('').length !== 6}
-            >
-              {isLoading ? 'Verifying...' : 'Verify & Create Account'}
-            </button>
-          )}
+          <button 
+            className="btn-primary"
+            onClick={handleNext}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creating account…' : step === 3 ? 'Create Account' : 'Next'}
+          </button>
         </div>
 
         {/* Social Signup */}

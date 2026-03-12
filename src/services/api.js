@@ -317,6 +317,16 @@ class APIService {
     });
     return this.handleResponse(response);
   }
+
+  // ── Vulnerability Scan ────────────────────────────────────────────────────
+  // Queries OSV.dev via the server proxy — returns { scannedAt, packagesChecked, findings[] }
+  async vulnScan() {
+    const response = await fetch(`${API_BASE_URL}/security/vuln-scan`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
 }
 
 // Singleton instance

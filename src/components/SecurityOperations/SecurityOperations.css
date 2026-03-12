@@ -44,3 +44,48 @@
 .vuln-status-badge.patch_available { background: rgba(99, 102, 241, 0.2); color: var(--accent-color); }
 .vuln-component { color: var(--text-secondary); font-size: 13px; }
 @media (max-width: 768px) { .security-operations { padding: 15px; } .feeds-grid, .metrics-grid { grid-template-columns: 1fr; } .incident-card, .vuln-card { flex-direction: column; align-items: flex-start; gap: 10px; } }
+
+/* ── Scan progress ─────────────────────────────────────────────────────────── */
+.scan-progress-container { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+.scan-phase-label { color: var(--text-secondary); font-size: 13px; margin: 0; }
+.scan-progress-bar { width: 100%; height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+.scan-progress-fill { height: 100%; background: var(--accent-color, #667eea); border-radius: 4px; transition: width 0.45s ease; }
+.scan-progress-pct { color: var(--text-primary); font-size: 12px; font-weight: 600; text-align: right; margin: 0; }
+.last-scan-time { color: var(--text-secondary); font-size: 12px; margin: 4px 0 0 0; }
+
+/* ── Disabled scan button ──────────────────────────────────────────────────── */
+.scan-vulnerabilities:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Incident create form ──────────────────────────────────────────────────── */
+.incident-form { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+.incident-form-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.incident-input { flex: 1; min-width: 180px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); font-size: 14px; }
+.incident-select { padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); font-size: 14px; cursor: pointer; }
+.incident-form-error { color: #ef4444; font-size: 12px; margin: 8px 0 0 0; }
+
+/* ── Enhanced vuln card ────────────────────────────────────────────────────── */
+.vuln-card { flex-direction: column; align-items: stretch; gap: 8px; }
+.vuln-card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vuln-summary { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.vuln-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 2px; }
+.vuln-ref-link { font-size: 12px; color: var(--accent-color, #667eea); text-decoration: none; font-weight: 600; white-space: nowrap; }
+.vuln-ref-link:hover { text-decoration: underline; }
+
+/* Type badges */
+.vuln-type-badge { font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.vuln-type-package { background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.3); }
+.vuln-type-network  { background: rgba(245,158,11,.12);  color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+.vuln-type-config   { background: rgba(239,68,68,.12);   color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
+
+/* Empty state */
+.vuln-empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.vuln-empty-icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+.vuln-empty-state p { margin: 4px 0; font-size: 14px; }
+.vuln-empty-sub { font-size: 13px; max-width: 440px; margin: 8px auto 0; line-height: 1.6; }
+
+/* Scan summary badges */
+.scan-crit-badge { background: rgba(220,38,38,.15); color: #dc2626; border-radius: 8px; padding: 1px 6px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+.scan-high-badge { background: rgba(239,68,68,.12); color: #ef4444; border-radius: 8px; padding: 1px 6px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+
+/* Error banner */
+.scan-error-banner { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #f59e0b; margin-bottom: 14px; }
