@@ -566,6 +566,19 @@
   font-weight: 600;
 }
 
+/* Always-on Threat Protection indicator dot on the Security tab */
+.tab-shield-badge {
+  font-size: 8px;
+  color: #4ade80;
+  line-height: 1;
+  animation: shieldPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes shieldPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
 .App-main {
   padding: 0 20px 40px;
 }

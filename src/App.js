@@ -31,6 +31,7 @@ import PerformanceMetrics from './components/PerformanceMetrics';
 import GeographicMap from './components/GeographicMap';
 import ThreatDetection from './components/ThreatDetection';
 import DNSProtection from './components/DNSProtection';
+import ThreatProtection from './components/ThreatProtection';
 import IPv6Protection from './components/IPv6Protection';
 import FirewallManager from './components/FirewallManager';
 import ObfuscationSettings from './components/ObfuscationSettings';
@@ -996,6 +997,7 @@ function App() {
             onClick={() => setActiveTab('security')}
           >
             🛡️ Security
+            <span className="tab-shield-badge" title="Threat Protection active">●</span>
           </button>
         )}
         {hasFeature(effectivePlan, 'automationRules') && (
@@ -1284,6 +1286,12 @@ function App() {
                 <div className="analytics-tabs">
                   <button 
                     className={`analytics-tab ${activeTab === 'security' && !window.securitySubTab ? 'active' : ''}`}
+                    onClick={() => { window.securitySubTab = 'protection'; setActiveTab('security'); }}
+                  >
+                    ✨ Threat Protection
+                  </button>
+                  <button 
+                    className={`analytics-tab ${window.securitySubTab === 'threats' ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = 'threats'; setActiveTab('security'); }}
                   >
                     🛡️ Threat Detection
@@ -1321,7 +1329,11 @@ function App() {
                 </div>
                 
                 <div className="analytics-content">
-                  {(!window.securitySubTab || window.securitySubTab === 'threats') && (
+                  {(!window.securitySubTab || window.securitySubTab === 'protection') && (
+                    <ThreatProtection isConnected={isConnected} />
+                  )}
+
+                  {window.securitySubTab === 'threats' && (
                     <ThreatDetection isConnected={isConnected} />
                   )}
                   
