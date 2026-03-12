@@ -175,11 +175,50 @@ function App() {
     { id: '41', name: 'Obfuscated EU',    location: 'Amsterdam',     ping: '60ms',  load: 25, country: 'NL', flag: '🥷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
   ];
 
+  // Live server metrics fetched from /api/servers (ping ms + load %).
+  // Keyed by server id. Merges on top of the static allServers array.
+  const [serverLiveMetrics, setServerLiveMetrics] = useState({});
+  const [isRefreshingServers, setIsRefreshingServers] = useState(false);
+
   // Admin gets unrestricted access; all others are gated by their plan
   const effectivePlan = user?.role === 'admin' ? 'admin' : currentPlan;
 
+  // Merge live metrics (ping/load from API) on top of static server definitions
+  const liveMergedServers = Object.keys(serverLiveMetrics).length > 0
+    ? allServers.map(s => ({
+        ...s,
+        ...(serverLiveMetrics[s.id] || {}),
+      }))
+    : allServers;
+
   // Filter servers based on effective plan
-  const servers = getAllowedServers(effectivePlan, allServers);
+  const servers = getAllowedServers(effectivePlan, liveMergedServers);
+
+  // Fetch live server ping/load from the API and merge into allServers
+  const fetchLiveServerData = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setIsRefreshingServers(true);
+    try {
+      const data = await apiService.getServers();
+      if (data?.servers) {
+        const map = {};
+        data.servers.forEach(s => {
+          map[s.id] = { ping: s.ping, load: s.load };
+        });
+        setServerLiveMetrics(map);
+      }
+    } catch {
+      // Silently fall back to static data
+    } finally {
+      setIsRefreshingServers(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetchLiveServerData();
+    const interval = setInterval(fetchLiveServerData, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchLiveServerData]);
 
   // PWA features and service worker registration
   useEffect(() => {
@@ -1108,6 +1147,8 @@ function App() {
                 onSelect={handleServerSelect}
                 selectedServer={selectedServer}
                 isConnected={isConnected}
+                onRefresh={fetchLiveServerData}
+                isRefreshing={isRefreshingServers}
               />
             </div>
           )}

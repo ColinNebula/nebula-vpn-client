@@ -1,7 +1,52 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './ServerList.css';
 
-const ServerList = ({ servers, onSelect, selectedServer, isConnected }) => {
+// Normalize ping to a plain number regardless of whether it arrived as
+// a numeric 25 (from API) or a string "25ms" (from static data).
+const normalizePingMs = (ping) => {
+  if (typeof ping === 'number') return ping;
+  return parseInt(String(ping)) || 0;
+};
+
+const getPingColor = (ms) => {
+  if (ms < 50)  return '#4ade80';
+  if (ms < 100) return '#a3e635';
+  if (ms < 200) return '#facc15';
+  return '#f87171';
+};
+
+const getPingBars = (ms) => {
+  if (ms < 50)  return 4;
+  if (ms < 100) return 3;
+  if (ms < 200) return 2;
+  return 1;
+};
+
+// Signal-strength bars component
+const PingSignal = ({ ping }) => {
+  const ms    = normalizePingMs(ping);
+  const bars  = getPingBars(ms);
+  const color = getPingColor(ms);
+  return (
+    <div className="ping-signal">
+      <div className="ping-bars">
+        {[1, 2, 3, 4].map(b => (
+          <span
+            key={b}
+            className="ping-bar"
+            style={{
+              height: `${b * 4}px`,
+              background: b <= bars ? color : 'rgba(255,255,255,0.15)',
+            }}
+          />
+        ))}
+      </div>
+      <span className="ping-ms" style={{ color }}>{ms}ms</span>
+    </div>
+  );
+};
+
+const ServerList = ({ servers, onSelect, selectedServer, isConnected, onRefresh, isRefreshing = false }) => {
   const [sortBy, setSortBy] = useState('name'); // name, ping, load
   const [filterCountry, setFilterCountry] = useState('all');
   const [filterPurpose, setFilterPurpose] = useState('all'); // all, general, streaming, gaming, p2p
@@ -9,7 +54,20 @@ const ServerList = ({ servers, onSelect, selectedServer, isConnected }) => {
   const [showOptimal, setShowOptimal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // grid, list
+  const [lastRefreshed, setLastRefreshed] = useState(Date.now());
   const searchRef = useRef(null);
+
+  // Track when a refresh completes to show "Updated just now"
+  useEffect(() => {
+    if (!isRefreshing) setLastRefreshed(Date.now());
+  }, [isRefreshing]);
+
+  const getSecondsAgo = () => {
+    const s = Math.floor((Date.now() - lastRefreshed) / 1000);
+    if (s < 5)   return 'just now';
+    if (s < 60)  return `${s}s ago`;
+    return `${Math.floor(s / 60)}m ago`;
+  };
 
   const getLoadColor = (load) => {
     if (load < 30) return '#4CAF50'; // Green
@@ -94,6 +152,17 @@ const ServerList = ({ servers, onSelect, selectedServer, isConnected }) => {
           <div className="view-toggle">
             <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Grid view">⊞</button>
             <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')} title="List view">☰</button>
+          </div>
+          <div className="server-refresh-row">
+            <span className="last-refresh-label">{isRefreshing ? 'Refreshing…' : `Updated ${getSecondsAgo()}`}</span>
+            {onRefresh && (
+              <button
+                className={`server-refresh-btn ${isRefreshing ? 'spinning' : ''}`}
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                title="Refresh server list"
+              >↺</button>
+            )}
           </div>
         </div>
 
@@ -226,7 +295,7 @@ const ServerList = ({ servers, onSelect, selectedServer, isConnected }) => {
               <div className="server-details">
                 <div className="server-location">{server.location}</div>
                 <div className="server-stats-row">
-                  <span className="server-ping">{server.ping}</span>
+                  <PingSignal ping={server.ping} />
                   <div className="feature-indicators">
                     {server.streaming && <span className="feature-icon" title="Streaming">🎬</span>}
                     {server.gaming && <span className="feature-icon" title="Gaming">🎮</span>}
