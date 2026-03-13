@@ -66,8 +66,8 @@ const SettingsPanel = ({ settings, onSettingsChange }) => {
           </label>
         </div>
         
-        <div className="setting-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-          <div className="setting-info" style={{ marginBottom: '12px' }}>
+        <div className="setting-item setting-item--protocol">
+          <div className="setting-info setting-info--protocol">
             <label>VPN Protocol</label>
             <span className="setting-description">Select the tunneling protocol used for all connections</span>
           </div>

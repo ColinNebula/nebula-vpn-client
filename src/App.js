@@ -74,11 +74,13 @@ import WarrantCanary from './components/WarrantCanary';
 import TransparencyReport from './components/TransparencyReport';
 import UpdateNotification from './components/UpdateNotification';
 import DonateModal from './components/DonateModal';
+import OnboardingWizard from './components/OnboardingWizard';
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [user, setUser] = useState(null);
   const [oauthLoginError, setOAuthLoginError] = useState(null); // error from provider redirect
   const [isConnected, setIsConnected] = useState(false);
@@ -597,13 +599,31 @@ function App() {
     setShowSignup(false);
     console.log('✅ Account created successfully!');
     addLog('New account created and verified', 'success');
-    
-    // Show welcome message
-    setTimeout(() => {
-      if (userData.plan === 'free') {
-        setShowSubscriptionModal(true);
-      }
-    }, 3000);
+
+    // Show onboarding wizard for first-time users
+    const onboardingKey = `nebula_onboarding_done_${userData.email}`;
+    if (!localStorage.getItem(onboardingKey)) {
+      setShowOnboarding(true);
+    } else if (userData.plan === 'free') {
+      // Returning user — show subscription nudge as before
+      setTimeout(() => setShowSubscriptionModal(true), 3000);
+    }
+  };
+
+  const handleOnboardingComplete = (choices) => {
+    // Mark wizard as seen for this user so it never shows again
+    if (user?.email) {
+      localStorage.setItem(`nebula_onboarding_done_${user.email}`, '1');
+    }
+    // Apply wizard choices to app settings
+    if (choices.protocol) handleSettingChange('protocol', choices.protocol);
+    if (choices.killSwitch !== undefined) handleSettingChange('killSwitch', choices.killSwitch);
+    if (choices.server) setSelectedServer(choices.server);
+    setShowOnboarding(false);
+    // Show subscription modal for free users after a short delay
+    if (currentPlan === 'free') {
+      setTimeout(() => setShowSubscriptionModal(true), 2000);
+    }
   };
 
   const handleLogout = async () => {
@@ -866,6 +886,16 @@ function App() {
         isOpen={showDonateModal}
         onClose={() => setShowDonateModal(false)}
       />
+
+      {/* Onboarding Wizard — shown to first-time users after signup */}
+      {showOnboarding && (
+        <OnboardingWizard
+          user={user}
+          settings={settings}
+          servers={servers}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
 
       {/* Promotional Banner */}
       <PromoBanner 

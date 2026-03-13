@@ -144,5 +144,37 @@
 @media (max-width: 520px) {
   .protocol-picker {
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .proto-card {
+    padding: 10px;
+  }
+
+  .proto-metrics {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .proto-description {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .protocol-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .proto-card {
+    padding: 10px 12px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .proto-card-top {
+    flex: 1;
+    min-width: 0;
   }
 }

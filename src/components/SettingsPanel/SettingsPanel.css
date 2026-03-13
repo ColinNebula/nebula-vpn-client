@@ -4,8 +4,10 @@
   padding: 25px;
   box-shadow: var(--shadow, 0 8px 25px rgba(0, 0, 0, 0.15));
   max-width: 600px;
+  width: 100%;
   margin: 0 auto;
   border: 1px solid var(--border-color, #eee);
+  box-sizing: border-box;
 }
 
 .settings-panel h3 {
@@ -37,7 +39,8 @@
   align-items: center;
   padding: 15px 0;
   border-bottom: 1px solid rgba(var(--border-color, 245, 245, 245), 0.5);
-  gap: 20px;
+  gap: 16px;
+  min-width: 0;
 }
 
 .setting-item:last-child {
@@ -59,6 +62,7 @@
   font-size: 14px;
   color: var(--text-secondary, #666);
   line-height: 1.4;
+  word-break: break-word;
 }
 
 .toggle-switch {
@@ -66,6 +70,7 @@
   display: inline-block;
   width: 50px;
   height: 24px;
+  flex-shrink: 0;
 }
 
 .toggle-switch input {
@@ -132,6 +137,7 @@ input:checked + .slider:before {
   cursor: pointer;
   transition: all 0.3s ease;
   margin: 0 5px;
+  white-space: nowrap;
 }
 
 .action-btn.secondary {
@@ -168,19 +174,79 @@ input:checked + .slider:before {
   font-size: 14px;
 }
 
+.setting-item--protocol {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.setting-info--protocol {
+  margin-bottom: 12px;
+}
+
 @media (max-width: 600px) {
+  .settings-panel {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .settings-panel h3 {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+  }
+
+  .settings-section h4 {
+    font-size: 1rem;
+  }
+
   .setting-item {
     flex-direction: column;
     align-items: stretch;
-    gap: 15px;
+    gap: 12px;
   }
-  
-  .toggle-switch, .setting-select {
-    align-self: center;
+
+  .setting-info {
+    min-width: 0;
   }
-  
-  .action-btn {
-    margin: 5px 0;
+
+  .toggle-switch {
+    align-self: flex-start;
+  }
+
+  .setting-select {
+    align-self: stretch;
     width: 100%;
+    min-width: unset;
+  }
+
+  .settings-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .action-btn {
+    margin: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .settings-panel {
+    padding: 16px 12px;
+    border-radius: 10px;
+  }
+
+  .settings-panel h3 {
+    font-size: 1.1rem;
+  }
+
+  .setting-item {
+    padding: 12px 0;
+    gap: 10px;
+  }
+
+  .setting-description {
+    font-size: 13px;
   }
 }
