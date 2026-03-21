@@ -220,6 +220,10 @@ function injectRendererPrivacyHardening(webContents) {
 }
 
 function getApiBase() {
+  // In development or when explicitly testing, use localhost
+  if (isDev || process.env.USE_LOCAL_API === 'true') {
+    return 'http://localhost:3001/api';
+  }
   return process.env.API_URL || 'https://api.nebula3ddev.com/api';
 }
 
