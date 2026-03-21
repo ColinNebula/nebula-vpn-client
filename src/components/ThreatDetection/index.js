@@ -1,6 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ThreatDetection.css';
 
+// ── Helper functions ─────────────────────────────────────────────────────────
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+// ── Geographic data ──────────────────────────────────────────────────────────
+const COUNTRIES = ['US', 'RU', 'CN', 'DE', 'BR', 'IN', 'FR', 'UK', 'KR', 'JP', 'NL', 'CA'];
+
+const COUNTRY_NAMES = {
+  'US': 'United States',
+  'RU': 'Russia', 
+  'CN': 'China',
+  'DE': 'Germany',
+  'BR': 'Brazil',
+  'IN': 'India',
+  'FR': 'France',
+  'UK': 'United Kingdom',
+  'KR': 'South Korea',
+  'JP': 'Japan', 
+  'NL': 'Netherlands',
+  'CA': 'Canada'
+};
+
 // ── Threat catalogue ─────────────────────────────────────────────────────────
 const THREAT_CATALOGUE = [
   { type: 'malware',      icon: '🦠', color: '#f44336', label: 'Malware',        protocol: 'HTTP',  settingKey: 'blockMalware'      },
@@ -15,28 +36,14 @@ const THREAT_CATALOGUE = [
   { type: 'mitm',         icon: '🔀', color: '#e65100', label: 'MITM Attempt',   protocol: 'TLS',   settingKey: 'deepPacketInspection' },
 ];
 
-const DOMAINS = [
-  'malicious-site.xyz', 'fake-banking.com', 'tracker-network.io',
-  'ad-server-cdn.net',  'phishing-scam.org', 'malware-download.ru',
-  'suspicious-domain.tk', 'cdn-crypto-miner.net', 'botnet-controller.onion',
-  'c2-server-hidden.io', 'ransom-payload.xyz', 'spy-ware-drop.net',
-  'ssl-strip-proxy.cc', 'exfil-data-server.ru', 'zero-day-exploit.cn',
-];
-
-const COUNTRIES = ['RU', 'CN', 'KP', 'IR', 'US', 'UA', 'BR', 'NG', 'RO', 'IN'];
-const COUNTRY_NAMES = { RU: 'Russia', CN: 'China', KP: 'N. Korea', IR: 'Iran', US: 'United States', UA: 'Ukraine', BR: 'Brazil', NG: 'Nigeria', RO: 'Romania', IN: 'India' };
-
+// Intelligence campaigns are static reference data; IOC counts come from real scans
 const INTEL_CAMPAIGNS = [
-  { name: 'Operation Eclipse',    type: 'APT', iocs: 342, status: 'active'   },
-  { name: 'DarkHydra Botnet',     type: 'Botnet', iocs: 1280, status: 'active' },
-  { name: 'PhishNet Campaign',    type: 'Phishing', iocs: 576, status: 'active' },
-  { name: 'CryptoJack Ring',      type: 'Cryptomining', iocs: 214, status: 'monitored' },
-  { name: 'RansomCloud v4',       type: 'Ransomware', iocs: 98,  status: 'active'   },
+  { name: 'Operation Eclipse',    type: 'APT',          iocs: 0, status: 'monitored' },
+  { name: 'DarkHydra Botnet',     type: 'Botnet',       iocs: 0, status: 'monitored' },
+  { name: 'PhishNet Campaign',    type: 'Phishing',     iocs: 0, status: 'monitored' },
+  { name: 'CryptoJack Ring',      type: 'Cryptomining', iocs: 0, status: 'monitored' },
+  { name: 'RansomCloud v4',       type: 'Ransomware',   iocs: 0, status: 'monitored' },
 ];
-
-const randIp = () => Array.from({ length: 4 }, () => Math.floor(Math.random() * 256)).join('.');
-const randFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 // ── Sparkline ────────────────────────────────────────────────────────────────
 const Sparkline = ({ data, width = 160, height = 36, color = '#4CAF50' }) => {
@@ -90,7 +97,7 @@ const ThreatDetection = ({ isConnected }) => {
   const [threatTimeline, setThreatTimeline] = useState(Array(20).fill(0));
   const [riskScore, setRiskScore]         = useState(12);
   const [intelCampaigns]                  = useState(INTEL_CAMPAIGNS);
-  const [totalIocs, setTotalIocs]         = useState(2510);
+  const [totalIocs, setTotalIocs]         = useState(0);
   const nextId = useRef(1);
 
   const shouldBlock = (type) => {
@@ -99,69 +106,52 @@ const ThreatDetection = ({ isConnected }) => {
     return cat ? !!settings[cat.settingKey] : false;
   };
 
-  // ── Simulate real-time threat feed ──────────────────────────────────────
+  // ── Real threat events via localStorage (written by ThreatProtection / OS-level proxy) ──
+  // When the browser extension or Electron main process detects a blocked request,
+  // it writes a JSON array to localStorage key 'nebula_threat_log'.
   useEffect(() => {
-    if (!isConnected || !settings.enabled) return;
-
-    const interval = setInterval(() => {
-      if (Math.random() > 0.65) {
-        const threatDef = randFrom(THREAT_CATALOGUE);
-        const severity  = randFrom(['low', 'medium', 'high', 'critical']);
-        const country   = randFrom(COUNTRIES);
-        const domain    = randFrom(DOMAINS);
-        const blocked   = shouldBlock(threatDef.type);
-        const quarantine = blocked && settings.autoQuarantine;
-
-        const newThreat = {
-          id:        nextId.current++,
-          type:      threatDef.type,
-          icon:      threatDef.icon,
-          color:     threatDef.color,
-          label:     threatDef.label,
-          protocol:  threatDef.protocol,
-          domain,
-          ip:        randIp(),
-          country,
-          countryName: COUNTRY_NAMES[country],
-          timestamp: new Date().toLocaleTimeString(),
-          severity,
-          blocked,
-          quarantined: quarantine,
-          bytes:     `${randInt(1, 999)} KB`,
-          confidence: randInt(72, 99),
-          iocMatch:  Math.random() > 0.4 ? randFrom(INTEL_CAMPAIGNS).name : null,
-        };
-
-        if (quarantine && !quarantined.includes(domain)) {
-          setQuarantined(prev => [...prev, domain]);
-        }
-
-        setThreats(prev => [newThreat, ...prev].slice(0, 200));
-
-        if (blocked) {
+    const onStorage = (e) => {
+      if (e.key !== 'nebula_threat_log') return;
+      try {
+        const events = JSON.parse(e.newValue || '[]');
+        if (!Array.isArray(events) || events.length === 0) return;
+        const newThreats = events.map(ev => ({
+          id:          nextId.current++,
+          type:        ev.type        || 'malware',
+          icon:        THREAT_CATALOGUE.find(c => c.type === ev.type)?.icon  || '🦠',
+          color:       THREAT_CATALOGUE.find(c => c.type === ev.type)?.color || '#f44336',
+          label:       THREAT_CATALOGUE.find(c => c.type === ev.type)?.label || ev.type,
+          protocol:    ev.protocol    || 'HTTP',
+          domain:      ev.domain      || '—',
+          ip:          ev.ip          || '—',
+          country:     ev.country     || '—',
+          countryName: ev.countryName || ev.country || '—',
+          timestamp:   ev.timestamp   || new Date().toLocaleTimeString(),
+          severity:    ev.severity    || 'medium',
+          blocked:     ev.blocked     ?? true,
+          quarantined: false,
+          bytes:       ev.bytes       || '—',
+          confidence:  ev.confidence  || 90,
+          iocMatch:    ev.iocMatch    || null,
+        }));
+        setThreats(prev => [...newThreats, ...prev].slice(0, 200));
+        const blocked = newThreats.filter(t => t.blocked);
+        if (blocked.length > 0) {
           setStats(prev => {
-            const key = ['malware','phishing','tracker','ransomware','cryptomining','botnet','c2'].includes(newThreat.type)
-              ? (newThreat.type === 'tracker' ? 'trackers' : newThreat.type)
-              : newThreat.type === 'ads' ? 'trackers' : 'malware';
-            return { ...prev, blocked: prev.blocked + 1, [key]: (prev[key] || 0) + 1 };
+            const next = { ...prev, blocked: prev.blocked + blocked.length };
+            blocked.forEach(t => {
+              const key = t.type === 'tracker' ? 'trackers' : (next[t.type] !== undefined ? t.type : 'malware');
+              next[key] = (next[key] || 0) + 1;
+            });
+            return next;
           });
+          setTotalIocs(prev => prev + blocked.length);
         }
-
-        // Update timeline (threats per tick)
-        setThreatTimeline(prev => [...prev.slice(1), blocked ? 1 : 0]);
-
-        // Adjust risk score
-        setRiskScore(prev => {
-          const delta = severity === 'critical' ? 8 : severity === 'high' ? 4 : severity === 'medium' ? 2 : 1;
-          return Math.min(100, Math.max(5, prev + (blocked ? -1 : delta)));
-        });
-
-        setTotalIocs(prev => prev + randInt(0, 3));
-      }
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, [isConnected, settings, quarantined]); // eslint-disable-line react-hooks/exhaustive-deps
+      } catch { /* ignore malformed events */ }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // Risk score natural decay
   useEffect(() => {

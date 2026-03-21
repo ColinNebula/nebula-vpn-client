@@ -249,10 +249,18 @@ const injectionCheck = (req, res, next) => {
 const corsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin || allowedOrigins.includes(origin)) {
+    
+    // In development, be more permissive for Electron and local development
+    const isDev = process.env.NODE_ENV !== 'production';
+    const isElectron = !origin || origin === 'null' || origin.startsWith('file://');
+    const isLocalhost = origin && (origin.includes('localhost') || origin.includes('127.0.0.1'));
+    
+    // Allow requests with no origin (mobile apps, curl, Electron, etc.)
+    if (!origin || allowedOrigins.includes(origin) || 
+        (isDev && (isElectron || isLocalhost))) {
       callback(null, true);
     } else {
+      console.log(`CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },

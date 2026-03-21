@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './PerformanceMetrics.css';
 
-const PerformanceMetrics = ({ isConnected, currentServer }) => {
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
+
+const PerformanceMetrics = ({ isConnected, currentServer, trafficData }) => {
   const [metrics, setMetrics] = useState({
     latency: [],
     packetLoss: [],
@@ -37,7 +40,7 @@ const PerformanceMetrics = ({ isConnected, currentServer }) => {
     else if (timeWindow === '30m') maxDataPoints.current = 120;
   }, [timeWindow]);
 
-  // Simulate real-time metrics
+  // Real-time metrics: measure actual RTT to the speedtest/ping endpoint
   useEffect(() => {
     if (!isConnected) {
       setCurrentMetrics({
@@ -56,27 +59,69 @@ const PerformanceMetrics = ({ isConnected, currentServer }) => {
       return;
     }
 
-    const interval = setInterval(() => {
+    // Keep a rolling window of the last 5 latency readings to compute jitter
+    const recentLatencies = [];
+
+    const interval = setInterval(async () => {
       const now = new Date();
       const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
-      // Generate realistic metrics
-      const baseLatency = 25;
-      const latencyVariation = Math.random() * 30 - 15;
-      const newLatency = Math.max(5, baseLatency + latencyVariation);
-      
-      const newPacketLoss = Math.random() < 0.95 ? 0 : Math.random() * 2;
-      const newJitter = Math.abs(latencyVariation);
-      
-      const downloadSpeed = Math.random() * 50 + 20;
-      const uploadSpeed = Math.random() * 30 + 10;
+      // Measure RTT to ping endpoint
+      let newLatency = null;
+      let newPacketLoss = 0;
+      try {
+        const t0 = Date.now();
+        const resp = await fetch(`${API_BASE}/speedtest/ping`, {
+          headers: authHeader(),
+          cache: 'no-store',
+        });
+        if (resp.status === 204 || resp.ok) {
+          newLatency = Date.now() - t0;
+        } else {
+          newPacketLoss = 100;
+        }
+      } catch {
+        newPacketLoss = 100;
+      }
+
+      if (newLatency === null) {
+        // Probe failed — record packet loss, skip latency/jitter update
+        setMetrics(prev => {
+          const newData = {
+            latency: [...prev.latency],
+            packetLoss: [...prev.packetLoss, 100],
+            jitter: [...prev.jitter, prev.jitter[prev.jitter.length - 1] ?? 0],
+            timestamps: [...prev.timestamps, time],
+          };
+          if (newData.timestamps.length > maxDataPoints.current) {
+            newData.latency = newData.latency.slice(-maxDataPoints.current);
+            newData.packetLoss = newData.packetLoss.slice(-maxDataPoints.current);
+            newData.jitter = newData.jitter.slice(-maxDataPoints.current);
+            newData.timestamps = newData.timestamps.slice(-maxDataPoints.current);
+          }
+          return newData;
+        });
+        return;
+      }
+
+      // Compute jitter = std-dev of recent 5 latency readings
+      recentLatencies.push(newLatency);
+      if (recentLatencies.length > 5) recentLatencies.shift();
+      const mean = recentLatencies.reduce((a, b) => a + b, 0) / recentLatencies.length;
+      const newJitter = recentLatencies.length > 1
+        ? Math.sqrt(recentLatencies.reduce((s, v) => s + (v - mean) ** 2, 0) / recentLatencies.length)
+        : 0;
+
+      // Download / upload speed from real traffic data prop (KB/s → Mbps)
+      const dlMbps = trafficData ? (trafficData.download / 1024 * 8) : 0;
+      const ulMbps = trafficData ? (trafficData.upload / 1024 * 8) : 0;
 
       setCurrentMetrics({
         latency: newLatency.toFixed(1),
         packetLoss: newPacketLoss.toFixed(2),
         jitter: newJitter.toFixed(1),
-        downloadSpeed: downloadSpeed.toFixed(1),
-        uploadSpeed: uploadSpeed.toFixed(1)
+        downloadSpeed: dlMbps.toFixed(1),
+        uploadSpeed: ulMbps.toFixed(1),
       });
 
       setMetrics(prev => {
@@ -84,23 +129,20 @@ const PerformanceMetrics = ({ isConnected, currentServer }) => {
           latency: [...prev.latency, newLatency],
           packetLoss: [...prev.packetLoss, newPacketLoss],
           jitter: [...prev.jitter, newJitter],
-          timestamps: [...prev.timestamps, time]
+          timestamps: [...prev.timestamps, time],
         };
-
-        // Keep only last N data points
         if (newData.latency.length > maxDataPoints.current) {
           newData.latency = newData.latency.slice(-maxDataPoints.current);
           newData.packetLoss = newData.packetLoss.slice(-maxDataPoints.current);
           newData.jitter = newData.jitter.slice(-maxDataPoints.current);
           newData.timestamps = newData.timestamps.slice(-maxDataPoints.current);
         }
-
         return newData;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isConnected]);
+  }, [isConnected, trafficData]);
 
   // Calculate statistics
   useEffect(() => {

@@ -49,7 +49,7 @@ reportWebVitals();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(`${process.env.PUBLIC_URL}/sw.js`)
       .then((registration) => {
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;

@@ -11,34 +11,21 @@ function abortAfter(ms) {
 
 /**
  * Fetch real public IP + ISP + location.
- * Primary:  our backend proxy (/api/security/ip-info) — no CORS / mixed-content issues.
- * Fallback: ipwho.is directly over HTTPS.
+ * Routed exclusively through our own backend proxy so the client's real IP
+ * is never sent directly to a third-party service.
  */
 async function fetchPublicIP() {
-  // Primary: backend proxy
-  try {
-    const resp = await fetch(`${API_BASE_URL}/security/ip-info`, {
-      signal: abortAfter(8000),
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      if (data.ip) return { ip: data.ip, org: data.org || null, city: data.city || null, country: data.country_name || null };
-    }
-  } catch { /* fall through */ }
-
-  // Fallback: ipwho.is — HTTPS, CORS-enabled, 10k req/month free
-  const resp = await fetch('https://ipwho.is/', {
-    headers: { Accept: 'application/json' },
+  const resp = await fetch(`${API_BASE_URL}/security/ip-info`, {
     signal: abortAfter(8000),
   });
-  if (!resp.ok) throw new Error(`IP lookup returned ${resp.status}`);
-  const d = await resp.json();
-  if (!d.ip) throw new Error('No IP in response');
+  if (!resp.ok) throw new Error(`IP info proxy returned ${resp.status}`);
+  const data = await resp.json();
+  if (!data.ip) throw new Error('No IP in response');
   return {
-    ip:      d.ip,
-    org:     d.connection?.isp || d.org || null,
-    city:    d.city            || null,
-    country: d.country         || null,
+    ip:      data.ip,
+    org:     data.org     || null,
+    city:    data.city    || null,
+    country: data.country_name || null,
   };
 }
 
@@ -82,7 +69,11 @@ const RotatingIP = ({
     const doRotate = async () => {
       // Signal VPN layer to reconnect so a new exit IP is assigned
       if (window.electron?.vpn?.reconnect) {
-        try { await window.electron.vpn.reconnect(); } catch { /* best-effort */ }
+        try {
+          await window.electron.vpn.reconnect({
+            token: localStorage.getItem('token') || '',
+          });
+        } catch { /* best-effort */ }
       }
       // Brief delay to let the new tunnel come up before querying the exit IP
       await new Promise(r => setTimeout(r, 2000));

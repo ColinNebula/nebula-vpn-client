@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './GeographicMap.css';
 
 const GeographicMap = ({ servers, currentServer, onServerSelect }) => {
   const [hoveredServer, setHoveredServer] = useState(null);
   const [filterContinent, setFilterContinent] = useState('all');
   const [showConnectionPath, setShowConnectionPath] = useState(true);
+  // Never query browser geolocation here. The map should describe the VPN
+  // network, not ask the OS for the device's real position.
+  const [yourLocation, setYourLocation] = useState(null);
+
+  useEffect(() => {
+    setYourLocation(null);
+  }, []);
 
   // Server locations with coordinates (simplified for demo)
   const serverLocations = [
@@ -75,10 +82,9 @@ const GeographicMap = ({ servers, currentServer, onServerSelect }) => {
 
   const stats = getContinentStats();
   const filteredServers = getFilteredServers();
-
-  // Your location (simulated)
-  const yourLocation = { lat: 37.7749, lon: -122.4194 }; // San Francisco
-  const yourLocationSVG = projectToSVG(yourLocation.lat, yourLocation.lon);
+  const yourLocationSVG = yourLocation
+    ? projectToSVG(yourLocation.lat, yourLocation.lon)
+    : null;
 
   return (
     <div className="geographic-map">
@@ -255,7 +261,7 @@ const GeographicMap = ({ servers, currentServer, onServerSelect }) => {
           <line x1="75" y1="0" x2="75" y2="50" stroke="#8ec5d6" strokeWidth="0.15" opacity="0.3" strokeDasharray="1,1" />
           
           {/* Connection path from your location to current server */}
-          {showConnectionPath && currentServer && (
+          {showConnectionPath && currentServer && yourLocationSVG && (
             <>
               <defs>
                 <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">

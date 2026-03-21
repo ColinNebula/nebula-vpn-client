@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import './IPLeakTest.css';
 
 // ── Real probe helpers ────────────────────────────────────────────────────────
@@ -10,40 +10,21 @@ function abortAfter(ms) {
   return ctrl.signal;
 }
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.nebula3ddev.com/api';
 
 /**
  * Fetch public IP + ISP + location.
- * Primary:  our own backend proxy (/api/security/ip-info) — avoids CORS and
- *           mixed-content blocks entirely.
- * Fallback: ipwho.is directly over HTTPS (free, CORS-enabled, no key needed).
+ * Routed exclusively through our own backend proxy so the client's real IP
+ * is never sent directly to a third-party service.
  */
 async function fetchIPInfo() {
-  // Primary: backend proxy
-  try {
-    const resp = await fetch(`${API_BASE_URL}/security/ip-info`, {
-      signal: abortAfter(8000),
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      if (data.ip) return data;
-    }
-  } catch { /* fall through to direct call */ }
-
-  // Fallback: ipwho.is — HTTPS, CORS-enabled, 10k req/month free
-  const resp = await fetch('https://ipwho.is/', {
-    headers: { Accept: 'application/json' },
+  const resp = await fetch(`${API_BASE_URL}/security/ip-info`, {
     signal: abortAfter(8000),
   });
-  if (!resp.ok) throw new Error(`IP lookup returned ${resp.status}`);
-  const d = await resp.json();
-  if (!d.ip) throw new Error('IP lookup returned no data');
-  return {
-    ip:           d.ip,
-    org:          d.connection?.isp || d.org || null,
-    city:         d.city            || null,
-    country_name: d.country         || null,
-  };
+  if (!resp.ok) throw new Error(`IP info proxy returned ${resp.status}`);
+  const data = await resp.json();
+  if (!data.ip) throw new Error('IP info proxy returned no data');
+  return data;
 }
 
 /**
@@ -55,7 +36,7 @@ async function detectWebRTCIPs() {
   if (typeof RTCPeerConnection === 'undefined') return [];
   return new Promise((resolve) => {
     const ips = new Set();
-    const pc  = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const pc  = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }] });
     pc.createDataChannel('');
     pc.createOffer()
       .then(offer => pc.setLocalDescription(offer))
@@ -170,15 +151,37 @@ function isExpectedDNS(ip) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-const IPLeakTest = ({ isConnected }) => {
+const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = false }) => {
   const [status, setStatus]         = useState('idle'); // idle | running | done | error
   const [results, setResults]       = useState(null);
   const [progress, setProgress]     = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   const [errorMsg, setErrorMsg]     = useState('');
   const [showRealIP, setShowRealIP] = useState(false);
+  const canRunExternalProbeSuite = isConnected && isProtectionVerified && !isSimulated;
+
+  useEffect(() => {
+    if (!canRunExternalProbeSuite) {
+      setStatus('idle');
+      setResults(null);
+      setProgress(0);
+      setCurrentStep('');
+      setErrorMsg('');
+      setShowRealIP(false);
+    }
+  }, [canRunExternalProbeSuite]);
 
   const runTest = useCallback(async () => {
+    if (!canRunExternalProbeSuite) {
+      setStatus('error');
+      setResults(null);
+      setProgress(0);
+      setCurrentStep('');
+      setErrorMsg('External probe services are disabled until a verified desktop WireGuard tunnel is active.');
+      setShowRealIP(false);
+      return;
+    }
+
     setStatus('running');
     setResults(null);
     setErrorMsg('');
@@ -271,7 +274,7 @@ const IPLeakTest = ({ isConnected }) => {
       setStatus('error');
     }
     setCurrentStep('');
-  }, [isConnected]);
+  }, [canRunExternalProbeSuite, isConnected]);
 
   const getScoreLabel = (score) => {
     if (score >= 90) return { label: 'Excellent', color: '#388e3c' };
@@ -304,18 +307,32 @@ const IPLeakTest = ({ isConnected }) => {
         <button
           className={`ilt-run-btn ${status === 'running' ? 'running' : ''}`}
           onClick={runTest}
-          disabled={status === 'running'}
+          disabled={status === 'running' || !canRunExternalProbeSuite}
         >
-          {status === 'running' ? '⏳ Testing…' : status === 'done' ? '🔄 Re-run Test' : '▶ Run Test'}
+          {status === 'running'
+            ? '⏳ Testing…'
+            : canRunExternalProbeSuite
+              ? status === 'done' ? '🔄 Re-run Test' : '▶ Run Test'
+              : '🔒 Requires Verified Desktop Tunnel'}
         </button>
       </div>
 
       {/* VPN status banner */}
       <div className={`ilt-status-banner ${isConnected ? 'connected' : 'disconnected'}`}>
-        {isConnected
-          ? '🛡️ VPN is active — your traffic is encrypted and tunnelled through Nebula VPN'
-          : '⚠️ VPN is not connected — your real IP and DNS may be exposed'}
+        {canRunExternalProbeSuite
+          ? '🛡️ Verified desktop tunnel active — external leak probes are allowed'
+          : isSimulated
+            ? '🧪 Browser/PWA simulation — external leak probes are blocked until a real tunnel is verified'
+            : isConnected
+              ? '🟡 Connected but not verified — external leak probes are blocked until the desktop tunnel is proven'
+              : '⚠️ VPN is not connected — external leak probes are blocked and your real IP and DNS may be exposed'}
       </div>
+
+      {!canRunExternalProbeSuite && (
+        <div className="ilt-error-banner" style={{ marginBottom: '18px' }}>
+          Leak-test probes that depend on third-party services stay disabled until the Electron app reports a verified WireGuard handshake.
+        </div>
+      )}
 
       {/* Progress */}
       {status === 'running' && (
@@ -343,7 +360,9 @@ const IPLeakTest = ({ isConnected }) => {
               <p className="ilt-score-desc">
                 {results.score >= 90
                   ? 'Your connection is fully protected. No leaks detected.'
-                  : 'Some leaks were detected. Connect to VPN to protect your identity.'}
+                  : isSimulated
+                    ? 'Browser/PWA mode is only a UI simulation. Some or all of your identity may still be exposed.'
+                    : 'Some leaks were detected. Connect to VPN to protect your identity.'}
               </p>
             </div>
           </div>
@@ -371,7 +390,7 @@ const IPLeakTest = ({ isConnected }) => {
                 </div>
 
               </div>
-              <div className={`ilt-ip-card ${isConnected ? 'protected' : 'real'}`}>
+              <div className={`ilt-ip-card ${isProtectionVerified ? 'protected' : 'real'}`}>
                 <div className="ilt-ip-card-label">Visible IP (what sites see)</div>
                 <div className={`ilt-ip-value${showRealIP ? '' : ' ilt-ip-redacted'}`}>
                   {showRealIP ? results.vpnIP : '••••••••••••'}
@@ -379,7 +398,7 @@ const IPLeakTest = ({ isConnected }) => {
                 <div className={`ilt-ip-meta${showRealIP ? '' : ' ilt-ip-redacted'}`}>
                   {showRealIP ? `${results.vpnISP} · ${results.vpnLoc}` : '•••••••••••• · ••••••••'}
                 </div>
-                {isConnected && <div className="ilt-ip-shield">🛡️ Protected</div>}
+                {isProtectionVerified && <div className="ilt-ip-shield">🛡️ Verified</div>}
               </div>
             </div>
           </div>
@@ -421,20 +440,24 @@ const IPLeakTest = ({ isConnected }) => {
                   : 'IPv6 traffic is blocked or tunnelled'
               )}
               {renderCheck(
-                isConnected,
-                'VPN Tunnel — Active',
-                'VPN Tunnel — Not Active',
-                isConnected ? 'All traffic is routed through Nebula VPN' : 'Connect to VPN to encrypt your connection'
+                isProtectionVerified,
+                'VPN Tunnel — Handshake Verified',
+                'VPN Tunnel — Not Verified',
+                isProtectionVerified
+                  ? 'WireGuard handshake was observed from the desktop tunnel'
+                  : isSimulated
+                    ? 'Browser/PWA mode is simulated only — no OS tunnel was created'
+                    : 'Connect to the desktop app to create and verify a real tunnel'
               )}
             </div>
           </div>
 
           {/* Recommendations */}
-          {(!isConnected || results.dnsLeaked || results.webRtcLeaked) && (
+          {(!isProtectionVerified || results.dnsLeaked || results.webRtcLeaked) && (
             <div className="ilt-section">
               <h3 className="ilt-section-title">💡 Recommendations</h3>
               <div className="ilt-recommendations">
-                {!isConnected && (
+                {!isProtectionVerified && (
                   <div className="ilt-rec-item">
                     <span className="ilt-rec-icon">🔌</span>
                     <span>Connect to Nebula VPN to hide your real IP and encrypt DNS queries.</span>

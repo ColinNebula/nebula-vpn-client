@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DNSProtection.css';
 
-const DNSProtection = ({ isConnected }) => {
+const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated = false }) => {
   const [dnsSettings, setDnsSettings] = useState({
     enabled: true,
     provider: 'cloudflare',
@@ -26,12 +26,39 @@ const DNSProtection = ({ isConnected }) => {
     { id: 'custom', name: 'Custom DNS', dns1: 'Custom', dns2: 'Custom', secure: false }
   ];
 
+  const canRunExternalLeakTest = isConnected && isProtectionVerified && !isSimulated;
+
+  useEffect(() => {
+    if (!canRunExternalLeakTest) {
+      setLeakTest({
+        testing: false,
+        lastTest: null,
+        results: null,
+      });
+    }
+  }, [canRunExternalLeakTest]);
+
   /**
    * Real DNS-leak test using bash.ws (same backend as ipleak.net).
    * Triggers DNS queries from the browser then asks the server which
    * resolvers answered — those are the user's active DNS servers.
    */
   const runLeakTest = async () => {
+    if (!canRunExternalLeakTest) {
+      setLeakTest({
+        testing: false,
+        lastTest: null,
+        results: {
+          leakDetected: false,
+          dnsServers: ['External DNS probes are disabled until a verified desktop tunnel is active'],
+          location: 'Unavailable',
+          secure: false,
+          error: 'Desktop handshake verification required',
+        },
+      });
+      return;
+    }
+
     setLeakTest({ ...leakTest, testing: true });
     try {
       const id = (typeof crypto.randomUUID === 'function')
@@ -91,14 +118,16 @@ const DNSProtection = ({ isConnected }) => {
       </div>
 
       {/* Status Banner */}
-      <div className={`dns-banner ${dnsSettings.enabled && isConnected ? 'protected' : 'warning'}`}>
-        <div className="banner-icon">{dnsSettings.enabled && isConnected ? '🛡️' : '⚠️'}</div>
+      <div className={`dns-banner ${dnsSettings.enabled && isProtectionVerified ? 'protected' : 'warning'}`}>
+        <div className="banner-icon">{dnsSettings.enabled && isProtectionVerified ? '🛡️' : '⚠️'}</div>
         <div className="banner-content">
-          <h4>{dnsSettings.enabled && isConnected ? 'DNS Protected' : 'DNS Not Protected'}</h4>
+          <h4>{dnsSettings.enabled && isProtectionVerified ? 'DNS Protected' : isSimulated ? 'DNS Unverified in Browser' : 'DNS Not Protected'}</h4>
           <p>
-            {dnsSettings.enabled && isConnected
+            {dnsSettings.enabled && isProtectionVerified
               ? 'Your DNS queries are encrypted and routed through secure servers'
-              : 'Connect to VPN and enable DNS protection for secure browsing'}
+              : isSimulated
+                ? 'Browser/PWA mode is only a UI simulation. DNS still follows your normal network unless leak tests prove otherwise.'
+                : 'Connect to VPN and enable DNS protection for secure browsing'}
           </p>
         </div>
       </div>
@@ -106,13 +135,18 @@ const DNSProtection = ({ isConnected }) => {
       {/* Leak Test */}
       <div className="leak-test-section">
         <h4>🔍 DNS Leak Test</h4>
+        {!canRunExternalLeakTest && (
+          <div className="leak-warning" style={{ marginBottom: '12px' }}>
+            External DNS probe services are disabled until the Electron app has a verified WireGuard tunnel.
+          </div>
+        )}
         <div className="test-container">
           <button 
             onClick={runLeakTest} 
             className={`test-btn ${leakTest.testing ? 'testing' : ''}`}
-            disabled={leakTest.testing || !isConnected}
+            disabled={leakTest.testing || !canRunExternalLeakTest}
           >
-            {leakTest.testing ? '🔄 Testing...' : '▶️ Run Leak Test'}
+            {leakTest.testing ? '🔄 Testing...' : canRunExternalLeakTest ? '▶️ Run Leak Test' : '🔒 Requires Verified Desktop Tunnel'}
           </button>
           
           {leakTest.lastTest && (

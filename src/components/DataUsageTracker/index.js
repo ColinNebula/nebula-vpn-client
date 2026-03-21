@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DataUsageTracker.css';
 
-const DataUsageTracker = ({ isConnected }) => {
+const DataUsageTracker = ({ isConnected, trafficData }) => {
   const [timeRange, setTimeRange] = useState('today');
   const [sortBy, setSortBy] = useState('usage');
   const [showLimitModal, setShowLimitModal] = useState(false);
@@ -43,25 +43,19 @@ const DataUsageTracker = ({ isConnected }) => {
     });
   }, [apps]);
 
-  // Simulate real-time data updates
+  // Per-app breakdown requires OS-level packet inspection which is not available
+  // in a browser/PWA. The app list above shows typical usage patterns.
+  // Real total usage comes from the VPN tunnel traffic stats via the trafficData prop.
   useEffect(() => {
-    if (!isConnected) return;
-
-    const interval = setInterval(() => {
-      setApps(prevApps => prevApps.map(app => {
-        const uploadInc = Math.random() * 2;
-        const downloadInc = Math.random() * 5;
-        return {
-          ...app,
-          upload: parseFloat((app.upload + uploadInc).toFixed(2)),
-          download: parseFloat((app.download + downloadInc).toFixed(2)),
-          total: parseFloat((app.total + uploadInc + downloadInc).toFixed(2))
-        };
-      }));
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [isConnected]);
+    if (!isConnected || !trafficData) return;
+    // Update total stats from real traffic data (trafficData totals are in KB)
+    setTotalStats(prev => ({
+      ...prev,
+      totalDownload: Math.round(trafficData.totalDownload / 1024), // KB → MB
+      totalUpload:   Math.round(trafficData.totalUpload   / 1024),
+      totalData:     Math.round((trafficData.totalDownload + trafficData.totalUpload) / 1024),
+    }));
+  }, [isConnected, trafficData]);
 
   const getSortedApps = () => {
     let sorted = [...apps];

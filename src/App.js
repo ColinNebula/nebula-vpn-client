@@ -76,6 +76,19 @@ import UpdateNotification from './components/UpdateNotification';
 import DonateModal from './components/DonateModal';
 import OnboardingWizard from './components/OnboardingWizard';
 
+// Initialize Electron safety check
+if (typeof window !== 'undefined' && !window.electron) {
+  console.warn('[App] window.electron is undefined, creating fallback object');
+  window.electron = {
+    vpn: {
+      connect: () => Promise.reject(new Error('Electron IPC not available')),
+      disconnect: () => Promise.reject(new Error('Electron IPC not available')),
+      getStats: () => Promise.reject(new Error('Electron IPC not available')),
+      multiHopConnect: () => Promise.reject(new Error('Electron IPC not available')),
+    }
+  };
+}
+
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -83,7 +96,19 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [user, setUser] = useState(null);
   const [oauthLoginError, setOAuthLoginError] = useState(null); // error from provider redirect
+  const isElectronApp = typeof window !== 'undefined' && !!(window.electron?.vpn || window.nebulaVPN?.vpn);
+  const buildProtectionState = useCallback((overrides = {}) => ({
+    platform: isElectronApp ? 'electron' : 'browser',
+    state: 'disconnected',
+    simulated: false,
+    tunnelVerified: false,
+    verificationMethod: null,
+    verifiedAt: null,
+    detail: null,
+    ...overrides,
+  }), [isElectronApp]);
   const [isConnected, setIsConnected] = useState(false);
+  const [protectionState, setProtectionState] = useState(() => buildProtectionState());
   const [selectedServer, setSelectedServer] = useState(null);
   const [connectionTime, setConnectionTime] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -223,6 +248,28 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchLiveServerData]);
 
+  // Debug IPC communication on startup
+  useEffect(() => {
+    const electronAPI = window.electron || window.nebulaVPN;
+    if (electronAPI && electronAPI.ipc) {
+      console.log('🔧 APP.JS - Testing electron/nebulaVPN API on startup...');
+      // Test simple IPC methods
+      electronAPI.ipc.test().then(result => {
+        console.log('🔧 APP.JS - test() result:', result);
+      }).catch(error => {
+        console.log('🔧 APP.JS - test() error:', error);
+      });
+      
+      electronAPI.ipc.ping().then(result => {
+        console.log('🔧 APP.JS - ping() result:', result);
+      }).catch(error => {
+        console.log('🔧 APP.JS - ping() error:', error);
+      });
+    } else {
+      console.log('🔧 APP.JS - No electron/nebulaVPN IPC API available');
+    }
+  }, []);
+
   // PWA features and service worker registration
   useEffect(() => {
     // Register service worker for PWA — production only.
@@ -273,21 +320,40 @@ function App() {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
+  // Tracks the last-seen cumulative byte counts from wg show transfer / API
+  const prevTrafficBytesRef = useRef({ download: 0, upload: 0 });
+
   // Timer for connection duration
   useEffect(() => {
     let interval;
     if (isConnected) {
-      interval = setInterval(() => {
+      // Reset byte reference so the first delta isn't inflated
+      prevTrafficBytesRef.current = { download: 0, upload: 0 };
+      interval = setInterval(async () => {
         setConnectionTime(prev => prev + 1);
-        // Simulate traffic data
-        setTrafficData(prev => ({
-          download: Math.random() * 1000 + 500, // KB/s
-          upload: Math.random() * 300 + 100,
-          totalDownload: prev.totalDownload + (Math.random() * 1000 + 500) / 8, // Convert to KB
-          totalUpload: prev.totalUpload + (Math.random() * 300 + 100) / 8
-        }));
+        // Read real rx/tx bytes from WireGuard (Electron) or backend API (browser)
+        try {
+          const stats = await apiService.getTrafficStats();
+          const dlBytes = stats.download || 0;
+          const ulBytes = stats.upload || 0;
+          const dlDelta = Math.max(0, dlBytes - prevTrafficBytesRef.current.download);
+          const ulDelta = Math.max(0, ulBytes - prevTrafficBytesRef.current.upload);
+          prevTrafficBytesRef.current = { download: dlBytes, upload: ulBytes };
+          // Convert byte-delta-per-second to KB/s
+          const dlKbps = dlDelta / 1024;
+          const ulKbps = ulDelta / 1024;
+          setTrafficData(prev => ({
+            download: dlKbps,
+            upload: ulKbps,
+            totalDownload: prev.totalDownload + dlKbps,
+            totalUpload: prev.totalUpload + ulKbps,
+          }));
+        } catch {
+          // Leave previous traffic values unchanged on transient error
+        }
       }, 1000);
     } else {
+      prevTrafficBytesRef.current = { download: 0, upload: 0 };
       setConnectionTime(0);
       setTrafficData({ download: 0, upload: 0, totalDownload: 0, totalUpload: 0 });
     }
@@ -298,7 +364,7 @@ function App() {
   useEffect(() => {
     if (window.electron?.isElectron) {
       const status = {
-        connected: isConnected,
+        connected: isConnected && protectionState.tunnelVerified,
         server: selectedServer?.name || (multiHopServers.length > 0 ? multiHopServers.map(s => s.name).join(' → ') : 'Unknown')
       };
       
@@ -307,33 +373,43 @@ function App() {
       window.dispatchEvent(statusEvent);
       
       // Update tray tooltip via IPC
-      if (window.electron.vpn && typeof window.electron.vpn.updateStatus === 'function') {
-        window.electron.vpn.updateStatus(status);
+      const electronAPI = window.electron || window.nebulaVPN;
+      if (electronAPI && electronAPI.vpn && typeof electronAPI.vpn.updateStatus === 'function') {
+        electronAPI.vpn.updateStatus(status);
       }
     }
-  }, [isConnected, selectedServer, multiHopServers]);
+  }, [isConnected, multiHopServers, protectionState.tunnelVerified, selectedServer]);
 
   // Advanced Kill Switch monitoring
   useEffect(() => {
-    if (settings.advancedKillSwitch && isConnected) {
-      const monitorConnection = setInterval(() => {
-        // Simulate connection monitoring
-        const connectionHealthy = Math.random() > 0.05; // 95% uptime simulation
-        
-        if (!connectionHealthy) {
-          setKillSwitchActive(true);
-          addLog('VPN connection unstable - Kill Switch activated', 'warning');
-          
-          setTimeout(() => {
-            setKillSwitchActive(false);
-            addLog('VPN connection restored - Kill Switch deactivated', 'success');
-          }, 3000);
+    if (settings.advancedKillSwitch && isConnected && isElectronApp) {
+      const monitorConnection = setInterval(async () => {
+        try {
+          const status = await apiService.getVPNStatus();
+          if (!status.connected) {
+            const token = localStorage.getItem('token') || '';
+            const electronAPI = window.electron || window.nebulaVPN;
+            await electronAPI?.vpn?.disconnect?.({ token }).catch(() => {});
+            setIsConnected(false);
+            setProtectionState(buildProtectionState({
+              state: 'error',
+              detail: 'Server no longer reports this peer as active',
+            }));
+            setKillSwitchActive(true);
+            addLog('Server-side peer state was lost. Local tunnel status cleared and Kill Switch activated.', 'error');
+            setTimeout(() => {
+              setKillSwitchActive(false);
+              addLog('Kill Switch deactivated after reconnect', 'success');
+            }, 3000);
+          }
+        } catch {
+          // Network error during health check — do nothing; offline handler covers this
         }
       }, 10000); // Check every 10 seconds
 
       return () => clearInterval(monitorConnection);
     }
-  }, [settings.advancedKillSwitch, isConnected]);
+  }, [buildProtectionState, isConnected, isElectronApp, settings.advancedKillSwitch]);
 
   // ── Restore all saveable preferences for a user ────────────────────────
   // serverPrefs: settings object returned from the server (canonical)
@@ -349,10 +425,26 @@ function App() {
     try {
       if (prefs.settings)                setSettings(p => ({ ...p, ...prefs.settings }));
       if (prefs.isDarkMode !== undefined) setIsDarkMode(prefs.isDarkMode);
+      
+      // Enhanced server restoration with debugging
       if (prefs.selectedServerId) {
+        console.log('Restoring server with ID:', prefs.selectedServerId, 'Type:', typeof prefs.selectedServerId);
         const srv = serverList.find(s => s.id === prefs.selectedServerId);
-        if (srv) setSelectedServer(srv);
+        console.log('Found server:', srv);
+        if (srv) {
+          setSelectedServer(srv);
+          console.log('Selected server set to:', srv.name);
+        } else {
+          console.warn('Server not found for ID:', prefs.selectedServerId);
+          // Try to find the server with string comparison just in case
+          const srvString = serverList.find(s => String(s.id) === String(prefs.selectedServerId));
+          if (srvString) {
+            setSelectedServer(srvString);
+            console.log('Selected server set via string match:', srvString.name);
+          }
+        }
       }
+      
       if (prefs.recentServers)               setRecentServers(prefs.recentServers);
       if (prefs.favoriteServers)             setFavoriteServers(prefs.favoriteServers);
       if (prefs.rotatingIPEnabled !== undefined) setRotatingIPEnabled(prefs.rotatingIPEnabled);
@@ -427,7 +519,17 @@ function App() {
         setCurrentPlan(u.plan || 'free');
         setIsAuthenticated(true);
         setShowSplashScreen(false);
-        restorePrefs(u.settings || {}, loadPrefs(u.email), allServers);
+        
+        // Always prioritize localStorage preferences for selectedServer if server prefs are incomplete
+        const serverPrefs = u.settings || {};
+        const localPrefs = loadPrefs(u.email);
+        
+        // If server preferences don't have selectedServerId but localStorage does, merge them
+        if (!serverPrefs.selectedServerId && localPrefs && localPrefs.selectedServerId) {
+          serverPrefs.selectedServerId = localPrefs.selectedServerId;
+        }
+        
+        restorePrefs(serverPrefs, localPrefs, allServers);
       })
       .catch(() => {
         // Token invalid or expired — clear it so login screen shows
@@ -435,6 +537,61 @@ function App() {
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Ensure selectedServer state stays in sync with localStorage ─────────────
+  useEffect(() => {
+    // Skip if we're currently restoring preferences to avoid conflicts
+    if (isRestoringPrefs.current) return;
+    
+    // Only run this if user is authenticated and has an email
+    if (!user?.email || allServers.length === 0) return;
+    
+    // If selectedServer is null but localStorage has a selection, restore it
+    if (!selectedServer) {
+      const localPrefs = loadPrefs(user.email);
+      if (localPrefs && localPrefs.selectedServerId) {
+        console.log('🔄 Syncing selectedServer from localStorage:', localPrefs.selectedServerId);
+        
+        // First try exact match
+        let srv = allServers.find(s => s.id === localPrefs.selectedServerId);
+        
+        // Fallback: try string comparison (same logic as restorePrefs)
+        if (!srv) {
+          console.log('🔄 Trying string fallback comparison');
+          srv = allServers.find(s => String(s.id) === String(localPrefs.selectedServerId));
+        }
+        
+        if (srv) {
+          console.log('✅ Restoring selectedServer:', srv.name, 'ID:', srv.id);
+          setSelectedServer(srv);
+        } else {
+          console.warn('❌ Server not found for ID:', localPrefs.selectedServerId, 'Available servers:', allServers.map(s => s.id).slice(0, 5));
+        }
+      }
+    }
+  }, [selectedServer, user?.email, allServers]);
+
+  // ── Debug selectedServer state changes ──────────────────────────────────
+  useEffect(() => {
+    console.log('selectedServer state changed:', selectedServer);
+    if (selectedServer) {
+      console.log('Server details:', { id: selectedServer.id, name: selectedServer.name });
+    } else {
+      console.log('selectedServer is null/undefined');
+      // Try to restore from localStorage if still null
+      if (user?.email) {
+        const prefs = loadPrefs(user.email);
+        if (prefs && prefs.selectedServerId) {
+          console.log('Attempting fallback restore for server ID:', prefs.selectedServerId);
+          const srv = allServers.find(s => s.id === prefs.selectedServerId);
+          if (srv && !isRestoringPrefs.current) {
+            console.log('Fallback restore setting server:', srv.name);
+            setSelectedServer(srv);
+          }
+        }
+      }
+    }
+  }, [selectedServer, user?.email, allServers]);
 
   // ── Auto-save preferences whenever they change ─────────────────────────────
   useEffect(() => {
@@ -616,8 +773,11 @@ function App() {
       localStorage.setItem(`nebula_onboarding_done_${user.email}`, '1');
     }
     // Apply wizard choices to app settings
-    if (choices.protocol) handleSettingChange('protocol', choices.protocol);
-    if (choices.killSwitch !== undefined) handleSettingChange('killSwitch', choices.killSwitch);
+    setSettings(prev => ({
+      ...prev,
+      ...(choices.protocol ? { protocol: choices.protocol } : {}),
+      ...(choices.killSwitch !== undefined ? { killSwitch: choices.killSwitch } : {}),
+    }));
     if (choices.server) setSelectedServer(choices.server);
     setShowOnboarding(false);
     // Show subscription modal for free users after a short delay
@@ -710,6 +870,16 @@ function App() {
   };
 
   const handleToggleConnection = async () => {
+    console.log('🔗 Connect button clicked! Current state:', { 
+      isConnected, 
+      selectedServer: selectedServer?.name, 
+      multiHopServers: multiHopServers.length,
+      hasElectronAPI: !!window.electron?.vpn,
+      hasNebulaVPNAPI: !!window.nebulaVPN?.vpn,
+      hasElectronConnectFunction: typeof window.electron?.vpn?.connect === 'function',
+      hasNebulaVPNConnectFunction: typeof window.nebulaVPN?.vpn?.connect === 'function'
+    });
+    
     if (!selectedServer && !isConnected && multiHopServers.length === 0) {
       alert('Please select a server or configure multi-hop connection first');
       return;
@@ -725,14 +895,46 @@ function App() {
     }
     
     // Use Electron IPC when running in the desktop app; fall back to simulation in browser
-    const isElectronCtx = typeof window !== 'undefined' && !!window.electron?.vpn;
+    // Detect Electron context by checking for the electron API, not just protocol
+    const electronAPI = window.electron || window.nebulaVPN;
+    const isElectronCtx = typeof window !== 'undefined' && 
+                         !!electronAPI?.vpn &&
+                         typeof electronAPI.vpn.connect === 'function';
+                         
+    console.log('🔗 Electron context detection:', {
+      windowExists: typeof window !== 'undefined',
+      hasElectron: !!window.electron,
+      hasNebulaVPN: !!window.nebulaVPN,
+      electronAPI: !!electronAPI,
+      hasVpnAPI: !!electronAPI?.vpn,
+      hasConnectFunction: typeof electronAPI?.vpn?.connect === 'function',
+      isElectronCtx,
+      token: localStorage.getItem('token') ? 'exists' : 'missing',
+      // DETAILED DEBUGGING:
+      electronObject: window.electron || 'undefined',
+      nebulaVPNObject: window.nebulaVPN || 'undefined',
+      electronAPI: electronAPI || 'undefined',
+      hasElectronPreload: !!window.electron?.DEBUG_PRELOAD_LOADED,
+      hasNebulaVPNPreload: !!window.nebulaVPN?.minimal,
+      preloadDebug: window.electron?.DEBUG_PRELOAD_LOADED || 'not present',
+      preloadTime: window.electron?.DEBUG_TIMESTAMP || 'not present'
+    });
+                         
+    // Only consider it a browser if we don't have Electron APIs available
+    const isInBrowser = !isElectronCtx;
 
     if (isElectronCtx) {
+      console.log('🔗 Using Electron VPN mode');
+      setProtectionState(buildProtectionState({ state: 'connecting', detail: 'Waiting for WireGuard handshake verification' }));
       try {
         const token = localStorage.getItem('token') || '';
+        console.log('🔗 Token available:', !!token, 'length:', token.length);
+        
         if (isConnected) {
-          await window.electron.vpn.disconnect({ token });
+          console.log('🔗 Disconnecting...');
+          await electronAPI.vpn.disconnect({ token });
           setIsConnected(false);
+          setProtectionState(buildProtectionState());
           setIsConnecting(false);
           addLog('Disconnected from VPN', 'warning');
           if (settings.advancedKillSwitch) {
@@ -740,40 +942,78 @@ function App() {
             addLog('Advanced Kill Switch activated after disconnect', 'warning');
           }
         } else if (multiHopServers.length > 0) {
-          const result = await window.electron.vpn.multiHopConnect({
+          console.log('🔗 Multi-hop connection...', multiHopServers.map(s => s.name));
+          const result = await electronAPI.vpn.multiHopConnect({
             serverIds:  multiHopServers.map(s => String(s.id)),
             protocol:   settings.protocol || 'wireguard',
             token,
             killSwitch: !!settings.advancedKillSwitch,
           });
+          console.log('🔗 Multi-hop result:', result);
           if (result?.success === false) throw new Error(result.error || 'Multi-hop connection failed');
           setKillSwitchActive(false);
           setIsConnected(true);
+          setProtectionState(buildProtectionState({
+            state: result?.tunnelVerified ? 'verified' : 'connected',
+            tunnelVerified: !!result?.tunnelVerified,
+            verificationMethod: result?.verificationMethod || null,
+            verifiedAt: result?.verification?.lastHandshakeAt || null,
+            detail: result?.tunnelVerified
+              ? 'WireGuard handshake verified in Electron'
+              : 'Connected without handshake proof',
+          }));
           setIsConnecting(false);
-          addLog(`Successfully connected via multi-hop: ${multiHopServers.map(s => s.name).join(' → ')}`, 'success');
+          addLog(`WireGuard handshake verified via multi-hop: ${multiHopServers.map(s => s.name).join(' → ')}`, 'success');
         } else {
-          const result = await window.electron.vpn.connect({
+          console.log('🔗 Single server connection...', selectedServer.name, 'ID:', selectedServer.id);
+          const result = await electronAPI.vpn.connect({
             serverId:   String(selectedServer.id),
             protocol:   settings.protocol || 'wireguard',
             token,
             killSwitch: !!settings.advancedKillSwitch,
           });
+          console.log('🔗 Connection result:', result);
           if (result?.success === false) throw new Error(result.error || 'Connection failed');
           setKillSwitchActive(false);
           setIsConnected(true);
+          setProtectionState(buildProtectionState({
+            state: result?.tunnelVerified ? 'verified' : 'connected',
+            tunnelVerified: !!result?.tunnelVerified,
+            verificationMethod: result?.verificationMethod || null,
+            verifiedAt: result?.verification?.lastHandshakeAt || null,
+            detail: result?.tunnelVerified
+              ? 'WireGuard handshake verified in Electron'
+              : 'Connected without handshake proof',
+          }));
           setIsConnecting(false);
-          addLog(`Successfully connected to ${selectedServer.name}`, 'success');
+          addLog(`WireGuard handshake verified. Connected to ${selectedServer.name}`, 'success');
         }
       } catch (err) {
+        console.error('🔗 VPN connection error:', err);
+        setIsConnected(false);
+        setProtectionState(buildProtectionState({ state: 'error', detail: err.message }));
         setIsConnecting(false);
         addLog(`Connection error: ${err.message}`, 'error');
       }
       return;
     }
 
+    console.log('🔗 Falling back to browser simulation mode');
     // Simulate connection delay (longer for multi-hop)
     const connectionDelay = multiHopServers.length > 0 ? 4000 : 2000;
-    
+
+    // Warn immediately that this is a UI-only simulation — no real tunnel
+    addLog(
+      'Browser mode: VPN connection is simulated. Your real IP remains visible to websites. ' +
+      'Download the desktop app for a real WireGuard tunnel.',
+      'warning'
+    );
+    setProtectionState(buildProtectionState({
+      state: 'simulating',
+      simulated: true,
+      detail: 'Browser/PWA simulation only',
+    }));
+
     setTimeout(() => {
       const newConnectedState = !isConnected;
       setIsConnected(newConnectedState);
@@ -781,12 +1021,18 @@ function App() {
       
       if (newConnectedState) {
         setKillSwitchActive(false);
+        setProtectionState(buildProtectionState({
+          state: 'simulated',
+          simulated: true,
+          detail: 'Browser/PWA UI simulation only — no OS tunnel exists',
+        }));
         if (multiHopServers.length > 0) {
-          addLog(`Successfully connected via multi-hop: ${multiHopServers.map(s => s.name).join(' → ')}`, 'success');
+          addLog(`Browser simulation started for multi-hop: ${multiHopServers.map(s => s.name).join(' → ')}. No real tunnel was created.`, 'warning');
         } else {
-          addLog(`Successfully connected to ${selectedServer.name}`, 'success');
+          addLog(`Browser simulation started for ${selectedServer.name}. No real tunnel was created.`, 'warning');
         }
       } else {
+        setProtectionState(buildProtectionState());
         addLog('Disconnected from VPN', 'warning');
         if (settings.advancedKillSwitch) {
           setKillSwitchActive(true);
@@ -801,6 +1047,16 @@ function App() {
       setSelectedServer(server);
       setMultiHopServers([]); // Clear multi-hop when selecting single server
       addLog(`Selected server: ${server.name} (${server.location})`, 'info');
+      
+      // Save server selection to localStorage
+      if (user?.email) {
+        const currentPrefs = loadPrefs(user.email) || {};
+        savePrefs(user.email, {
+          ...currentPrefs,
+          selectedServerId: server.id
+        });
+        console.log('✅ Saved server selection to localStorage:', server.id);
+      }
     }
   };
 
@@ -980,6 +1236,7 @@ function App() {
           multiHopServers={multiHopServers}
           connectionTime={connectionTime}
           killSwitchActive={killSwitchActive}
+          protectionState={protectionState}
         />
       </header>
       
@@ -1169,6 +1426,8 @@ function App() {
               user={user}
               killSwitchActive={killSwitchActive}
               settings={settings}
+              isElectron={isElectronApp}
+              protectionState={protectionState}
             />
           )}
           
@@ -1275,12 +1534,14 @@ function App() {
                     <TrafficAnalytics 
                       isConnected={isConnected}
                       connectionTime={connectionTime}
+                      trafficData={trafficData}
                     />
                   )}
                   {window.analyticsSubTab === 'performance' && (
                     <PerformanceMetrics 
                       isConnected={isConnected}
                       currentServer={selectedServer || (multiHopServers.length > 0 ? multiHopServers[multiHopServers.length - 1] : null)}
+                      trafficData={trafficData}
                     />
                   )}
                   {window.analyticsSubTab === 'history' && (
@@ -1289,6 +1550,7 @@ function App() {
                   {window.analyticsSubTab === 'usage' && (
                     <DataUsageTracker 
                       isConnected={isConnected}
+                      trafficData={trafficData}
                     />
                   )}
                   {window.analyticsSubTab === 'map' && (
@@ -1368,7 +1630,11 @@ function App() {
                   )}
                   
                   {window.securitySubTab === 'dns' && (
-                    <DNSProtection isConnected={isConnected} />
+                    <DNSProtection
+                      isConnected={isConnected}
+                      isProtectionVerified={protectionState.tunnelVerified}
+                      isSimulated={protectionState.simulated}
+                    />
                   )}
                   
                   {window.securitySubTab === 'ipv6' && (
@@ -1444,7 +1710,7 @@ function App() {
                   )}
                   
                   {window.automationSubTab === 'monitor' && (
-                    <NetworkMonitor isConnected={isConnected} />
+                    <NetworkMonitor isConnected={isConnected} trafficData={trafficData} />
                   )}
                   
                   {window.automationSubTab === 'chaining' && (
@@ -1766,7 +2032,11 @@ function App() {
           )}
 
           {activeTab === 'leaktest' && (
-            <IPLeakTest isConnected={isConnected} />
+            <IPLeakTest
+              isConnected={isConnected}
+              isProtectionVerified={protectionState.tunnelVerified}
+              isSimulated={protectionState.simulated}
+            />
           )}
 
           {activeTab === 'darkweb' && (
@@ -1843,9 +2113,11 @@ function App() {
               isConnected={isConnected}
               onToggle={handleToggleConnection}
               disabled={isConnecting || killSwitchActive}
+              connectionState={protectionState.state}
+              isElectron={isElectronApp}
             />
             {isConnecting && <div className="connecting-text">Connecting...</div>}
-            {killSwitchActive && <div className="kill-switch-text">🛡️ Protected</div>}
+            {killSwitchActive && <div className="kill-switch-text">🛡️ Traffic Blocked</div>}
             
             {multiHopServers.length > 0 ? (
               <div className="selected-server-info multi-hop">
@@ -1874,6 +2146,7 @@ function App() {
               isActive={killSwitchActive}
               isAdvanced={settings.advancedKillSwitch}
               isOnline={isOnline}
+              protectionState={protectionState}
             />
           </div>
         </div>

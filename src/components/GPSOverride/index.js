@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './GPSOverride.css';
 
+const GEOLOCATION_DISABLED_MESSAGE = 'Disabled to prevent location leaks';
+
 const GPSOverride = () => {
   const [gpsOverrideEnabled, setGpsOverrideEnabled] = useState(false);
   const [autoMatch, setAutoMatch] = useState(true);
@@ -25,19 +27,11 @@ const GPSOverride = () => {
     { id: 'br-sao', name: 'São Paulo, BR', lat: -23.5505, lng: -46.6333, tz: 'America/Sao_Paulo', flag: '🇧🇷' },
   ];
 
-  // Simulate getting real location
+  // Never query the browser geolocation API from the renderer. Doing so would
+  // ask the OS for the device's real coordinates and undermine privacy.
   useEffect(() => {
-    setIsDetecting(true);
-    // Simulated real location (would use Geolocation API in real app)
-    setTimeout(() => {
-      setRealLocation({
-        lat: 37.7749,
-        lng: -122.4194,
-        city: 'San Francisco, CA',
-        accuracy: 15
-      });
-      setIsDetecting(false);
-    }, 1000);
+    setRealLocation({ lat: null, lng: null, city: GEOLOCATION_DISABLED_MESSAGE, accuracy: null });
+    setIsDetecting(false);
   }, []);
 
   // Update spoofed location when VPN server changes
@@ -82,6 +76,11 @@ const GPSOverride = () => {
         <span className="header-subtitle">Surfshark-Style Location Spoofing</span>
       </div>
 
+      {/* Security notice — GPS override is a UI preference only */}
+      <div className="gps-notice" style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '6px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#856404' }}>
+        <strong>⚠️ Notice:</strong> GPS Override stores your preferred location within this app only. Nebula now blocks renderer geolocation requests to avoid exposing your real coordinates, but it does <strong>not</strong> spoof OS-level GPS for other applications.
+      </div>
+
       {/* Status Panel */}
       <div className={`gps-status-panel ${gpsOverrideEnabled ? 'active' : ''}`}>
         <div className="status-row">
@@ -92,9 +91,11 @@ const GPSOverride = () => {
             ) : realLocation ? (
               <>
                 <span className="location-city">{realLocation.city}</span>
-                <span className="location-coords">
-                  {realLocation.lat.toFixed(4)}, {realLocation.lng.toFixed(4)}
-                </span>
+                {realLocation.lat !== null && realLocation.lng !== null && (
+                  <span className="location-coords">
+                    {realLocation.lat.toFixed(4)}, {realLocation.lng.toFixed(4)}
+                  </span>
+                )}
               </>
             ) : (
               <span className="unknown">Unknown</span>

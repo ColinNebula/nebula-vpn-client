@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './IPv6Protection.css';
 
-const IPv6Protection = () => {
+const IPv6Protection = ({ isConnected = false }) => {
   const [ipv6Enabled, setIpv6Enabled] = useState(true);
   const [ipv6Status, setIpv6Status] = useState({
     detected: true,
@@ -18,6 +18,13 @@ const IPv6Protection = () => {
    * connectivity is exposed (i.e., not blocked by the kill switch / VPN).
    */
   const runLeakTest = async () => {
+    // Never probe external endpoints before the VPN tunnel is established —
+    // doing so would send the user's real IP to a third-party service.
+    if (!isConnected) {
+      setIpv6Status(prev => ({ ...prev, leakDetected: false, address: null }));
+      setTestingLeaks(false);
+      return;
+    }
     setTestingLeaks(true);
     try {
       const ctrl = new AbortController();
@@ -40,10 +47,10 @@ const IPv6Protection = () => {
     setTestingLeaks(false);
   };
 
-  // Auto-run test on mount
+  // Auto-run test on mount (only fires when VPN is connected)
   useEffect(() => {
     runLeakTest();
-  }, []);
+  }, [isConnected]);
 
   // Update leak status when traffic handling changes
   useEffect(() => {

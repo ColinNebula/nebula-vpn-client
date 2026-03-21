@@ -13,7 +13,7 @@ async function detectWebRTCIPs() {
   if (typeof RTCPeerConnection === 'undefined') return [];
   return new Promise((resolve) => {
     const ips = new Set();
-    const pc  = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const pc  = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }] });
     pc.createDataChannel('');
     pc.createOffer()
       .then(offer => pc.setLocalDescription(offer))

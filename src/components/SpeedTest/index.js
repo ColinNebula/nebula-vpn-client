@@ -1,78 +1,161 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import './SpeedTest.css';
+
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const token = () => localStorage.getItem('token') || '';
+
+// Measure round-trip time to the ping endpoint (returns median of N probes)
+async function measurePing(samples = 6) {
+  const rtts = [];
+  for (let i = 0; i < samples; i++) {
+    const t0 = Date.now();
+    try {
+      await fetch(`${API_BASE}/speedtest/ping`, {
+        headers: { Authorization: `Bearer ${token()}` },
+        cache: 'no-store',
+      });
+      rtts.push(Date.now() - t0);
+    } catch {
+      // skip failed probe
+    }
+  }
+  if (rtts.length === 0) return { ping: null, jitter: null };
+  rtts.sort((a, b) => a - b);
+  const median = rtts[Math.floor(rtts.length / 2)];
+  const mean = rtts.reduce((s, v) => s + v, 0) / rtts.length;
+  const jitter = Math.sqrt(rtts.reduce((s, v) => s + (v - mean) ** 2, 0) / rtts.length);
+  return { ping: median, jitter: Math.round(jitter * 10) / 10 };
+}
+
+// Measure download speed — streams BYTES bytes and measures throughput
+async function measureDownload(bytes = 5 * 1024 * 1024, onProgress) {
+  const t0 = Date.now();
+  let received = 0;
+  const resp = await fetch(
+    `${API_BASE}/speedtest/download?bytes=${bytes}`,
+    { headers: { Authorization: `Bearer ${token()}` }, cache: 'no-store' }
+  );
+  const reader = resp.body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.length;
+    const elapsed = (Date.now() - t0) / 1000;
+    if (elapsed > 0) {
+      // Mbps = (bytes * 8) / elapsed / 1_000_000
+      onProgress((received * 8) / elapsed / 1_000_000);
+    }
+  }
+  const elapsed = (Date.now() - t0) / 1000;
+  return elapsed > 0 ? (received * 8) / elapsed / 1_000_000 : 0;
+}
+
+// Measure upload speed — sends BYTES bytes and measures throughput
+async function measureUpload(bytes = 2 * 1024 * 1024, onProgress) {
+  const payload = new Uint8Array(bytes);
+  const t0 = Date.now();
+  // Fake progress ticks while upload occurs
+  let done = false;
+  const ticker = setInterval(() => {
+    if (done) return;
+    const elapsed = (Date.now() - t0) / 1000;
+    if (elapsed > 0) onProgress(Math.min((bytes * 8) / elapsed / 1_000_000, 9999));
+  }, 200);
+  try {
+    await fetch(`${API_BASE}/speedtest/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token()}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: payload,
+    });
+  } finally {
+    done = true;
+    clearInterval(ticker);
+  }
+  const elapsed = (Date.now() - t0) / 1000;
+  return elapsed > 0 ? (bytes * 8) / elapsed / 1_000_000 : 0;
+}
 
 const SpeedTest = ({ isConnected, selectedServer }) => {
   const [isRunning, setIsRunning] = useState(false);
-  const [testPhase, setTestPhase] = useState('idle'); // idle, download, upload, complete
+  const [testPhase, setTestPhase] = useState('idle'); // idle | ping | download | upload | complete | error
   const [downloadSpeed, setDownloadSpeed] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState(0);
   const [ping, setPing] = useState(0);
   const [jitter, setJitter] = useState(0);
   const [progress, setProgress] = useState(0);
   const [testHistory, setTestHistory] = useState([]);
+  const [errorMsg, setErrorMsg] = useState('');
+  const abortRef = useRef(false);
 
   const runSpeedTest = async () => {
-    if (!isConnected) {
-      alert('Please connect to a VPN server first');
-      return;
-    }
+    if (!isConnected) return;
 
+    abortRef.current = false;
     setIsRunning(true);
+    setErrorMsg('');
     setProgress(0);
     setDownloadSpeed(0);
     setUploadSpeed(0);
     setPing(0);
     setJitter(0);
 
-    // Simulate ping test
-    setTestPhase('ping');
-    for (let i = 0; i < 10; i++) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const currentPing = Math.random() * 50 + 20;
-      setPing(currentPing);
-      setProgress((i + 1) * 10);
+    try {
+      // ── 1. Ping + jitter ──────────────────────────────────────────────
+      setTestPhase('ping');
+      setProgress(10);
+      const { ping: measuredPing, jitter: measuredJitter } = await measurePing(6);
+      if (abortRef.current) return;
+      if (measuredPing === null) throw new Error('Ping test failed — server unreachable');
+      setPing(measuredPing);
+      setProgress(33);
+
+      // ── 2. Download ───────────────────────────────────────────────────
+      setTestPhase('download');
+      const finalDl = await measureDownload(5 * 1024 * 1024, (mbps) => {
+        if (!abortRef.current) {
+          setDownloadSpeed(mbps);
+          setProgress(33 + Math.min(33, (mbps / 200) * 33));
+        }
+      });
+      if (abortRef.current) return;
+      setDownloadSpeed(finalDl);
+      setProgress(66);
+
+      // ── 3. Upload ─────────────────────────────────────────────────────
+      setTestPhase('upload');
+      const finalUl = await measureUpload(2 * 1024 * 1024, (mbps) => {
+        if (!abortRef.current) {
+          setUploadSpeed(mbps);
+          setProgress(66 + Math.min(34, (mbps / 100) * 34));
+        }
+      });
+      if (abortRef.current) return;
+      setUploadSpeed(finalUl);
+      setJitter(measuredJitter ?? 0);
+      setProgress(100);
+      setTestPhase('complete');
+
+      setTestHistory(prev => [{
+        id: Date.now(),
+        timestamp: new Date().toLocaleString(),
+        server: selectedServer?.name || 'Unknown',
+        download: finalDl.toFixed(1),
+        upload: finalUl.toFixed(1),
+        ping: measuredPing.toFixed(0),
+        jitter: (measuredJitter ?? 0).toFixed(1),
+      }, ...prev.slice(0, 9)]);
+    } catch (err) {
+      setErrorMsg(err.message || 'Speed test failed');
+      setTestPhase('error');
+    } finally {
+      setIsRunning(false);
     }
-
-    // Simulate download test
-    setTestPhase('download');
-    setProgress(0);
-    for (let i = 0; i < 100; i++) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-      const speed = Math.min(i * 2, Math.random() * 100 + 50);
-      setDownloadSpeed(speed);
-      setProgress(i + 1);
-    }
-
-    // Simulate upload test
-    setTestPhase('upload');
-    setProgress(0);
-    for (let i = 0; i < 100; i++) {
-      await new Promise(resolve => setTimeout(resolve, 40));
-      const speed = Math.min(i * 1.5, Math.random() * 50 + 20);
-      setUploadSpeed(speed);
-      setProgress(i + 1);
-    }
-
-    // Calculate jitter
-    const finalJitter = Math.random() * 10 + 2;
-    setJitter(finalJitter);
-    
-    setTestPhase('complete');
-    setIsRunning(false);
-
-    // Add to history
-    const testResult = {
-      id: Date.now(),
-      timestamp: new Date().toLocaleString(),
-      server: selectedServer?.name || 'Unknown',
-      download: downloadSpeed.toFixed(1),
-      upload: uploadSpeed.toFixed(1),
-      ping: ping.toFixed(0),
-      jitter: finalJitter.toFixed(1)
-    };
-    
-    setTestHistory(prev => [testResult, ...prev.slice(0, 9)]); // Keep last 10 tests
   };
+
+  const cancelTest = () => { abortRef.current = true; setIsRunning(false); setTestPhase('idle'); };
 
   const getSpeedRating = (speed, type) => {
     if (type === 'download') {
@@ -124,6 +207,12 @@ const SpeedTest = ({ isConnected, selectedServer }) => {
         </div>
       </div>
 
+      {testPhase === 'error' && (
+        <div className="speed-error" style={{ color: '#f44336', padding: '8px 12px', background: 'rgba(244,67,54,0.1)', borderRadius: 6, marginBottom: 12 }}>
+          ⚠️ {errorMsg}
+        </div>
+      )}
+
       <div className="speed-gauge-container">
         <div className="speed-gauge">
           <div className="gauge-circle">
@@ -134,8 +223,8 @@ const SpeedTest = ({ isConnected, selectedServer }) => {
                 <div className="gauge-value">
                   {testPhase === 'download' && `${downloadSpeed.toFixed(1)}`}
                   {testPhase === 'upload' && `${uploadSpeed.toFixed(1)}`}
-                  {testPhase === 'ping' && `${ping.toFixed(0)}`}
-                  {testPhase === 'idle' && '0'}
+                  {testPhase === 'ping' && `${ping.toFixed(0) || '…'}`}
+                  {(testPhase === 'idle' || testPhase === 'error') && '0'}
                   {testPhase === 'complete' && '✓'}
                 </div>
                 <div className="gauge-unit">
@@ -145,6 +234,7 @@ const SpeedTest = ({ isConnected, selectedServer }) => {
                 </div>
                 <div className="gauge-phase">
                   {testPhase === 'idle' && 'Ready'}
+                  {testPhase === 'error' && 'Error'}
                   {testPhase === 'ping' && 'Testing Ping'}
                   {testPhase === 'download' && 'Download Test'}
                   {testPhase === 'upload' && 'Upload Test'}
@@ -155,13 +245,11 @@ const SpeedTest = ({ isConnected, selectedServer }) => {
           </div>
         </div>
 
-        <button 
-          className={`speed-test-btn ${isRunning ? 'running' : ''}`}
-          onClick={runSpeedTest}
-          disabled={isRunning}
-        >
-          {isRunning ? 'Testing...' : 'Start Speed Test'}
-        </button>
+        {isRunning ? (
+          <button className="speed-test-btn running" onClick={cancelTest}>Cancel</button>
+        ) : (
+          <button className="speed-test-btn" onClick={runSpeedTest}>Start Speed Test</button>
+        )}
       </div>
 
       {(testPhase === 'complete' || downloadSpeed > 0) && (

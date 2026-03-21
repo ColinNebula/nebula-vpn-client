@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import './DedicatedIP.css';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const authHeader = () => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+});
+
 const DedicatedIP = () => {
   const [currentPlan, setCurrentPlan] = useState('shared'); // shared, dedicated, static
   const [selectedRegion, setSelectedRegion] = useState(null);
@@ -102,17 +108,42 @@ const DedicatedIP = () => {
     },
   ];
 
-  const handleUpgrade = (plan) => {
+  const handleUpgrade = async (plan) => {
     setCurrentPlan(plan);
     if (plan === 'dedicated' && selectedRegion) {
-      // Simulate IP assignment
       const region = regions.find(r => r.id === selectedRegion);
-      setAssignedIP({
-        ip: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-        region: region.name,
-        city: region.city,
-        assigned: new Date().toLocaleDateString()
-      });
+      try {
+        // Request a real dedicated IP from the backend
+        const resp = await fetch(`${API_BASE}/vpn/dedicated-ip`, {
+          method: 'POST',
+          headers: authHeader(),
+          body: JSON.stringify({ region: selectedRegion }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          setAssignedIP({
+            ip:       data.ip,
+            region:   region.name,
+            city:     region.city,
+            assigned: new Date().toLocaleDateString(),
+          });
+        } else {
+          // API returned error (e.g. feature not yet deployed) — show pending state
+          setAssignedIP({
+            ip:       'Pending assignment',
+            region:   region.name,
+            city:     region.city,
+            assigned: new Date().toLocaleDateString(),
+          });
+        }
+      } catch {
+        setAssignedIP({
+          ip:       'Service unavailable',
+          region:   region.name,
+          city:     region.city,
+          assigned: new Date().toLocaleDateString(),
+        });
+      }
     }
     setShowUpgrade(false);
   };

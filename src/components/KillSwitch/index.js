@@ -1,7 +1,10 @@
 import React from 'react';
 import './KillSwitch.css';
 
-const KillSwitch = ({ isActive, isAdvanced, isOnline }) => {
+const KillSwitch = ({ isActive, isAdvanced, isOnline, protectionState }) => {
+  const isVerified = protectionState?.state === 'verified';
+  const isSimulated = protectionState?.state === 'simulated';
+
   const getStatusMessage = () => {
     if (!isOnline) {
       return 'No Internet Connection';
@@ -9,19 +12,29 @@ const KillSwitch = ({ isActive, isAdvanced, isOnline }) => {
     if (isActive) {
       return isAdvanced ? 'Advanced Kill Switch Active' : 'Kill Switch Active';
     }
-    return 'Network Protected';
+    if (isVerified) {
+      return 'WireGuard Tunnel Verified';
+    }
+    if (isSimulated) {
+      return 'Browser Simulation Only';
+    }
+    return 'Traffic Exposed';
   };
 
   const getStatusIcon = () => {
     if (!isOnline) return '📡';
     if (isActive) return '🛡️';
-    return '✅';
+    if (isVerified) return '✅';
+    if (isSimulated) return '🧪';
+    return '⚠️';
   };
 
   const getStatusColor = () => {
     if (!isOnline) return '#ff9800';
     if (isActive) return '#f44336';
-    return '#4caf50';
+    if (isVerified) return '#4caf50';
+    if (isSimulated) return '#f59e0b';
+    return '#ef4444';
   };
 
   return (
@@ -38,6 +51,16 @@ const KillSwitch = ({ isActive, isAdvanced, isOnline }) => {
           {isActive && (
             <div className="status-subtitle">
               All traffic blocked for security
+            </div>
+          )}
+          {isSimulated && !isActive && isOnline && (
+            <div className="status-subtitle">
+              UI simulation only — your normal network is still in use
+            </div>
+          )}
+          {!isVerified && !isSimulated && !isActive && isOnline && (
+            <div className="status-subtitle">
+              Connect the desktop tunnel to protect traffic
             </div>
           )}
           {!isOnline && (

@@ -9,9 +9,10 @@
  *   • Adds / removes WireGuard peers via `wg set`
  *   • Reports real rx/tx bytes via `wg show transfer`
  *
- * When WireGuard is NOT installed (development / testing), all peer
- * management commands are skipped with a warning, but the returned config
- * is still structurally correct and can be used with a real server.
+ * When WireGuard peer registration fails, connection setup now fails closed
+ * by default so the client cannot show a connected/protected UI for a peer
+ * the server never actually installed. For local development only, this can
+ * be relaxed with ALLOW_INSECURE_WG_DEV=true.
  *
  * Required env vars (add to server/.env):
  *   WG_INTERFACE          – WireGuard interface name  (default: wg0)
@@ -128,6 +129,7 @@ class VPNService {
     this.serverPubKey = process.env.WG_SERVER_PUBLIC_KEY || null;
     this.endpoint   = process.env.WG_SERVER_ENDPOINT || null;
     this.dns        = (process.env.WG_DNS || '1.1.1.1,1.0.0.1').split(',').map(s => s.trim());
+    this.allowInsecureDevPeerSetup = process.env.ALLOW_INSECURE_WG_DEV === 'true';
 
     if (!this.serverPubKey || !this.endpoint) {
       logger.warn(
@@ -135,6 +137,28 @@ class VPNService {
         'Returning config with placeholder values — set real values for production.'
       );
     }
+
+    if (this.allowInsecureDevPeerSetup) {
+      logger.warn(
+        'ALLOW_INSECURE_WG_DEV=true enables unverified peer setup. ' +
+        'Clients may appear connected without real server-side WireGuard protection.'
+      );
+    }
+  }
+
+  async registerPeerOrThrow(peerPublicKey, assignedIp, label = 'VPN') {
+    try {
+      await wgAddPeer(this.iface, peerPublicKey, assignedIp);
+      logger.info(`${label}: added peer ${peerPublicKey.slice(0, 8)}… allowed-ips ${assignedIp}/32`);
+    } catch (wgErr) {
+      if (this.allowInsecureDevPeerSetup) {
+        logger.warn(`${label}: peer add skipped because ALLOW_INSECURE_WG_DEV=true (${wgErr.message})`);
+        return false;
+      }
+      throw new Error(`WireGuard peer setup failed: ${wgErr.message}`);
+    }
+
+    return true;
   }
 
   // ── Status ─────────────────────────────────────────────────────────────
@@ -181,6 +205,11 @@ class VPNService {
       // If no client public key supplied, generate a placeholder (dev mode)
       const peerPublicKey = clientPublicKey || generateCurve25519KeyPair().publicKey;
 
+      // Add the peer to the WireGuard interface on this server
+      if (this.serverPubKey && this.endpoint) {
+        await this.registerPeerOrThrow(peerPublicKey, assignedIp, 'WireGuard');
+      }
+
       const connection = {
         server:          serverId,
         protocol,
@@ -190,17 +219,6 @@ class VPNService {
       };
 
       this.connections.set(userId, connection);
-
-      // Add the peer to the WireGuard interface on this server
-      if (this.serverPubKey && this.endpoint) {
-        try {
-          await wgAddPeer(this.iface, peerPublicKey, assignedIp);
-          logger.info(`WireGuard: added peer ${peerPublicKey.slice(0, 8)}… allowed-ips ${assignedIp}/32`);
-        } catch (wgErr) {
-          // WireGuard not installed on this host (development) — log and continue.
-          logger.warn(`WireGuard peer add skipped (wg not available): ${wgErr.message}`);
-        }
-      }
 
       logger.info(`VPN connected: user=${userId} server=${serverId} ip=${assignedIp}`);
 
@@ -251,10 +269,22 @@ class VPNService {
   // ── Multi-hop ──────────────────────────────────────────────────────────
 
   async multiHopConnect({ userId, serverIds, clientPublicKey }) {
+    if (!this.serverPubKey || this.serverPubKey === 'REPLACE_WITH_SERVER_PUBLIC_KEY' ||
+        !this.endpoint     || this.endpoint     === 'YOUR_SERVER_IP:51820') {
+      throw new Error(
+        'VPN server is not configured. ' +
+        'Set WG_SERVER_PUBLIC_KEY and WG_SERVER_ENDPOINT in server/.env and restart.'
+      );
+    }
+
     if (this.connections.has(userId)) await this.disconnect(userId);
 
     const assignedIp    = this.ipPool.allocate(userId);
     const peerPublicKey = clientPublicKey || generateCurve25519KeyPair().publicKey;
+
+    if (this.serverPubKey) {
+      await this.registerPeerOrThrow(peerPublicKey, assignedIp, 'WireGuard multi-hop');
+    }
 
     const connection = {
       servers:         serverIds,
@@ -266,14 +296,6 @@ class VPNService {
     };
 
     this.connections.set(userId, connection);
-
-    if (this.serverPubKey) {
-      try {
-        await wgAddPeer(this.iface, peerPublicKey, assignedIp);
-      } catch (wgErr) {
-        logger.warn(`WireGuard multi-hop peer add skipped: ${wgErr.message}`);
-      }
-    }
 
     logger.info(`Multi-hop VPN connected: user=${userId} servers=${serverIds.join('→')}`);
 

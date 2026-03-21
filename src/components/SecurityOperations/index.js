@@ -39,7 +39,7 @@ function detectWebRTCIPs() {
     if (typeof RTCPeerConnection === 'undefined') return resolve({ ips: [] });
     const ips = new Set();
     try {
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }] });
       pc.createDataChannel('probe');
       pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {});
       const done = () => { try { pc.close(); } catch {} resolve({ ips: [...ips] }); };

@@ -33,6 +33,7 @@ const securityRoutes = require('./routes/security');
 const userRoutes = createUserRouter(authRoutes.users);
 const analyticsRouter = analyticsRoutes(authRoutes.users);
 const adminRoutes = require('./routes/admin');
+const speedtestRoutes = require('./routes/speedtest');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -130,6 +131,8 @@ app.use('/api/user', userRoutes);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/security', securityRoutes);
 app.use('/api/admin', adminRoutes);
+// Speed-test upload uses raw body (binary stream), not JSON — mount before body parsers cap the size
+app.use('/api/speedtest', speedtestRoutes);
 
 // Error handling (sanitized - don't expose internal errors)
 app.use((err, req, res, next) => {

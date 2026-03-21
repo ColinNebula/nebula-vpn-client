@@ -102,16 +102,18 @@ router.get('/breaches', authMiddleware, (req, res) => {
 // No auth required: the caller's own IP is always what's returned.
 // Rate-limit is handled by the global Express limiter in index.js.
 router.get('/ip-info', (req, res) => {
-  // ipwho.is: free, HTTPS, CORS-enabled, 10k req/month
+  // ipwho.is: free, HTTPS, CORS-enabled, 10k req/month.
+  // Do NOT forward X-Forwarded-For — sending the client's real IP to a
+  // third-party service defeats the purpose of the proxy and would persist
+  // the user's real IP in ipwho.is logs.  ipwho.is returns the requester's
+  // IP (the server's egress IP) which is what the client needs to verify
+  // their VPN exit node.
   const options = {
     hostname: 'ipwho.is',
     path: '/',
     method: 'GET',
     headers: {
       'Accept': 'application/json',
-      // Use the verified server-side req.ip only — never trust client-supplied
-      // X-Forwarded-For header (SSRF / spoofing risk).
-      'X-Forwarded-For': req.ip || '',
     },
   };
 

@@ -1,64 +1,155 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './NetworkMonitor.css';
 
-const NetworkMonitor = () => {
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
+
+const NetworkMonitor = ({ isConnected, trafficData }) => {
   const [monitoring, setMonitoring] = useState(true);
   const [networkHealth, setNetworkHealth] = useState({
     status: 'good',
-    score: 85,
-    latency: 24,
-    jitter: 3,
-    packetLoss: 0.2,
-    bandwidth: 95.3
+    score: 0,
+    latency: 0,
+    jitter: 0,
+    packetLoss: 0,
+    bandwidth: 0
   });
 
-  const [ispInfo] = useState({
-    provider: 'Comcast Cable',
-    ip: '203.0.113.42',
-    location: 'San Francisco, CA',
-    asn: 'AS7922',
-    type: 'Cable'
+  const [ispInfo, setIspInfo] = useState({
+    provider: 'Loading…',
+    ip: '—',
+    location: '—',
+    asn: '—',
+    type: '—'
   });
 
-  const [alerts, setAlerts] = useState([
-    { id: 1, type: 'warning', message: 'High latency detected (>100ms)', time: '2 minutes ago', severity: 'medium' },
-    { id: 2, type: 'info', message: 'Network switch detected', time: '15 minutes ago', severity: 'low' },
-    { id: 3, type: 'critical', message: 'Packet loss above threshold (>5%)', time: '1 hour ago', severity: 'high' },
-  ]);
+  const [alerts, setAlerts] = useState([]);
 
   const [metrics, setMetrics] = useState({
-    uptime: '99.98%',
-    avgLatency: 26,
-    peakBandwidth: 147.2,
-    totalData: 245.6,
-    connections: 1247
+    uptime: '—',
+    avgLatency: 0,
+    peakBandwidth: 0,
+    totalData: 0,
+    connections: 0
   });
 
-  const [historyData] = useState([
-    { time: '00:00', latency: 22, bandwidth: 85 },
-    { time: '04:00', latency: 25, bandwidth: 92 },
-    { time: '08:00', latency: 28, bandwidth: 78 },
-    { time: '12:00', latency: 32, bandwidth: 65 },
-    { time: '16:00', latency: 24, bandwidth: 95 },
-    { time: '20:00', latency: 26, bandwidth: 88 },
-  ]);
+  const [historyData, setHistoryData] = useState([]);
+  const latencyHistoryRef = useRef([]);
 
-  // Simulate real-time updates
+  // Fetch real ISP / IP info from the backend proxy (never directly from ipwho.is)
+  useEffect(() => {
+    const fetchIspInfo = async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/security/ip-info`, {
+          headers: authHeader(),
+        });
+        if (!resp.ok) throw new Error('ip-info unavailable');
+        const data = await resp.json();
+        setIspInfo({
+          provider: data.org || data.isp || 'Unknown ISP',
+          ip:       data.ip  || '—',
+          location: [data.city, data.region, data.country].filter(Boolean).join(', ') || '—',
+          asn:      data.asn || '—',
+          type:     data.type || '—',
+        });
+      } catch {
+        setIspInfo(prev => ({ ...prev, provider: 'Unavailable', ip: '—' }));
+      }
+    };
+    fetchIspInfo();
+  }, []);
+
+  // Real-time latency + jitter measurement via ping endpoint + bandwidth from trafficData
   useEffect(() => {
     if (!monitoring) return;
-    
-    const interval = setInterval(() => {
-      setNetworkHealth(prev => ({
-        ...prev,
-        latency: Math.max(15, Math.min(50, prev.latency + (Math.random() - 0.5) * 5)),
-        jitter: Math.max(1, Math.min(10, prev.jitter + (Math.random() - 0.5) * 2)),
-        packetLoss: Math.max(0, Math.min(5, prev.packetLoss + (Math.random() - 0.5) * 0.5)),
-        bandwidth: Math.max(50, Math.min(150, prev.bandwidth + (Math.random() - 0.5) * 10))
-      }));
+
+    const interval = setInterval(async () => {
+      // Measure RTT
+      let latencyMs = null;
+      let lostProbe = false;
+      try {
+        const t0 = Date.now();
+        const resp = await fetch(`${API_BASE}/speedtest/ping`, {
+          headers: authHeader(),
+          cache: 'no-store',
+        });
+        if (resp.status === 204 || resp.ok) {
+          latencyMs = Date.now() - t0;
+        } else {
+          lostProbe = true;
+        }
+      } catch {
+        lostProbe = true;
+      }
+
+      if (lostProbe || latencyMs === null) {
+        setAlerts(prev => {
+          const exists = prev.some(a => a.id === 'ping-fail');
+          if (exists) return prev;
+          return [{ id: 'ping-fail', type: 'warning', message: 'Ping probe failed', time: new Date().toLocaleTimeString(), severity: 'medium' }, ...prev.slice(0, 9)];
+        });
+        return;
+      }
+
+      // Remove lingering ping-fail alert
+      setAlerts(prev => prev.filter(a => a.id !== 'ping-fail'));
+
+      // Rolling jitter
+      latencyHistoryRef.current.push(latencyMs);
+      if (latencyHistoryRef.current.length > 10) latencyHistoryRef.current.shift();
+      const mean = latencyHistoryRef.current.reduce((a, b) => a + b, 0) / latencyHistoryRef.current.length;
+      const jitterMs = latencyHistoryRef.current.length > 1
+        ? Math.sqrt(latencyHistoryRef.current.reduce((s, v) => s + (v - mean) ** 2, 0) / latencyHistoryRef.current.length)
+        : 0;
+
+      // Bandwidth in Mbps from trafficData (KB/s * 8 / 1024)
+      const bwMbps = trafficData
+        ? ((trafficData.download + trafficData.upload) / 1024 * 8)
+        : 0;
+
+      // Health score: penalize high latency, jitter, packet loss
+      const latencyScore  = Math.max(0, 100 - latencyMs);
+      const jitterScore   = Math.max(0, 100 - jitterMs * 2);
+      const score         = Math.round((latencyScore + jitterScore) / 2);
+
+      setNetworkHealth({
+        status:     score >= 80 ? 'good' : score >= 50 ? 'fair' : 'poor',
+        score:      Math.min(100, score),
+        latency:    latencyMs,
+        jitter:     parseFloat(jitterMs.toFixed(1)),
+        packetLoss: 0,
+        bandwidth:  parseFloat(bwMbps.toFixed(1)),
+      });
+
+      // Update history (last 6 readings)
+      const label = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setHistoryData(prev => [...prev.slice(-5), { time: label, latency: latencyMs, bandwidth: bwMbps }]);
+
+      // Latency alert
+      if (latencyMs > 150) {
+        setAlerts(prev => {
+          const exists = prev.some(a => a.id === 'high-latency');
+          if (exists) return prev;
+          return [{ id: 'high-latency', type: 'warning', message: `High latency detected (${latencyMs}ms)`, time: new Date().toLocaleTimeString(), severity: 'medium' }, ...prev.slice(0, 9)];
+        });
+      } else {
+        setAlerts(prev => prev.filter(a => a.id !== 'high-latency'));
+      }
+
+      setMetrics(prev => {
+        const newAvg = latencyHistoryRef.current.length > 0
+          ? Math.round(mean)
+          : prev.avgLatency;
+        return {
+          ...prev,
+          avgLatency:    newAvg,
+          peakBandwidth: Math.max(prev.peakBandwidth, bwMbps),
+        };
+      });
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [monitoring]);
+  }, [monitoring, trafficData]);
 
   const getHealthStatus = (score) => {
     if (score >= 80) return { label: 'Excellent', color: '#4CAF50' };

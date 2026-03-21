@@ -25,6 +25,12 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+.status-bar.warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: rgba(255, 255, 255, 0.88);
+}
+
 /* Status dot + label */
 .status-pill {
   display: flex;
@@ -43,6 +49,11 @@
 .dot-green {
   background: #10b981;
   box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+.dot-amber {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.65);
 }
 
 .dot-red {
@@ -68,7 +79,25 @@
 }
 
 .status-bar.connected .status-label { color: #6ee7b7; }
+.status-bar.warning .status-label { color: #fcd34d; }
 .status-bar.disconnected .status-label { color: #fca5a5; }
+
+.status-note {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-note.verified {
+  color: #a7f3d0;
+}
+
+.status-note.simulated {
+  color: #fde68a;
+}
+
+.status-note.warning {
+  color: #fecaca;
+}
 
 /* Vertical divider */
 .status-divider {

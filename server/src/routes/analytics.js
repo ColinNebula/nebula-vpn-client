@@ -18,7 +18,7 @@ const createAnalyticsRouter = (users) => {
     const user = users.get(req.user.email);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const { server, protocol, status, startTime, endTime, duration, dataUsed, ip } = req.body;
+    const { server, protocol, status, startTime, endTime, duration, dataUsed } = req.body;
 
     if (!server || !status) {
       return res.status(400).json({ error: 'server and status are required' });
@@ -46,7 +46,10 @@ const createAnalyticsRouter = (users) => {
       endTime:    endTime || null,
       duration:   duration || null,
       dataUsed:   dataUsed != null ? Number(dataUsed) : null,
-      ip:         ip ? String(ip).slice(0, 45) : null,
+      // Always derive IP from the authenticated server-side request — never
+      // accept a client-supplied ip field, which could record the pre-VPN
+      // real IP or be spoofed by an attacker with a stolen token.
+      ip:         req.ip ? String(req.ip).slice(0, 45) : null,
       encryption: 'AES-256',
     };
 

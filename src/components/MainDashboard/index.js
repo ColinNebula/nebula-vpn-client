@@ -98,23 +98,32 @@ const MainDashboard = ({
   user,
   killSwitchActive,
   settings = {},
+  isElectron = false,
+  protectionState,
 }) => {
   // ── local state ──
   const [downHistory,   setDownHistory]   = useState(Array(30).fill(0));
   const [upHistory,     setUpHistory]     = useState(Array(30).fill(0));
-  const [threatsBlocked, setThreatsBlocked] = useState({ malware: 0, ads: 147, trackers: 83, phishing: 0 });
+  const [threatsBlocked, setThreatsBlocked] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('nebula_tp_stats') || 'null');
+      if (stored && typeof stored === 'object') return stored;
+    } catch { /* ignore */ }
+    return { malware: 0, ads: 0, trackers: 0, phishing: 0 };
+  });
   const [securityScore, setSecurityScore] = useState(0);
   const [pingMs,        setPingMs]        = useState(null);
   const [showServerPicker, setShowServerPicker] = useState(false);
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
   const [activityFeed,  setActivityFeed]  = useState([
-    { id: 1, icon: '🛡️', msg: 'DNS Protection active',       time: 'just now',  type: 'good'    },
-    { id: 2, icon: '🔬', msg: 'IP Leak test passed',          time: '2m ago',    type: 'good'    },
-    { id: 3, icon: '🚫', msg: '147 ads blocked this session', time: '4m ago',    type: 'neutral' },
+    { id: 1, icon: '🛡️', msg: 'DNS Protection active', time: 'just now', type: 'good' },
+    { id: 2, icon: '🔬', msg: 'IP Leak test passed',   time: '2m ago',   type: 'good' },
   ]);
   const actRef = useRef(activityFeed);
   actRef.current  = activityFeed;
 
+  const isVerifiedConnection = protectionState?.state === 'verified';
+  const isSimulatedConnection = protectionState?.state === 'simulated';
   const activeConnection = isConnected && !isVPNPaused;
   const displayServer    = multiHopServers.length > 0
     ? { name: multiHopServers.map(s => s.name).join(' → '), flag: '🔐', location: 'Multi-Hop', ping: '--', load: 20 }
@@ -122,7 +131,7 @@ const MainDashboard = ({
 
   // ── security score calc ──
   useEffect(() => {
-    const base   = isConnected ? 55 : 18;
+    const base = isVerifiedConnection ? 55 : isSimulatedConnection ? 24 : 18;
     const extras = [
       settings.killSwitch,
       settings.dnsLeakProtection,
@@ -131,7 +140,7 @@ const MainDashboard = ({
       rotatingIPEnabled,
     ].filter(Boolean).length;
     setSecurityScore(Math.min(100, base + extras * 9));
-  }, [isConnected, settings, rotatingIPEnabled]);
+  }, [isSimulatedConnection, isVerifiedConnection, settings, rotatingIPEnabled]);
 
   // ── speed history ──
   useEffect(() => {
@@ -144,26 +153,24 @@ const MainDashboard = ({
     setUpHistory(p   => [...p.slice(1), trafficData.upload   || 0]);
   }, [trafficData, isConnected]);
 
-  // ── simulated ping ──
+  // ── real ping (use server's measured RTT value; no random jitter) ──
   useEffect(() => {
     if (!isConnected || !displayServer) { setPingMs(null); return; }
-    const base = parseInt(displayServer.ping) || 40;
-    setPingMs(base + Math.floor(Math.random() * 6 - 3));
-  }, [isConnected, displayServer, connectionTime]);
+    setPingMs(parseInt(displayServer.ping) || null);
+  }, [isConnected, displayServer]);
 
-  // ── threat simulation ──
+  // ── sync threat counts from localStorage written by ThreatProtection component ──
   useEffect(() => {
-    if (!isConnected) return;
-    const t = setInterval(() => {
-      setThreatsBlocked(p => ({
-        malware:  p.malware  + (Math.random() > 0.97 ? 1 : 0),
-        ads:      p.ads      + (Math.random() > 0.65 ? Math.floor(Math.random() * 3) : 0),
-        trackers: p.trackers + (Math.random() > 0.78 ? 1 : 0),
-        phishing: p.phishing + (Math.random() > 0.99 ? 1 : 0),
-      }));
-    }, 2500);
-    return () => clearInterval(t);
-  }, [isConnected]);
+    const onStorage = (e) => {
+      if (e.key !== 'nebula_tp_stats') return;
+      try {
+        const val = JSON.parse(e.newValue || 'null');
+        if (val && typeof val === 'object') setThreatsBlocked(val);
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // ── activity feed ──
   const pushActivity = (icon, msg, type = 'neutral') => {
@@ -171,12 +178,18 @@ const MainDashboard = ({
   };
   useEffect(() => {
     if (isConnected && displayServer) {
-      pushActivity('✅', `Connected to ${displayServer.name}`, 'good');
+      pushActivity(
+        isVerifiedConnection ? '✅' : '🧪',
+        isVerifiedConnection
+          ? `WireGuard handshake verified on ${displayServer.name}`
+          : `Browser simulation active for ${displayServer.name}`,
+        isVerifiedConnection ? 'good' : 'warn'
+      );
     } else if (!isConnected && actRef.current.length) {
       pushActivity('🔴', 'VPN disconnected', 'warn');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected]);
+  }, [isConnected, isVerifiedConnection, displayServer]);
 
   // ── connect handler ──
   const handleConnect = () => {
@@ -259,7 +272,7 @@ const MainDashboard = ({
               : <span className="md-orb-icon">{activeConnection ? '🛡️' : '⚡'}</span>
             }
             <span className="md-orb-label">
-              {isConnecting ? 'Connecting…' : activeConnection ? 'Protected' : 'Connect'}
+              {isConnecting ? 'Connecting…' : isVerifiedConnection ? 'Tunnel Verified' : isSimulatedConnection ? 'Simulated' : activeConnection ? 'Connected' : 'Connect'}
             </span>
           </div>
         </button>
@@ -268,8 +281,12 @@ const MainDashboard = ({
         <div className="md-hero-status">
           {isVPNPaused && isConnected
             ? <span className="status-chip paused">⏸  VPN Paused</span>
+            : isVerifiedConnection
+            ? <span className="status-chip on">🔒 Handshake Verified</span>
+            : isSimulatedConnection
+            ? <span className="status-chip paused">🧪 Browser Simulation</span>
             : activeConnection
-            ? <span className="status-chip on">🔒 Secure Connection</span>
+            ? <span className="status-chip paused">🟡 Connected, Unverified</span>
             : <span className="status-chip off">⚠ Unprotected</span>
           }
           {settings.protocol && (
@@ -385,7 +402,7 @@ const MainDashboard = ({
           <h3 className="md-card-title">Security Score</h3>
           <ScoreArc score={securityScore} />
           <p className="md-security-note">
-            {securityScore >= 80 ? '🟢 Excellent protection' : securityScore >= 50 ? '🟡 Moderate — improve below' : '🔴 Low — connect VPN'}
+            {securityScore >= 80 ? '🟢 Excellent protection' : securityScore >= 50 ? '🟡 Moderate — improve below' : '🔴 Low — verified tunnel recommended'}
           </p>
           <div className="md-shield-grid">
             {[
@@ -393,7 +410,7 @@ const MainDashboard = ({
               { label: 'DNS Guard',    on: settings.dnsLeakProtection },
               { label: 'IPv6 Block',   on: settings.ipv6Protection },
               { label: 'Rotating IP',  on: rotatingIPEnabled },
-              { label: 'VPN Tunnel',   on: isConnected },
+              { label: 'VPN Tunnel',   on: isVerifiedConnection },
               { label: 'Multi-Hop',    on: multiHopServers.length > 0 },
             ].map(f => (
               <div key={f.label} className={`shield-pill ${f.on ? 'on' : 'off'}`}>
@@ -429,28 +446,40 @@ const MainDashboard = ({
         {/* IP info */}
         <div className="md-card md-ip-card">
           <h3 className="md-card-title">IP Visibility</h3>
+          {isSimulatedConnection && (
+            <div style={{ background: '#7c2d12', color: '#fca5a5', borderRadius: '6px', padding: '8px 12px', marginBottom: '10px', fontSize: '12px', lineHeight: '1.4' }}>
+              <strong>⚠ Browser mode:</strong> No real VPN tunnel is active. Your actual IP and location are still visible to websites. Download the desktop app for real protection.
+            </div>
+          )}
+          {isVerifiedConnection && (
+            <div style={{ background: '#052e2b', color: '#a7f3d0', borderRadius: '6px', padding: '8px 12px', marginBottom: '10px', fontSize: '12px', lineHeight: '1.4' }}>
+              <strong>Desktop proof:</strong> WireGuard handshake verified. This confirms tunnel establishment, but leak tests are still the stronger end-to-end proof.
+            </div>
+          )}
           <div className="md-ip-row">
             <span className="ip-row-label">Visible IP</span>
-            <span className={`ip-row-val ${activeConnection ? 'masked' : 'exposed'}`}>
-              {activeConnection
-                ? `${Math.floor(Math.random()*200+10)}.${Math.floor(Math.random()*255)}.xxx.xxx`
+            <span className={`ip-row-val ${isVerifiedConnection ? 'masked' : 'exposed'}`}>
+              {isVerifiedConnection
+                ? '🛡 Hidden via verified tunnel'
                 : '⚠ Your real IP'}
             </span>
           </div>
           <div className="md-ip-row">
             <span className="ip-row-label">Location</span>
             <span className="ip-row-val">
-              {activeConnection && displayServer ? `${displayServer.flag || ''} ${displayServer.location}` : '📍 Real location exposed'}
+              {isVerifiedConnection && displayServer
+                ? `${displayServer.flag || ''} ${displayServer.location}`
+                : '📍 Real location exposed'}
             </span>
           </div>
           <div className="md-ip-row">
             <span className="ip-row-label">ISP</span>
             <span className="ip-row-val">
-              {activeConnection ? '🛡 Nebula VPN Network' : '⚠ Visible to websites'}
+              {isVerifiedConnection ? '🛡 Nebula VPN Network' : '⚠ Visible to websites'}
             </span>
           </div>
-          <div className={`ip-status-banner ${activeConnection ? 'safe' : 'danger'}`}>
-            {activeConnection ? '🔒 Identity Hidden' : '🚨 Identity Exposed'}
+          <div className={`ip-status-banner ${isVerifiedConnection ? 'safe' : 'danger'}`}>
+            {isVerifiedConnection ? '🔒 Handshake-Verified Tunnel' : isSimulatedConnection ? '🧪 Simulation Only — Identity Exposed' : '🚨 Identity Exposed'}
           </div>
         </div>
       </div>

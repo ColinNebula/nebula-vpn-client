@@ -1,8 +1,29 @@
 const express = require('express');
+const net = require('net');
 const { authMiddleware } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 const router = express.Router();
+
+// RFC 5737 / documentation IP ranges — not real, can't TCP-ping them
+const isTestIP = (ip) =>
+  /^192\.0\.2\./.test(ip) ||
+  /^198\.51\.100\./.test(ip) ||
+  /^203\.0\.113\./.test(ip);
+
+/**
+ * Measure real TCP round-trip time to host:port.
+ * Returns latency in ms, or null if unreachable/timed out.
+ */
+function tcpRTT(host, port = 443, timeout = 3000) {
+  return new Promise((resolve) => {
+    const t0 = Date.now();
+    const socket = net.createConnection({ host, port, timeout });
+    socket.on('connect', () => { socket.destroy(); resolve(Date.now() - t0); });
+    socket.on('timeout', () => { socket.destroy(); resolve(null); });
+    socket.on('error', () => { socket.destroy(); resolve(null); });
+  });
+}
 
 // Server database (in production, this would be in a database)
 const servers = [
@@ -35,13 +56,7 @@ router.get('/', authMiddleware, (req, res) => {
       }
     }
     
-    // Add random ping variation for realism
-    availableServers = availableServers.map(server => ({
-      ...server,
-      ping: server.ping + Math.floor(Math.random() * 10 - 5),
-      load: Math.min(100, Math.max(0, server.load + Math.floor(Math.random() * 10 - 5)))
-    }));
-
+    // Return servers as-is (ping/load are set from the server config or last real measurement)
     res.json({ 
       servers: availableServers,
       count: availableServers.length
@@ -80,7 +95,7 @@ router.get('/:id', authMiddleware, (req, res) => {
   }
 });
 
-// Test server ping
+// Test server ping — attempts a real TCP connection; falls back to configured ping for test IPs
 router.post('/:id/ping', authMiddleware, async (req, res) => {
   try {
     const server = servers.find(s => s.id === req.params.id);
@@ -89,8 +104,20 @@ router.post('/:id/ping', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Server not found' });
     }
 
-    // Simulate ping test
-    const pingResult = server.ping + Math.floor(Math.random() * 10 - 5);
+    let pingResult = server.ping; // configured baseline (ms)
+
+    if (!isTestIP(server.ip)) {
+      // Try a real TCP RTT measurement on port 443 (HTTPS) or 51820 (WireGuard)
+      const rtt = await tcpRTT(server.ip, 443, 3000);
+      if (rtt !== null) {
+        pingResult = rtt;
+      } else {
+        // TCP unreachable — try WireGuard UDP port via TCP as fallback
+        const rtt2 = await tcpRTT(server.ip, 51820, 3000);
+        if (rtt2 !== null) pingResult = rtt2;
+      }
+    }
+    // For test/documentation IPs (192.0.2.x etc.), return configured ping value
     
     res.json({
       serverId: server.id,

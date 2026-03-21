@@ -1,7 +1,17 @@
 // API Service for Nebula VPN
 // Connects React frontend to Node.js backend
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+// Determine API URL based on environment
+let API_BASE_URL;
+if (window.electron || process.env.NODE_ENV === 'development') {
+  // Use localhost for development or Electron environment
+  API_BASE_URL = 'http://localhost:3001/api';
+} else {
+  // Use production API for web builds
+  API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.nebula3ddev.com/api';
+}
+
+console.log('🔗 API_BASE_URL:', API_BASE_URL, 'window.electron:', !!window.electron);
 
 class APIService {
   constructor() {

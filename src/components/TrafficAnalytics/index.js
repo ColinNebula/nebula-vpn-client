@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './TrafficAnalytics.css';
 
-const TrafficAnalytics = ({ isConnected, connectionTime }) => {
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
+
+const TrafficAnalytics = ({ isConnected, connectionTime, trafficData }) => {
   const [timeRange, setTimeRange] = useState('24h');
   const [dataType, setDataType] = useState('bandwidth');
   const [stats, setStats] = useState({
@@ -26,74 +29,101 @@ const TrafficAnalytics = ({ isConnected, connectionTime }) => {
     currentTotal: 0
   });
 
-  // Generate mock analytics data
+  // Load historical connection data from the API
   useEffect(() => {
-    const generateData = () => {
-      const points = timeRange === '1h' ? 12 : timeRange === '24h' ? 24 : timeRange === '7d' ? 7 : 30;
-      const labels = [];
-      const bandwidth = [];
-      const upload = [];
-      const download = [];
+    const fetchHistory = async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/analytics/history`, {
+          headers: authHeader(),
+        });
+        if (!resp.ok) throw new Error('Failed to fetch history');
+        const data = await resp.json();
+        const history = Array.isArray(data.history) ? data.history : (Array.isArray(data) ? data : []);
 
-      for (let i = 0; i < points; i++) {
-        if (timeRange === '1h') {
-          labels.push(`${i * 5}m`);
-        } else if (timeRange === '24h') {
-          labels.push(`${i}h`);
-        } else if (timeRange === '7d') {
-          labels.push(`Day ${i + 1}`);
-        } else {
-          labels.push(`Day ${i + 1}`);
+        if (history.length === 0) {
+          // No history yet — leave chart empty with zero baselines
+          setChartData({ labels: [], bandwidth: [], upload: [], download: [] });
+          setStats({ totalData: '0.00', uploadData: '0.00', downloadData: '0.00', peakSpeed: '0.00', avgSpeed: '0.00', sessions: 0 });
+          return;
         }
 
-        const downloadVal = Math.random() * 50 + 10;
-        const uploadVal = Math.random() * 20 + 5;
-        
-        download.push(downloadVal);
-        upload.push(uploadVal);
-        bandwidth.push(downloadVal + uploadVal);
+        // Bucket by time range
+        const now = Date.now();
+        const rangeCutoff = {
+          '1h':  60 * 60 * 1000,
+          '24h': 24 * 60 * 60 * 1000,
+          '7d':  7  * 24 * 60 * 60 * 1000,
+          '30d': 30 * 24 * 60 * 60 * 1000,
+        }[timeRange] || 24 * 60 * 60 * 1000;
+
+        const filtered = history.filter(e => {
+          const ts = new Date(e.timestamp || e.createdAt || e.date || 0).getTime();
+          return now - ts <= rangeCutoff;
+        });
+
+        const points = timeRange === '1h' ? 12 : timeRange === '24h' ? 24 : timeRange === '7d' ? 7 : 30;
+        const bucketMs = rangeCutoff / points;
+        const labels = [];
+        const download = [];
+        const upload = [];
+
+        for (let i = 0; i < points; i++) {
+          const bucketStart = now - rangeCutoff + i * bucketMs;
+          const bucketEnd   = bucketStart + bucketMs;
+          const inBucket = filtered.filter(e => {
+            const ts = new Date(e.timestamp || e.createdAt || e.date || 0).getTime();
+            return ts >= bucketStart && ts < bucketEnd;
+          });
+          const dlSum = inBucket.reduce((s, e) => s + (e.downloadKB || e.download || 0) / 1024, 0); // → MB
+          const ulSum = inBucket.reduce((s, e) => s + (e.uploadKB   || e.upload   || 0) / 1024, 0);
+          download.push(parseFloat(dlSum.toFixed(2)));
+          upload.push(parseFloat(ulSum.toFixed(2)));
+
+          if (timeRange === '1h') labels.push(`${i * 5}m`);
+          else if (timeRange === '24h') labels.push(`${i}h`);
+          else labels.push(`Day ${i + 1}`);
+        }
+
+        const bandwidth = download.map((d, i) => d + upload[i]);
+        setChartData({ labels, bandwidth, upload, download });
+
+        const totalDl   = download.reduce((a, b) => a + b, 0);
+        const totalUl   = upload.reduce((a, b) => a + b, 0);
+        const totalBw   = totalDl + totalUl;
+        const peak      = Math.max(...bandwidth, 0);
+        const avg       = bandwidth.length > 0 ? totalBw / bandwidth.length : 0;
+
+        setStats({
+          totalData:    (totalBw   / 1024).toFixed(2),
+          uploadData:   (totalUl   / 1024).toFixed(2),
+          downloadData: (totalDl   / 1024).toFixed(2),
+          peakSpeed:    peak.toFixed(2),
+          avgSpeed:     avg.toFixed(2),
+          sessions:     history.length,
+        });
+      } catch {
+        // API unavailable — show zeros; don't show fake data
+        setChartData({ labels: [], bandwidth: [], upload: [], download: [] });
       }
-
-      setChartData({ labels, bandwidth, upload, download });
-
-      // Calculate stats
-      const totalBandwidth = bandwidth.reduce((a, b) => a + b, 0);
-      const totalUpload = upload.reduce((a, b) => a + b, 0);
-      const totalDownload = download.reduce((a, b) => a + b, 0);
-      
-      setStats({
-        totalData: (totalBandwidth / 1024).toFixed(2),
-        uploadData: (totalUpload / 1024).toFixed(2),
-        downloadData: (totalDownload / 1024).toFixed(2),
-        peakSpeed: Math.max(...bandwidth).toFixed(2),
-        avgSpeed: (totalBandwidth / points).toFixed(2),
-        sessions: Math.floor(Math.random() * 50) + 10
-      });
     };
-
-    generateData();
+    fetchHistory();
   }, [timeRange]);
 
-  // Simulate real-time data updates
+  // Real-time stats from the trafficData prop (updated every second by App.js)
   useEffect(() => {
-    if (!isConnected) {
+    if (!isConnected || !trafficData) {
       setRealtimeData({ currentUpload: 0, currentDownload: 0, currentTotal: 0 });
       return;
     }
-
-    const interval = setInterval(() => {
-      const download = Math.random() * 15 + 5;
-      const upload = Math.random() * 8 + 2;
-      
-      setRealtimeData({
-        currentDownload: download.toFixed(2),
-        currentUpload: upload.toFixed(2),
-        currentTotal: (download + upload).toFixed(2)
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isConnected]);
+    // trafficData.download / upload are already in KB/s — convert to MB/s for display
+    const dl = (trafficData.download / 1024).toFixed(2);
+    const ul = (trafficData.upload   / 1024).toFixed(2);
+    setRealtimeData({
+      currentDownload: dl,
+      currentUpload:   ul,
+      currentTotal:    ((trafficData.download + trafficData.upload) / 1024).toFixed(2),
+    });
+  }, [isConnected, trafficData]);
 
   const formatBytes = (bytes) => {
     if (bytes < 1024) return `${bytes} MB`;
