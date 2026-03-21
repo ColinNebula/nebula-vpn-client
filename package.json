@@ -2,7 +2,7 @@
   "name": "nebula-vpn-client",
   "version": "0.1.0",
   "private": true,
-  "homepage": "/nebula-vpn-client",
+  "homepage": ".",
   "main": "public/electron.js",
   "author": "ColinNebula",
   "description": "Nebula VPN - Secure, Fast, and Private VPN Client",
@@ -12,11 +12,11 @@
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "electron-is-dev": "^2.0.0",
     "electron-updater": "^6.8.3",
     "qrcode": "^1.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-scripts": "^5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -26,7 +26,7 @@
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "electron": "electron .",
+    "electron": "set NODE_ENV=development&& electron .",
     "electron-dev": "concurrently \"npm --prefix server start\" \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
     "electron-build": "npm run build && electron-builder",
     "electron-pack": "electron-builder --dir",
@@ -66,10 +66,10 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "electron": "^39.2.4",
-    "electron-builder": "^24.9.1",
-    "electron-is-dev": "^2.0.0",
+    "electron-builder": "^26.8.1",
     "gh-pages": "^6.3.0",
     "png-to-ico": "^3.0.1",
+    "react-scripts": "^5.0.1",
     "sharp": "^0.34.5",
     "wait-on": "^7.2.0"
   },
@@ -98,10 +98,23 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
-      "icon": "public/logo512.png"
+      "icon": "public/favicon.ico",
+      "requestedExecutionLevel": "requireAdministrator",
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "verifyUpdateCodeSignature": false
     },
     "mac": {
       "target": [
@@ -126,8 +139,18 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "public/favicon.ico",
+      "uninstallerIcon": "public/favicon.ico",
+      "installerHeaderIcon": "public/favicon.ico",
+      "deleteAppDataOnUninstall": true,
+      "menuCategory": true,
+      "shortcutName": "Nebula VPN",
+      "license": "LICENSE",
+      "runAfterFinish": true,
+      "perMachine": true
     }
   }
 }

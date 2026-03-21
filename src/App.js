@@ -96,6 +96,14 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [user, setUser] = useState(null);
   const [oauthLoginError, setOAuthLoginError] = useState(null); // error from provider redirect
+  
+  // Debug: Track user state changes
+  useEffect(() => {
+    console.log('🔍 DEBUG - User state changed:', user);
+    console.log('🔍 DEBUG - User role:', user?.role);
+    console.log('🔍 DEBUG - Is admin?', user?.role === 'admin');
+  }, [user]);
+  
   const isElectronApp = typeof window !== 'undefined' && !!(window.electron?.vpn || window.nebulaVPN?.vpn);
   const buildProtectionState = useCallback((overrides = {}) => ({
     platform: isElectronApp ? 'electron' : 'browser',
@@ -651,20 +659,26 @@ function App() {
     console.log('🔐 Login form submitted, authenticating...');
     try {
       const data = await apiService.login(credentials.email, credentials.password);
+      console.log('🔍 DEBUG - Login response data:', data);
       const u = data.user;
+      console.log('🔍 DEBUG - User object from response:', u);
+      console.log('🔍 DEBUG - User role:', u.role);
+      console.log('🔍 DEBUG - User plan:', u.plan);
       // Cache role+plan so offline mode can restore them for this account
       localStorage.setItem(`nebula_session_${u.email}`, JSON.stringify({
         role: u.role || 'user',
         plan: u.plan || 'free',
       }));
-      setUser({
+      const userObj = {
         email: u.email,
         plan: u.plan || 'free',
         role: u.role || 'user',
         firstName: u.name ? u.name.split(' ')[0] : u.email.split('@')[0],
         lastName: u.name ? u.name.split(' ').slice(1).join(' ') : '',
         verified: true
-      });
+      };
+      console.log('🔍 DEBUG - Setting user state to:', userObj);
+      setUser(userObj);
       setCurrentPlan(u.plan || 'free');
       setIsAuthenticated(true);
       setShowSignup(false);

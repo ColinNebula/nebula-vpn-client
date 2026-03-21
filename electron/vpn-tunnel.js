@@ -69,8 +69,8 @@ class WireGuardTunnel {
     this.keyPair         = null;   // { privateKey, publicKey } – raw base64
     this._vpnServerIP    = null;   // extracted from endpoint for kill switch
 
-    // FORCE DEVELOPMENT MODE FOR TESTING
-    this.FORCE_DEV_MODE = true;
+    // PRODUCTION MODE: To enable dev mode, set NODE_ENV=development
+    this.FORCE_DEV_MODE = false;
     console.log('🔧 WireGuardTunnel constructor: FORCE_DEV_MODE =', this.FORCE_DEV_MODE);
 
     // Feature sub-systems (instantiated lazily; require the classes defined
@@ -83,6 +83,15 @@ class WireGuardTunnel {
 
     // IPv6 leak prevention – list of adapter names we disabled on connect
     this._ipv6DisabledAdapters = [];
+    
+    // Trusted DNS servers to prevent DNS leaks (automatically configured on connect)
+    this.trustedDnsServers = [
+      '1.1.1.1',      // Cloudflare Primary
+      '1.0.0.1',      // Cloudflare Secondary
+    ];
+    
+    // Whether to use trusted DNS automatically (default: true for privacy)
+    this.useAutoTrustedDns = true;
   }
 
   _resolveConfigDir() {
@@ -585,10 +594,25 @@ class WireGuardTunnel {
         throw new Error('No DNS servers provided for Windows tunnel enforcement');
       }
       
-      // Only target the WireGuard adapter for DNS enforcement
-      const adapter = await this._getWindowsTunnelAdapter();
+      // Try to find WireGuard adapter first
+      let adapter = await this._getWindowsTunnelAdapter();
+      
+      // DEVELOPMENT MODE: If WireGuard adapter not found, use active physical adapter
+      if (!adapter && (process.env.NODE_ENV === 'development' || this.FORCE_DEV_MODE)) {
+        console.log('[DNS] Dev mode: WireGuard adapter not found, using primary active adapter');
+        const adapters = await this._getWindowsAdapters();
+        // Prefer Wi-Fi, then Ethernet, then first available
+        adapter = adapters.find(a => a.toLowerCase().includes('wi-fi')) ||
+                  adapters.find(a => a.toLowerCase().includes('ethernet')) ||
+                  adapters[0];
+        
+        if (adapter) {
+          console.log(`[DNS] Dev mode: Selected adapter "${adapter}" for DNS enforcement`);
+        }
+      }
+      
       if (!adapter) {
-        throw new Error(`WireGuard adapter "${this.tunnelName}" not found`);
+        throw new Error(`WireGuard adapter "${this.tunnelName}" not found and no active adapter available`);
       }
 
       try {
@@ -604,25 +628,33 @@ class WireGuardTunnel {
           );
         }
 
-        // Verify DNS enforcement on the WireGuard adapter specifically
+        // Verify DNS enforcement on the adapter
         const verified = await this._verifyWindowsDNS(adapter, enforcedServers);
         if (!verified) {
           console.warn(`[DNS] Verification failed on adapter "${adapter}", but continuing...`);
         }
         
-        console.log(`[DNS] Applied servers ${enforcedServers.join(', ')} to WireGuard adapter "${adapter}"`);
+        console.log(`[DNS] Applied servers ${enforcedServers.join(', ')} to adapter "${adapter}"`);
       } catch (error) {
-        throw new Error(`Failed to apply DNS to WireGuard adapter "${adapter}": ${error.message}`);
+        throw new Error(`Failed to apply DNS to adapter "${adapter}": ${error.message}`);
       }
       return;
     }
 
-    // Restore action - only target the WireGuard adapter
-    const adapter = await this._getWindowsTunnelAdapter();
+    // Restore action - try WireGuard adapter first, then dev mode fallback
+    let adapter = await this._getWindowsTunnelAdapter();
+    
+    if (!adapter && (process.env.NODE_ENV === 'development' || this.FORCE_DEV_MODE)) {
+      const adapters = await this._getWindowsAdapters();
+      adapter = adapters.find(a => a.toLowerCase().includes('wi-fi')) ||
+                adapters.find(a => a.toLowerCase().includes('ethernet')) ||
+                adapters[0];
+    }
+    
     if (!adapter) return;
 
     try {
-      // Reset the WireGuard adapter DNS to DHCP before removing it
+      // Reset the adapter DNS to DHCP
       await execAsync(
         `netsh interface ipv4 set dnsservers name="${adapter}" source=dhcp`
       ).catch(() => {});
@@ -630,7 +662,7 @@ class WireGuardTunnel {
         `netsh interface ipv4 delete dnsservers name="${adapter}" all`
       ).catch(() => {});
       
-      console.log(`[DNS] Restored DNS settings on WireGuard adapter "${adapter}"`);
+      console.log(`[DNS] Restored DNS settings on adapter "${adapter}"`);
     } catch (error) {
       console.warn(`[DNS] Failed to restore DNS on adapter "${adapter}": ${error.message}`);
     }
@@ -653,6 +685,36 @@ class WireGuardTunnel {
 
   getActiveDnsServers() {
     return [...this._activeDnsServers];
+  }
+  
+  /**
+   * Configure automatic trusted DNS protection.
+   * @param {boolean} enabled - Whether to automatically use trusted DNS servers
+   * @param {string[]} [servers] - Optional custom trusted DNS servers (defaults to Cloudflare)
+   */
+  configureAutoTrustedDns(enabled, servers = null) {
+    this.useAutoTrustedDns = enabled;
+    if (servers && Array.isArray(servers) && servers.length > 0) {
+      this.trustedDnsServers = this._normalizeDnsServers(servers);
+      console.log(`[DNS Protection] Trusted DNS servers updated: ${this.trustedDnsServers.join(', ')}`);
+    }
+    console.log(`[DNS Protection] Auto trusted DNS: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    return {
+      enabled: this.useAutoTrustedDns,
+      servers: [...this.trustedDnsServers]
+    };
+  }
+  
+  /**
+   * Get current DNS protection configuration.
+   */
+  getDnsProtectionConfig() {
+    return {
+      autoTrustedDns: this.useAutoTrustedDns,
+      trustedServers: [...this.trustedDnsServers],
+      currentVpnDns: [...this._vpnDnsServers],
+      activeDns: [...this._activeDnsServers]
+    };
   }
 
   async applyVpnDns() {
@@ -933,7 +995,19 @@ class WireGuardTunnel {
       }
 
       // ── DoH / DoT proxy: resolve all DNS queries via encrypted channel ────────
-      const vpnDnsServers = this._normalizeDnsServers(dns);
+      const apiDnsServers = this._normalizeDnsServers(dns);
+      
+      // AUTOMATIC DNS LEAK PREVENTION: Use trusted DNS servers by default
+      let vpnDnsServers;
+      if (this.useAutoTrustedDns && this.trustedDnsServers.length > 0) {
+        vpnDnsServers = this.trustedDnsServers;
+        console.log(`[DNS Protection] Using trusted DNS servers: ${vpnDnsServers.join(', ')}`);
+        console.log(`[DNS Protection] (API provided: ${apiDnsServers.join(', ')} - overridden for privacy)`);
+      } else {
+        vpnDnsServers = apiDnsServers;
+        console.log(`[DNS] Using API-provided DNS servers: ${vpnDnsServers.join(', ')}`);
+      }
+      
       let effectiveDns = [...vpnDnsServers];
       if (dohUrl) {
         if (this._dohProxy?.active) {
@@ -972,6 +1046,10 @@ class WireGuardTunnel {
         await this._disableIPv6Windows();
       }
 
+      // Apply DNS to the appropriate adapter
+      // In production: use WireGuard adapter
+      // In dev/simulation: use active physical adapter for real DNS protection
+      console.log(`[DNS] Applying DNS servers: ${effectiveDns.join(', ')}`);
       await this.setDNS(effectiveDns);
       // Note: _activeDnsServers is now set in setDNS method
 

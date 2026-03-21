@@ -237,17 +237,16 @@ function buildReconnectFeatureArgs() {
 
 async function connectSingle({ serverId, protocol, token, killSwitch }) {
   console.log('🔧🔧🔧 [connectSingle] FUNCTION CALLED 🔧🔧🔧');
-  console.log('[connectSingle] Development mode environment check:', {
+  console.log('[connectSingle] Environment check:', {
     NODE_ENV: process.env.NODE_ENV,
     ALLOW_INSECURE_WG_DEV: process.env.ALLOW_INSECURE_WG_DEV,
     argv: process.argv
   });
   
-  // Force development mode for local testing
-  if (!process.env.ALLOW_INSECURE_WG_DEV) {
+  // Enable dev mode bypass if NODE_ENV=development (set in package.json)
+  if (process.env.NODE_ENV === 'development' && !process.env.ALLOW_INSECURE_WG_DEV) {
     process.env.ALLOW_INSECURE_WG_DEV = 'true';
-    process.env.NODE_ENV = 'development';
-    console.log('[connectSingle] Forced development mode environment');
+    console.log('[connectSingle] Enabled dev mode bypass for simulated tunnel');
   }
   
   const pqc = new PqcHandshake();
@@ -467,8 +466,13 @@ function createWindow() {
   // Load the app
   const startUrl = isDev
     ? 'http://localhost:3000'
-    : `file://${path.join(__dirname, '../build/index.html')}`;
+    : `file://${path.join(app.getAppPath(), 'build/index.html')}`;
   const effectiveStartUrl = isPrivacyRegressionMode ? privacyRegressionTargetUrl : startUrl;
+
+  console.log('🔴 MAIN.JS - isDev:', isDev);
+  console.log('🔴 MAIN.JS - app.getAppPath():', app.getAppPath());
+  console.log('🔴 MAIN.JS - startUrl:', startUrl);
+  console.log('🔴 MAIN.JS - effectiveStartUrl:', effectiveStartUrl);
 
   // Deny runtime geolocation requests so renderer content cannot access the
   // OS location service and leak the user's real coordinates.
@@ -495,6 +499,33 @@ function createWindow() {
   // Privacy: Modify outgoing request headers to minimize fingerprinting and location leaks
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
     const { requestHeaders } = details;
+    
+    // Don't modify headers for our own API and local development servers
+    const isLocalAPI = details.url.includes('localhost:3001') || 
+                       details.url.includes('localhost:3000') ||
+                       details.url.includes('127.0.0.1:3001') ||
+                       details.url.includes('127.0.0.1:3000');
+    
+    // Allow DNS leak test services to function properly (these are INTENTIONALLY testing for leaks)
+    const isDNSLeakTest = details.url.includes('dnsleaktest.com') ||
+                          details.url.includes('bash.ws') ||
+                          details.url.includes('ipify.org') ||
+                          details.url.includes('ipwho.is') ||
+                          details.url.includes('stun.cloudflare.com');
+    
+    if (isLocalAPI) {
+      // Allow API calls to work normally
+      console.log('[Privacy] Allowing local API call:', details.url);
+      callback({ requestHeaders });
+      return;
+    }
+    
+    if (isDNSLeakTest) {
+      // Allow leak test services to work (they need real headers to detect leaks)
+      console.log('[Privacy] Allowing leak test service:', details.url);
+      callback({ requestHeaders });
+      return;
+    }
     
     // Remove/modify headers that leak location and system information
     delete requestHeaders['Accept-Language'];  // Language preference can reveal location
@@ -985,6 +1016,27 @@ ipcMain.handle('vpn-obfuscation-stop', async () => {
   }
 });
 
+// ── DNS Protection Configuration ──────────────────────────────────────────────
+ipcMain.handle('vpn-dns-configure', async (event, { enabled, servers }) => {
+  try {
+    const config = tunnel.configureAutoTrustedDns(enabled, servers);
+    return { success: true, config };
+  } catch (err) {
+    console.error('[IPC vpn-dns-configure] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('vpn-dns-get-config', async () => {
+  try {
+    const config = tunnel.getDnsProtectionConfig();
+    return { success: true, config };
+  } catch (err) {
+    console.error('[IPC vpn-dns-get-config] Error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
 // Get system info
 ipcMain.handle('get-system-info', async () => {
   return {
@@ -1215,9 +1267,9 @@ if (!isDev) {
             `default-src 'self' file:; ` +
             `script-src 'self' 'unsafe-inline' file:; ` +
             `style-src 'self' 'unsafe-inline' file:; ` +
-            `img-src 'self' data: blob: file:; ` +
+            `img-src 'self' data: blob: file: https:; ` +
             `font-src 'self' data: file:; ` +
-            `connect-src 'self' file: ${apiOrigin}; ` +
+            `connect-src 'self' file: ${apiOrigin} https://api6.ipify.org https://www.dnsleaktest.com https://*.dnsleaktest.com https://bash.ws https://*.bash.ws https://ipwho.is https://stun.cloudflare.com:3478; ` +
             `object-src 'none'; ` +
             `frame-ancestors 'none'; ` +
             `base-uri 'none';`

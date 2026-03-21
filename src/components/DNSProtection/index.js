@@ -17,6 +17,12 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
     lastTest: null,
     results: null
   });
+  
+  const [autoTrustedDns, setAutoTrustedDns] = useState({
+    enabled: true,
+    servers: ['1.1.1.1', '1.0.0.1'],
+    loading: false
+  });
 
   const dnsProviders = [
     { id: 'cloudflare', name: 'Cloudflare', dns1: '1.1.1.1', dns2: '1.0.0.1', secure: true },
@@ -28,6 +34,28 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
 
   const canRunExternalLeakTest = isConnected && isProtectionVerified && !isSimulated;
 
+  // Load current DNS configuration on mount
+  useEffect(() => {
+    const loadDnsConfig = async () => {
+      if (window.electron?.vpn?.getDnsConfig) {
+        try {
+          const result = await window.electron.vpn.getDnsConfig();
+          if (result.success && result.config) {
+            setAutoTrustedDns({
+              enabled: result.config.autoTrustedDns,
+              servers: result.config.trustedServers || ['1.1.1.1', '1.0.0.1'],
+              loading: false
+            });
+            console.log('[DNS Config] Loaded:', result.config);
+          }
+        } catch (error) {
+          console.error('[DNS Config] Failed to load:', error);
+        }
+      }
+    };
+    loadDnsConfig();
+  }, []);
+
   useEffect(() => {
     if (!canRunExternalLeakTest) {
       setLeakTest({
@@ -37,11 +65,75 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
       });
     }
   }, [canRunExternalLeakTest]);
+  
+  const handleAutoTrustedDnsToggle = async (enabled) => {
+    if (!window.electron?.vpn?.configureDns) {
+      console.error('[DNS Config] Electron API not available');
+      return;
+    }
+    
+    setAutoTrustedDns(prev => ({ ...prev, loading: true }));
+    try {
+      const result = await window.electron.vpn.configureDns({
+        enabled,
+        servers: autoTrustedDns.servers
+      });
+      
+      if (result.success) {
+        setAutoTrustedDns({
+          enabled: result.config.enabled,
+          servers: result.config.servers,
+          loading: false
+        });
+        console.log('[DNS Config] Updated:', result.config);
+      } else {
+        console.error('[DNS Config] Failed:', result.error);
+        setAutoTrustedDns(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.error('[DNS Config] Error:', error);
+      setAutoTrustedDns(prev => ({ ...prev, loading: false }));
+    }
+  };
+  
+  const handleTrustedDnsChange = async (providerId) => {
+    if (!window.electron?.vpn?.configureDns) return;
+    
+    const provider = dnsProviders.find(p => p.id === providerId);
+    if (!provider || provider.id === 'custom') return;
+    
+    const servers = [provider.dns1, provider.dns2];
+    setAutoTrustedDns(prev => ({ ...prev, loading: true }));
+    
+    try {
+      const result = await window.electron.vpn.configureDns({
+        enabled: autoTrustedDns.enabled,
+        servers
+      });
+      
+      if (result.success) {
+        setAutoTrustedDns({
+          enabled: result.config.enabled,
+          servers: result.config.servers,
+          loading: false
+        });
+        console.log('[DNS Config] Provider changed to:', providerId, servers);
+      } else {
+        setAutoTrustedDns(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.error('[DNS Config] Error:', error);
+      setAutoTrustedDns(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   /**
    * Real DNS-leak test using bash.ws (same backend as ipleak.net).
    * Triggers DNS queries from the browser then asks the server which
    * resolvers answered — those are the user's active DNS servers.
+   * 
+   * UPDATED: Now uses backend API to query Windows DNS settings directly,
+   * with bash.ws/dnsleaktest.com as fallback.
    */
   const runLeakTest = async () => {
     if (!canRunExternalLeakTest) {
@@ -60,23 +152,87 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
     }
 
     setLeakTest({ ...leakTest, testing: true });
+    
+    try {
+      // PRIMARY: Query Windows DNS settings directly via backend API
+      console.log('[DNS Leak Test] Querying system DNS configuration...');
+      const backendResp = await fetch('http://localhost:3001/api/security/dns-servers', {
+        signal: AbortSignal.timeout(8000)
+      });
+      
+      if (backendResp.ok) {
+        const data = await backendResp.json();
+        console.log('[DNS Leak Test] Backend results:', data);
+        
+        if (data.servers && data.servers.length > 0) {
+          setLeakTest({
+            testing: false,
+            lastTest: new Date().toLocaleString(),
+            results: {
+              leakDetected: data.leakDetected,
+              dnsServers: data.servers.map(dns => 
+                `${dns.ip} (${dns.provider}${dns.isPrivate ? ' - Local' : ''})`
+              ),
+              location: data.leakDetected ? 'ISP / Untrusted DNS' : 'Trusted DNS',
+              secure: data.secure,
+            },
+          });
+          return;
+        }
+      }
+      
+      console.log('[DNS Leak Test] Backend failed, trying bash.ws fallback...');
+    } catch (err) {
+      console.log('[DNS Leak Test] Backend error:', err.message);
+    }
+
+    // FALLBACK: Use bash.ws DNS leak detection
     try {
       const id = (typeof crypto.randomUUID === 'function')
         ? crypto.randomUUID().replace(/-/g, '')
         : Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-      // Trigger DNS lookups through the browser's resolver
-      await Promise.allSettled(
-        Array.from({ length: 6 }, (_, i) =>
-          fetch(`https://${id}.${i}.bash.ws`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {})
-        )
-      );
-      await new Promise(r => setTimeout(r, 2500));
+      console.log('[DNS Leak Test] Starting bash.ws test with ID:', id);
 
+      // Trigger MORE DNS lookups with multiple techniques to ensure capture
+      // Use fetch with no-cors (standard method)
+      const fetchPromises = Array.from({ length: 10 }, (_, i) =>
+        fetch(`https://${id}.${i}.bash.ws`, { mode: 'no-cors', cache: 'no-store' })
+          .then(() => console.log(`[DNS Leak Test] Query ${i} completed`))
+          .catch(e => console.log(`[DNS Leak Test] Query ${i} failed:`, e.message))
+      );
+      
+      // Also trigger via image loading (alternative technique that forces DNS)
+      const imgPromises = Array.from({ length: 3 }, (_, i) => 
+        new Promise(resolve => {
+          const img = new Image();
+          img.onload = img.onerror = () => {
+            console.log(`[DNS Leak Test] Image query ${i} completed`);
+            resolve();
+          };
+          img.src = `https://${id}.img${i}.bash.ws/pixel.png?t=${Date.now()}`;
+          setTimeout(resolve, 3000); // Timeout fallback
+        })
+      );
+
+      await Promise.allSettled([...fetchPromises, ...imgPromises]);
+      
+      // Wait longer to ensure DNS queries are captured by bash.ws backend
+      console.log('[DNS Leak Test] Waiting 4 seconds for DNS capture...');
+      await new Promise(r => setTimeout(r, 4000));
+
+      console.log('[DNS Leak Test] Fetching results from bash.ws...');
       const ctrl = new AbortController();
-      setTimeout(() => ctrl.abort(), 8000);
+      setTimeout(() => ctrl.abort(), 10000);
       const resp = await fetch(`https://bash.ws/dnsleak/test/${id}?json`, { signal: ctrl.signal });
-      const data = resp.ok ? await resp.json() : [];
+      
+      if (!resp.ok) {
+        console.error('[DNS Leak Test] Results fetch failed:', resp.status);
+        throw new Error(`bash.ws returned status ${resp.status}`);
+      }
+      
+      const data = await resp.json();
+      console.log('[DNS Leak Test] Results received:', data);
       const servers = Array.isArray(data) ? data : [];
 
       const trustedDNS = ['1.1.1.1', '1.0.0.1', '9.9.9.9', '149.112.112.112',
@@ -91,18 +247,19 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
           leakDetected: hasLeak,
           dnsServers: servers.length > 0
             ? servers.map(d => `${d.ip}${d.country_name ? ` (${d.country_name})` : ''}`)
-            : ['No DNS servers detected — try again'],
-          location: hasLeak ? 'ISP / Unknown DNS Server' : 'Trusted DNS Server',
-          secure: !hasLeak,
+            : ['No DNS servers detected — DNS may be encrypted or test failed. Try running again.'],
+          location: hasLeak ? 'ISP / Unknown DNS Server' : (servers.length > 0 ? 'Trusted DNS Server' : 'Unknown'),
+          secure: !hasLeak && servers.length > 0,
         },
       });
     } catch (err) {
+      console.error('[DNS Leak Test] Test failed:', err);
       setLeakTest({
         testing: false,
         lastTest: new Date().toLocaleString(),
         results: {
           leakDetected: false,
-          dnsServers: ['Test failed — check connection'],
+          dnsServers: [`Test error: ${err.message}. Check connection and try again.`],
           location: 'Unknown',
           secure: false,
           error: err.message,
@@ -129,6 +286,70 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
                 ? 'Browser/PWA mode is only a UI simulation. DNS still follows your normal network unless leak tests prove otherwise.'
                 : 'Connect to VPN and enable DNS protection for secure browsing'}
           </p>
+        </div>
+      </div>
+
+      {/* Automatic Trusted DNS Configuration */}
+      <div className="dns-config-section">
+        <h4>⚙️ DNS Configuration</h4>
+        <div className="config-card">
+          <div className="config-header">
+            <div className="config-title">
+              <span className="config-icon">🛡️</span>
+              <div>
+                <strong>Automatic Trusted DNS</strong>
+                <p style={{ fontSize: '12px', margin: '4px 0 0 0', opacity: 0.8 }}>
+                  Automatically use trusted DNS servers to prevent DNS leaks
+                </p>
+              </div>
+            </div>
+            <label className="toggle-switch">
+              <input 
+                type="checkbox" 
+                checked={autoTrustedDns.enabled}
+                onChange={(e) => handleAutoTrustedDnsToggle(e.target.checked)}
+                disabled={autoTrustedDns.loading}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+          
+          {autoTrustedDns.enabled && (
+            <div className="config-details">
+              <div className="dns-provider-select">
+                <label>Trusted DNS Provider:</label>
+                <select 
+                  onChange={(e) => handleTrustedDnsChange(e.target.value)}
+                  disabled={autoTrustedDns.loading}
+                  value={
+                    autoTrustedDns.servers[0] === '1.1.1.1' ? 'cloudflare' :
+                    autoTrustedDns.servers[0] === '8.8.8.8' ? 'google' :
+                    autoTrustedDns.servers[0] === '9.9.9.9' ? 'quad9' :
+                    autoTrustedDns.servers[0] === '208.67.222.222' ? 'opendns' : 'cloudflare'
+                  }
+                >
+                  <option value="cloudflare">Cloudflare (1.1.1.1, 1.0.0.1)</option>
+                  <option value="google">Google DNS (8.8.8.8, 8.8.4.4)</option>
+                  <option value="quad9">Quad9 (9.9.9.9, 149.112.112.112)</option>
+                  <option value="opendns">OpenDNS (208.67.222.222, 208.67.220.220)</option>
+                </select>
+              </div>
+              <div className="current-dns">
+                <span style={{ fontSize: '12px', opacity: 0.7 }}>
+                  Currently using: {autoTrustedDns.servers.join(', ')}
+                </span>
+              </div>
+              <div className="dns-info" style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,200,0,0.1)', borderRadius: '8px', fontSize: '13px' }}>
+                ✅ Your VPN will automatically use these trusted DNS servers instead of your ISP's DNS, preventing DNS leaks and improving privacy.
+              </div>
+            </div>
+          )}
+          
+          {!autoTrustedDns.enabled && (
+            <div className="dns-warning" style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,150,0,0.15)', borderRadius: '8px', fontSize: '13px' }}>
+              ⚠️ When disabled, your VPN will use the DNS servers provided by the VPN server, which may not be privacy-focused. This could lead to DNS leaks.
+            </div>
+          )}
         </div>
       </div>
 

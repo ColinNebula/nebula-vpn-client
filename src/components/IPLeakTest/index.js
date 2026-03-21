@@ -66,16 +66,27 @@ async function runDNSLeakProbe() {
     if (tokenResp.ok) {
       const { token } = await tokenResp.json();
       if (token) {
-        // Trigger DNS lookups
-        await Promise.allSettled(
-          Array.from({ length: 6 }, (_, i) =>
-            fetch(`https://${i}.${token}.test.dnsleaktest.com`, {
-              mode: 'no-cors',
-              cache: 'no-store',
-            }).catch(() => {})
-          )
+        console.log('[DNS Leak] dnsleaktest.com token:', token);
+        // Trigger MORE DNS lookups with multiple techniques
+        const fetchPromises = Array.from({ length: 10 }, (_, i) =>
+          fetch(`https://${i}.${token}.test.dnsleaktest.com`, {
+            mode: 'no-cors',
+            cache: 'no-store',
+          }).catch(() => {})
         );
-        await new Promise(r => setTimeout(r, 2000));
+        
+        // Also use image loading technique
+        const imgPromises = Array.from({ length: 3 }, (_, i) =>
+          new Promise(resolve => {
+            const img = new Image();
+            img.onload = img.onerror = resolve;
+            img.src = `https://img${i}.${token}.test.dnsleaktest.com/pixel.png?t=${Date.now()}`;
+            setTimeout(resolve, 3000);
+          })
+        );
+        
+        await Promise.allSettled([...fetchPromises, ...imgPromises]);
+        await new Promise(r => setTimeout(r, 3500)); // Wait longer
 
         const resultsResp = await fetch(
           `https://www.dnsleaktest.com/api/v1/test/${token}/results`,
@@ -83,11 +94,14 @@ async function runDNSLeakProbe() {
         );
         if (resultsResp.ok) {
           const data = await resultsResp.json();
+          console.log('[DNS Leak] dnsleaktest.com results:', data);
           if (Array.isArray(data) && data.length > 0) return data;
         }
       }
     }
-  } catch { /* fall through to bash.ws */ }
+  } catch (e) {
+    console.log('[DNS Leak] dnsleaktest.com failed:', e.message);
+  }
 
   // Fallback: bash.ws (ipleak.net backend)
   try {
@@ -95,20 +109,37 @@ async function runDNSLeakProbe() {
       ? crypto.randomUUID().replace(/-/g, '')
       : Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-    await Promise.allSettled(
-      Array.from({ length: 6 }, (_, i) =>
-        fetch(`https://${id}.${i}.bash.ws`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {})
-      )
+    console.log('[DNS Leak] bash.ws ID:', id);
+    
+    // Trigger MORE DNS queries with multiple techniques
+    const fetchPromises = Array.from({ length: 10 }, (_, i) =>
+      fetch(`https://${id}.${i}.bash.ws`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {})
     );
-    await new Promise(r => setTimeout(r, 2500));
+    
+    const imgPromises = Array.from({ length: 3 }, (_, i) =>
+      new Promise(resolve => {
+        const img = new Image();
+        img.onload = img.onerror = resolve;
+        img.src = `https://${id}.img${i}.bash.ws/pixel.png?t=${Date.now()}`;
+        setTimeout(resolve, 3000);
+      })
+    );
+    
+    await Promise.allSettled([...fetchPromises, ...imgPromises]);
+    await new Promise(r => setTimeout(r, 4000)); // Wait longer for capture
 
     const resp = await fetch(`https://bash.ws/dnsleak/test/${id}?json`, {
-      signal: abortAfter(8000),
+      signal: abortAfter(10000),
     });
-    if (!resp.ok) return [];
+    if (!resp.ok) {
+      console.log('[DNS Leak] bash.ws fetch failed:', resp.status);
+      return [];
+    }
     const data = await resp.json();
+    console.log('[DNS Leak] bash.ws results:', data);
     return Array.isArray(data) ? data : [];
-  } catch {
+  } catch (e) {
+    console.log('[DNS Leak] bash.ws failed:', e.message);
     return [];
   }
 }

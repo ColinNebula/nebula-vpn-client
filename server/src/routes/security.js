@@ -1,6 +1,7 @@
 const express = require('express');
 const https = require('https');
 const axios = require('axios');
+const { exec } = require('child_process');
 const { authMiddleware } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
@@ -149,6 +150,72 @@ router.get('/ip-info', (req, res) => {
   });
 
   proxyReq.end();
+});
+
+// ── Get system DNS servers using Windows PowerShell ─────────────────────────
+// No auth required - only returns local system DNS configuration
+router.get('/dns-servers', (req, res) => {
+  // Use PowerShell to get DNS servers from all active network adapters
+  const psCommand = 'Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object {$_.ServerAddresses} | Select-Object -ExpandProperty ServerAddresses | Select-Object -Unique';
+  
+  exec(`powershell.exe -Command "${psCommand}"`, { timeout: 5000 }, (error, stdout, stderr) => {
+    if (error) {
+      logger.error('DNS query error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to query DNS settings',
+        servers: []
+      });
+    }
+
+    try {
+      // Parse PowerShell output - one IP per line
+      const servers = stdout
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line && /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(line));
+
+      // Categorize DNS servers
+      const trustedDNS = {
+        '1.1.1.1': 'Cloudflare',
+        '1.0.0.1': 'Cloudflare',
+        '8.8.8.8': 'Google',
+        '8.8.4.4': 'Google',
+        '9.9.9.9': 'Quad9',
+        '149.112.112.112': 'Quad9',
+        '208.67.222.222': 'OpenDNS',
+        '208.67.220.220': 'OpenDNS',
+        '94.140.14.14': 'AdGuard',
+        '94.140.15.15': 'AdGuard'
+      };
+
+      const results = servers.map(ip => {
+        const provider = trustedDNS[ip];
+        const isPrivate = ip.startsWith('192.168.') || ip.startsWith('10.') || 
+                         ip.startsWith('172.16.') || ip.startsWith('127.');
+        
+        return {
+          ip,
+          provider: provider || (isPrivate ? 'Local/Router' : 'Unknown ISP DNS'),
+          trusted: !!provider,
+          isPrivate
+        };
+      });
+
+      const hasLeak = results.some(dns => !dns.trusted && !dns.isPrivate);
+
+      res.json({
+        servers: results,
+        leakDetected: hasLeak,
+        secure: results.length > 0 && !hasLeak
+      });
+    } catch (err) {
+      logger.error('DNS parsing error:', err);
+      res.status(500).json({ 
+        error: 'Failed to parse DNS configuration',
+        servers: []
+      });
+    }
+  });
 });
 
 // ── Packages checked against the OSV.dev vulnerability database ─────────────

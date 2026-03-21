@@ -75,6 +75,29 @@ try {
         } catch (error) {
           console.log('🚨 PRELOAD vpn-update-status error:', error.message);
         }
+      },
+      // DNS Protection Configuration
+      configureDns: async (config) => {
+        console.log('🔧 PRELOAD vpn.configureDns() called with:', config);
+        try {
+          const result = await ipcRenderer.invoke('vpn-dns-configure', config);
+          console.log('🔧 PRELOAD vpn-dns-configure result:', result);
+          return result;
+        } catch (error) {
+          console.log('🚨 PRELOAD vpn-dns-configure error:', error.message);
+          return { success: false, error: error.message };
+        }
+      },
+      getDnsConfig: async () => {
+        console.log('🔧 PRELOAD vpn.getDnsConfig() called');
+        try {
+          const result = await ipcRenderer.invoke('vpn-dns-get-config');
+          console.log('🔧 PRELOAD vpn-dns-get-config result:', result);
+          return result;
+        } catch (error) {
+          console.log('🚨 PRELOAD vpn-dns-get-config error:', error.message);
+          return { success: false, error: error.message };
+        }
       }
     },
     ipc: {
