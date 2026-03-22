@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import './QuickConnect.css';
 
-// Specialty servers (Tor, Double VPN, Obfuscated) are intentionally slower — skip for Quick Connect
+// Specialty servers (Tor, Double VPN, Obfuscated) are intentionally slower - skip for Quick Connect
 const SKIP_SPECIALTIES = new Set(['tor', 'double', 'obfuscated']);
 
 /**
  * Score a server for "safest + closest" quick-connect.
- * Returns a value in [0, 100] — higher is better.
+ * Returns a value in [0, 100] - higher is better.
  *   50 % weight → safety  (inverted load:  100 - load)
  *   50 % weight → proximity (inverted normalised ping)
  * Ping is normalised against MAX_PING_MS so it sits on the same 0-100 scale.
@@ -138,7 +138,7 @@ const QuickConnect = ({
                 {isConnected 
                   ? `Connected to ${currentServer?.name || 'VPN'}`
                   : bestServer
-                    ? `${getModeIcon()} ${bestServer.flag} ${bestServer.name} — ${bestServer.ping}, ${bestServer.load}% load`
+                    ? `${getModeIcon()} ${bestServer.flag} ${bestServer.name} - ${bestServer.ping}, ${bestServer.load}% load`
                     : `${getModeIcon()} ${getModeLabel()}`
                 }
               </span>

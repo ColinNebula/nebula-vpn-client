@@ -22,7 +22,7 @@ const VPNChaining = () => {
     ALL_SERVER_POOL.filter(s => s.id <= 3).map((s, i) => ({ ...s, position: i + 1 }))
   );
 
-  // Servers not in the chain — recomputed so removed servers become re-addable
+  // Servers not in the chain - recomputed so removed servers become re-addable
   const availableServers = ALL_SERVER_POOL.filter(s => !chainedServers.find(c => c.id === s.id));
 
   const chainPresets = [
@@ -57,7 +57,7 @@ const VPNChaining = () => {
   ];
 
   const [routingMode, setRoutingMode] = useState('cascade');
-  // Derived directly from current chain — never stale when servers are added/removed
+  // Derived directly from current chain - never stale when servers are added/removed
   const totalLatency = chainedServers.reduce((sum, s) => sum + s.latency, 0);
 
   const addServer = (server) => {

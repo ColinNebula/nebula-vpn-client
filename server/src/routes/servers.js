@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// RFC 5737 / documentation IP ranges — not real, can't TCP-ping them
+// RFC 5737 / documentation IP ranges - not real, can't TCP-ping them
 const isTestIP = (ip) =>
   /^192\.0\.2\./.test(ip) ||
   /^198\.51\.100\./.test(ip) ||
@@ -95,7 +95,7 @@ router.get('/:id', authMiddleware, (req, res) => {
   }
 });
 
-// Test server ping — attempts a real TCP connection; falls back to configured ping for test IPs
+// Test server ping - attempts a real TCP connection; falls back to configured ping for test IPs
 router.post('/:id/ping', authMiddleware, async (req, res) => {
   try {
     const server = servers.find(s => s.id === req.params.id);
@@ -112,7 +112,7 @@ router.post('/:id/ping', authMiddleware, async (req, res) => {
       if (rtt !== null) {
         pingResult = rtt;
       } else {
-        // TCP unreachable — try WireGuard UDP port via TCP as fallback
+        // TCP unreachable - try WireGuard UDP port via TCP as fallback
         const rtt2 = await tcpRTT(server.ip, 51820, 3000);
         if (rtt2 !== null) pingResult = rtt2;
       }

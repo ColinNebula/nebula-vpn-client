@@ -75,7 +75,7 @@ export default function OnboardingWizard({ user, settings, servers = [], onCompl
               <li><span className="benefit-icon">🔒</span> Military-grade encryption on every connection</li>
               <li><span className="benefit-icon">🚫</span> Block ads &amp; trackers automatically</li>
               <li><span className="benefit-icon">📵</span> No logs, no surveillance, ever</li>
-              <li><span className="benefit-icon">⚡</span> WireGuard protocol — fastest available</li>
+              <li><span className="benefit-icon">⚡</span> WireGuard protocol - fastest available</li>
             </ul>
             <div className="onboarding-actions">
               <button className="onboarding-btn-primary" onClick={next}>
@@ -131,7 +131,7 @@ export default function OnboardingWizard({ user, settings, servers = [], onCompl
               </button>
             </div>
             <div className="onboarding-ks-recommendation">
-              <span className="ow-rec-badge">✓ Recommended</span> — enabled by default for maximum protection
+              <span className="ow-rec-badge">✓ Recommended</span> - enabled by default for maximum protection
             </div>
             <div className="onboarding-actions">
               <button className="onboarding-btn-secondary" onClick={back}>← Back</button>
@@ -149,7 +149,7 @@ export default function OnboardingWizard({ user, settings, servers = [], onCompl
             </p>
             <div className="onboarding-server-list">
               {recommendedServers.length === 0 && (
-                <p className="onboarding-no-servers">No servers available — you can connect later from the dashboard.</p>
+                <p className="onboarding-no-servers">No servers available - you can connect later from the dashboard.</p>
               )}
               {recommendedServers.map(server => {
                 const pingMs = normalizePing(server.ping);

@@ -1,7 +1,7 @@
 /**
  * Secure Storage Utility
  * Provides AES-256-GCM encrypted localStorage and sessionStorage via the
- * Web Crypto API (SubtleCrypto).  No secrets are stored in code — the key
+ * Web Crypto API (SubtleCrypto).  No secrets are stored in code - the key
  * is derived at runtime from stable browser/device fingerprint data using
  * PBKDF2 with 100,000 iterations and SHA-256.
  *
@@ -10,7 +10,7 @@
  * to AES-GCM on first read.
  */
 
-// Public, non-secret salt — unique to this app and storage version.
+// Public, non-secret salt - unique to this app and storage version.
 const _SALT = new TextEncoder().encode('nebula-vpn-storage-v2');
 const _PBKDF2_ITERATIONS = 100_000;
 
@@ -88,7 +88,7 @@ class SecureStorage {
   async decrypt(encryptedData) {
     try {
       if (!encryptedData.startsWith('v2:')) {
-        // Legacy format — migrate transparently
+        // Legacy format - migrate transparently
         return this._decryptLegacy(encryptedData);
       }
 

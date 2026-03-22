@@ -27,7 +27,7 @@ async function measurePing(samples = 6) {
   return { ping: median, jitter: Math.round(jitter * 10) / 10 };
 }
 
-// Measure download speed — streams BYTES bytes and measures throughput
+// Measure download speed - streams BYTES bytes and measures throughput
 async function measureDownload(bytes = 5 * 1024 * 1024, onProgress) {
   const t0 = Date.now();
   let received = 0;
@@ -50,7 +50,7 @@ async function measureDownload(bytes = 5 * 1024 * 1024, onProgress) {
   return elapsed > 0 ? (received * 8) / elapsed / 1_000_000 : 0;
 }
 
-// Measure upload speed — sends BYTES bytes and measures throughput
+// Measure upload speed - sends BYTES bytes and measures throughput
 async function measureUpload(bytes = 2 * 1024 * 1024, onProgress) {
   const payload = new Uint8Array(bytes);
   const t0 = Date.now();
@@ -108,7 +108,7 @@ const SpeedTest = ({ isConnected, selectedServer }) => {
       setProgress(10);
       const { ping: measuredPing, jitter: measuredJitter } = await measurePing(6);
       if (abortRef.current) return;
-      if (measuredPing === null) throw new Error('Ping test failed — server unreachable');
+      if (measuredPing === null) throw new Error('Ping test failed - server unreachable');
       setPing(measuredPing);
       setProgress(33);
 

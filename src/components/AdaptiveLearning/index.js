@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AdaptiveLearning.css';
 
 const STORAGE_KEY = 'nebula_usage_log';
@@ -62,7 +62,7 @@ const derivePreferences = (log) => {
     },
     {
       category: 'Usage Pattern',
-      learned: eveningCount > morningCount ? 'Evening-heavy usage — optimised for 6PM–midnight' : 'Morning-heavy usage — optimised for 6AM–10AM',
+      learned: eveningCount > morningCount ? 'Evening-heavy usage - optimised for 6PM-midnight' : 'Morning-heavy usage - optimised for 6AM-10AM',
       confidence: Math.min(95, 55 + recentSessions.length * 2),
       actions: recentSessions.length,
     },
@@ -196,7 +196,7 @@ const AdaptiveLearning = () => {
         <div className="heatmap-section">
           <h4>🕐 24-Hour Usage Heatmap</h4>
           <p className="heatmap-description">
-            Built from {usageLog.length} real sessions — darker cells = more usage at that hour.
+            Built from {usageLog.length} real sessions - darker cells = more usage at that hour.
           </p>
           <UsageHeatmap log={usageLog} />
         </div>

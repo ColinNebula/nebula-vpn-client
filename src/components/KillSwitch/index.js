@@ -55,7 +55,7 @@ const KillSwitch = ({ isActive, isAdvanced, isOnline, protectionState }) => {
           )}
           {isSimulated && !isActive && isOnline && (
             <div className="status-subtitle">
-              UI simulation only — your normal network is still in use
+              UI simulation only - your normal network is still in use
             </div>
           )}
           {!isVerified && !isSimulated && !isActive && isOnline && (

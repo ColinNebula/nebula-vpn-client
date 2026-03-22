@@ -130,7 +130,7 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
   /**
    * Real DNS-leak test using bash.ws (same backend as ipleak.net).
    * Triggers DNS queries from the browser then asks the server which
-   * resolvers answered — those are the user's active DNS servers.
+   * resolvers answered - those are the user's active DNS servers.
    * 
    * UPDATED: Now uses backend API to query Windows DNS settings directly,
    * with bash.ws/dnsleaktest.com as fallback.
@@ -247,7 +247,7 @@ const DNSProtection = ({ isConnected, isProtectionVerified = false, isSimulated 
           leakDetected: hasLeak,
           dnsServers: servers.length > 0
             ? servers.map(d => `${d.ip}${d.country_name ? ` (${d.country_name})` : ''}`)
-            : ['No DNS servers detected — DNS may be encrypted or test failed. Try running again.'],
+            : ['No DNS servers detected - DNS may be encrypted or test failed. Try running again.'],
           location: hasLeak ? 'ISP / Unknown DNS Server' : (servers.length > 0 ? 'Trusted DNS Server' : 'Unknown'),
           secure: !hasLeak && servers.length > 0,
         },

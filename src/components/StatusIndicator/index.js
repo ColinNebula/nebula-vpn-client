@@ -25,7 +25,7 @@ const StatusIndicator = ({ isConnected, selectedServer, multiHopServers, connect
   const statusNote = isVerified
     ? 'WireGuard handshake verified'
     : isSimulated
-      ? 'Browser/PWA UI only — no OS tunnel'
+      ? 'Browser/PWA UI only - no OS tunnel'
       : 'Your traffic is exposed';
 
   return (

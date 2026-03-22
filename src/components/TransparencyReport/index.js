@@ -81,7 +81,7 @@ export default function TransparencyReport() {
           </div>
         </div>
         <div className="tr-meta">
-          <span>Last updated: <strong>{manifest._generated?.split('T')[0] ?? '—'}</strong></span>
+          <span>Last updated: <strong>{manifest._generated?.split('T')[0] ?? '-'}</strong></span>
           <span className="tr-meta-sep">·</span>
           <span>Provider: <strong>{manifest.provider}</strong></span>
         </div>
@@ -284,7 +284,7 @@ function ContactCard({ icon, label, value, href, ext }) {
       <span className="tr-contact-icon">{icon}</span>
       <div>
         <span className="tr-contact-label">{label}</span>
-        <span className="tr-contact-value">{value ?? '—'}</span>
+        <span className="tr-contact-value">{value ?? '-'}</span>
       </div>
     </div>
   );

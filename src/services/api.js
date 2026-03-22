@@ -3,11 +3,13 @@
 
 // Determine API URL based on environment
 let API_BASE_URL;
+
 if (window.electron || process.env.NODE_ENV === 'development') {
   // Use localhost for development or Electron environment
   API_BASE_URL = 'http://localhost:3001/api';
 } else {
   // Use production API for web builds
+  // Check if custom API URL is provided via environment variable
   API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.nebula3ddev.com/api';
 }
 
@@ -87,7 +89,7 @@ class APIService {
     return this.handleResponse(response);
   }
 
-  // Social / OAuth sign-in — provider is 'google' | 'apple' | 'microsoft'
+  // Social / OAuth sign-in - provider is 'google' | 'apple' | 'microsoft'
   // profile: { email, name, sub } as returned by the provider SDK
   async oauthLogin(provider, profile) {
     const response = await fetch(`${API_BASE_URL}/auth/oauth`, {
@@ -124,7 +126,7 @@ class APIService {
           method: 'POST',
           headers: this.getHeaders(),
         });
-      } catch { /* best-effort — clear locally regardless */ }
+      } catch { /* best-effort - clear locally regardless */ }
     }
     this.token = null;
     localStorage.removeItem('token');
@@ -329,7 +331,7 @@ class APIService {
   }
 
   // ── Vulnerability Scan ────────────────────────────────────────────────────
-  // Queries OSV.dev via the server proxy — returns { scannedAt, packagesChecked, findings[] }
+  // Queries OSV.dev via the server proxy - returns { scannedAt, packagesChecked, findings[] }
   async vulnScan() {
     const response = await fetch(`${API_BASE_URL}/security/vuln-scan`, {
       method: 'POST',

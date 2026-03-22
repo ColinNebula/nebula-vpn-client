@@ -24,7 +24,7 @@ module.exports = function createUserRouter(users) {
     const user = users.get(req.user.email);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Whitelist the keys we allow to be stored — never let a client
+    // Whitelist the keys we allow to be stored - never let a client
     // smuggle in role, plan, password, or other privileged fields.
     const ALLOWED_KEYS = [
       'settings', 'isDarkMode', 'selectedServerId',

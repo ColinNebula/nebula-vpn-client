@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './PredictiveSecurity.css';
 
 // ─── Threat definitions ───────────────────────────────────────────────────────
@@ -242,7 +242,7 @@ const PredictiveSecurity = () => {
             </div>
             {behaviorAnalysis.deviationAlert && (
               <div className="deviation-alert">
-                ⚠️ Behavioral deviation detected — Enhanced monitoring active
+                ⚠️ Behavioral deviation detected - Enhanced monitoring active
               </div>
             )}
           </div>

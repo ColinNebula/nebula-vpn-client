@@ -355,7 +355,7 @@ const MainDashboard = ({
             <span className="msc-icon down">↓</span>
             <Sparkline data={downHistory} color="#4ade80" />
           </div>
-          <div className="msc-value">{activeConnection ? fmtSpeed(trafficData.download) : '—'}</div>
+          <div className="msc-value">{activeConnection ? fmtSpeed(trafficData.download) : '-'}</div>
           <div className="msc-label">Download</div>
         </div>
 
@@ -364,14 +364,14 @@ const MainDashboard = ({
             <span className="msc-icon up">↑</span>
             <Sparkline data={upHistory} color="#60a5fa" />
           </div>
-          <div className="msc-value">{activeConnection ? fmtSpeed(trafficData.upload) : '—'}</div>
+          <div className="msc-value">{activeConnection ? fmtSpeed(trafficData.upload) : '-'}</div>
           <div className="msc-label">Upload</div>
         </div>
 
         <div className="md-stat-card">
           <div className="msc-ping-display">
             <span className="msc-ping-val" style={{ color: pingMs && pingMs < 80 ? '#4ade80' : pingMs && pingMs < 150 ? '#facc15' : '#f87171' }}>
-              {activeConnection && pingMs ? `${pingMs}` : '—'}
+              {activeConnection && pingMs ? `${pingMs}` : '-'}
             </span>
             <span className="msc-ping-unit">{activeConnection && pingMs ? 'ms' : ''}</span>
           </div>
@@ -379,7 +379,7 @@ const MainDashboard = ({
         </div>
 
         <div className="md-stat-card">
-          <div className="msc-timer">{activeConnection ? fmtTime(connectionTime) : '——:——:——'}</div>
+          <div className="msc-timer">{activeConnection ? fmtTime(connectionTime) : '--:--:--'}</div>
           <div className="msc-label">Session Time</div>
         </div>
 
@@ -402,7 +402,7 @@ const MainDashboard = ({
           <h3 className="md-card-title">Security Score</h3>
           <ScoreArc score={securityScore} />
           <p className="md-security-note">
-            {securityScore >= 80 ? '🟢 Excellent protection' : securityScore >= 50 ? '🟡 Moderate — improve below' : '🔴 Low — verified tunnel recommended'}
+            {securityScore >= 80 ? '🟢 Excellent protection' : securityScore >= 50 ? '🟡 Moderate - improve below' : '🔴 Low - verified tunnel recommended'}
           </p>
           <div className="md-shield-grid">
             {[
@@ -479,7 +479,7 @@ const MainDashboard = ({
             </span>
           </div>
           <div className={`ip-status-banner ${isVerifiedConnection ? 'safe' : 'danger'}`}>
-            {isVerifiedConnection ? '🔒 Handshake-Verified Tunnel' : isSimulatedConnection ? '🧪 Simulation Only — Identity Exposed' : '🚨 Identity Exposed'}
+            {isVerifiedConnection ? '🔒 Handshake-Verified Tunnel' : isSimulatedConnection ? '🧪 Simulation Only - Identity Exposed' : '🚨 Identity Exposed'}
           </div>
         </div>
       </div>

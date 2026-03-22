@@ -85,7 +85,7 @@ router.post('/upload', authMiddleware, (req, res) => {
   });
 
   req.on('error', () => {
-    // Client aborted — no-op
+    // Client aborted - no-op
   });
 });
 

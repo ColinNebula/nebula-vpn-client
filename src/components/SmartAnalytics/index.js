@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SmartAnalytics.css';
 
 // ─── Mini Sparkline ───────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ const MiniSparkline = ({ data, width = 80, height = 28, color = '#60a5fa' }) => 
 const SmartAnalytics = () => {
   const [insights, setInsights] = useState([
     { id: 1, type: 'performance', title: 'Server Switch Recommendation', description: 'AI detected 23% faster speeds available on Singapore server. Latency difference: 18ms vs 45ms current.', priority: 'high', confidence: 94, dismissed: false },
-    { id: 2, type: 'usage', title: 'Peak Usage Pattern Detected', description: 'Your highest activity is 7–9 PM. AI recommends scheduling bandwidth-heavy tasks for 2–6 AM (off-peak).', priority: 'medium', confidence: 87, dismissed: false },
+    { id: 2, type: 'usage', title: 'Peak Usage Pattern Detected', description: 'Your highest activity is 7-9 PM. AI recommends scheduling bandwidth-heavy tasks for 2-6 AM (off-peak).', priority: 'medium', confidence: 87, dismissed: false },
     { id: 3, type: 'security', title: 'Enhanced Protection Available', description: 'DNS-over-HTTPS not enabled. Activating it would prevent ISP DNS logging and add a privacy layer.', priority: 'medium', confidence: 81, dismissed: false },
     { id: 4, type: 'performance', title: 'Split Tunneling Opportunity', description: 'Streaming apps detected in traffic. Using split tunneling for Netflix/Spotify could improve VPN speed by 19%.', priority: 'low', confidence: 76, dismissed: false },
   ]);
@@ -32,7 +32,7 @@ const SmartAnalytics = () => {
   const [predictions, setPredictions] = useState({
     nextWeekUsage: { value: 47.8, trend: 'up', confidence: 89 },
     averageSpeed: { value: 128.5, trend: 'stable', confidence: 92 },
-    optimalTimes: ['7:00 AM – 9:00 AM', '1:00 PM – 3:00 PM', '11:00 PM – 1:00 AM'],
+    optimalTimes: ['7:00 AM - 9:00 AM', '1:00 PM - 3:00 PM', '11:00 PM - 1:00 AM'],
   });
 
   // KPI metrics with history arrays for sparklines
@@ -156,7 +156,7 @@ const SmartAnalytics = () => {
               </div>
             ))}
             {activeInsights.length === 0 && (
-              <div className="no-insights">✅ All insights addressed — you're fully optimised!</div>
+              <div className="no-insights">✅ All insights addressed - you're fully optimised!</div>
             )}
           </div>
         </div>

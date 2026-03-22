@@ -119,7 +119,7 @@ export default function UpdateNotification() {
         {state === 'downloading' && (
           <>
             <span className="update-bar__title">
-              Downloading update — {progress}%
+              Downloading update - {progress}%
               {speed > 0 && <span className="update-bar__speed"> ({fmtSpeed(speed)})</span>}
             </span>
             <div className="update-bar__progress" role="progressbar" aria-valuenow={progress} aria-valuemax={100}>

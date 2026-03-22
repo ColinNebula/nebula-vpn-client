@@ -34,7 +34,7 @@ const TwoFactorAuth = () => {
       .then(data => {
         if (data?.user?.twoFactorEnabled) setTwoFAEnabled(true);
       })
-      .catch(() => { /* ignore — show disabled banner */ });
+      .catch(() => { /* ignore - show disabled banner */ });
   }, []);
 
   // ── Toggle handler ─────────────────────────────────────────────
@@ -309,7 +309,7 @@ const TwoFactorAuth = () => {
         </div>
       )}
 
-      {/* ── 2FA enabled — show backup codes if just verified, else active state ── */}
+      {/* ── 2FA enabled - show backup codes if just verified, else active state ── */}
       {twoFAEnabled && (
         <div className="setup-container">
           {setupStep === 3 ? (

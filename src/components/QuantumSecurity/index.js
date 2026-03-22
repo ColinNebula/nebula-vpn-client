@@ -3,7 +3,7 @@ import './QuantumSecurity.css';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-// NIST PQC round-4 / finalised standards (2024); SIKE removed — was cracked in 2022
+// NIST PQC round-4 / finalised standards (2024); SIKE removed - was cracked in 2022
 const ALGORITHMS = [
   {
     id: 'kyber',
@@ -43,7 +43,7 @@ const ALGORITHMS = [
     status: 'standby',
     bits: 256,
     quantum: true,
-    desc: 'Hash-based, stateless. No algebraic assumptions — maximum conservatism.',
+    desc: 'Hash-based, stateless. No algebraic assumptions - maximum conservatism.',
   },
   {
     id: 'aes256',
@@ -59,7 +59,7 @@ const ALGORITHMS = [
     id: 'rsa',
     name: 'RSA-4096',
     type: 'Legacy Key Exchange',
-    nist: '—',
+    nist: '-',
     status: 'deprecated',
     bits: 4096,
     quantum: false, // Shor's algorithm breaks RSA
@@ -350,7 +350,7 @@ const QuantumSecurity = () => {
                     {a.status === 'standby'    && '🟡 Standby'}
                     {a.status === 'deprecated' && '🔴 Deprecated'}
                   </span>
-                  {a.nist !== '—' && (
+                  {a.nist !== '-' && (
                     <span className="qs-nist-pill">{a.nist}</span>
                   )}
                 </div>
@@ -443,7 +443,7 @@ const QuantumSecurity = () => {
                 icon: '💻',
                 threat: 'Breaks RSA, ECC, DH key exchange exponentially faster on a CRQC.',
                 prob: 'future',
-                timeframe: '8–12 years',
+                timeframe: '8-12 years',
                 mitigation: 'ML-KEM replaces all asymmetric key exchange.',
                 mitigated: true,
               },
@@ -452,8 +452,8 @@ const QuantumSecurity = () => {
                 icon: '🔍',
                 threat: 'Halves the effective bit-strength of symmetric ciphers (AES-128 → 64-bit).',
                 prob: 'future',
-                timeframe: '8–12 years',
-                mitigation: 'AES-256 provides 128-bit quantum security — no change needed.',
+                timeframe: '8-12 years',
+                mitigation: 'AES-256 provides 128-bit quantum security - no change needed.',
                 mitigated: true,
               },
               {
@@ -470,7 +470,7 @@ const QuantumSecurity = () => {
                 icon: '⏱️',
                 threat: 'Timing, power and cache-based attacks on PQC implementations.',
                 prob: 'medium',
-                timeframe: '3–7 years',
+                timeframe: '3-7 years',
                 mitigation: 'Constant-time implementations; hardware security modules.',
                 mitigated: false,
               },
@@ -479,7 +479,7 @@ const QuantumSecurity = () => {
                 icon: '🌀',
                 threat: 'D-Wave-style optimisation attacks on lattice problems (theoretical).',
                 prob: 'low',
-                timeframe: '10–15 years',
+                timeframe: '10-15 years',
                 mitigation: 'Conservative parameter choices in ML-KEM absorb this margin.',
                 mitigated: true,
               },

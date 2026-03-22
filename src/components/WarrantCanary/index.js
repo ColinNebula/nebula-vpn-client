@@ -156,7 +156,7 @@ export default function WarrantCanary() {
       <div className={`wc-banner ${isStale ? 'wc-red' : 'wc-green'}`}>
         <span className="wc-banner-icon">{isStale ? '⚠️' : '✅'}</span>
         <div>
-          <strong>{isStale ? 'CANARY FAILURE — ACTION REQUIRED' : 'Canary Active & Current'}</strong>
+          <strong>{isStale ? 'CANARY FAILURE - ACTION REQUIRED' : 'Canary Active & Current'}</strong>
           <p>
             {isStale
               ? freshness?.reason || 'The canary has expired or is missing.'
@@ -171,15 +171,15 @@ export default function WarrantCanary() {
           <span className="wc-icon">🕊️</span>
           <div>
             <h2 className="wc-title">Warrant Canary</h2>
-            <p className="wc-subtitle">Updated quarterly — absence of a current statement is itself a disclosure</p>
+            <p className="wc-subtitle">Updated quarterly - absence of a current statement is itself a disclosure</p>
           </div>
         </div>
         <div className="wc-meta">
-          <span className="wc-meta-item">Statement date: <strong>{parsed.statementDate ?? '—'}</strong></span>
+          <span className="wc-meta-item">Statement date: <strong>{parsed.statementDate ?? '-'}</strong></span>
           <span className="wc-meta-sep">·</span>
-          <span className="wc-meta-item">Version: <strong>{parsed.version ?? '—'}</strong></span>
+          <span className="wc-meta-item">Version: <strong>{parsed.version ?? '-'}</strong></span>
           <span className="wc-meta-sep">·</span>
-          <span className="wc-meta-item">Valid until: <strong>{parsed.validUntil ?? '—'}</strong></span>
+          <span className="wc-meta-item">Valid until: <strong>{parsed.validUntil ?? '-'}</strong></span>
         </div>
       </div>
 

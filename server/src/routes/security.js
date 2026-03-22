@@ -21,7 +21,7 @@ const getSeverity = (dataClasses) => {
   return 'low';
 };
 
-// Proxy to HaveIBeenPwned — keeps the API key server-side
+// Proxy to HaveIBeenPwned - keeps the API key server-side
 router.get('/breaches', authMiddleware, (req, res) => {
   const { email } = req.query;
 
@@ -99,12 +99,12 @@ router.get('/breaches', authMiddleware, (req, res) => {
   hibpReq.end();
 });
 
-// ── IP info proxy — avoids CORS and mixed-content issues on the client ──────
+// ── IP info proxy - avoids CORS and mixed-content issues on the client ──────
 // No auth required: the caller's own IP is always what's returned.
 // Rate-limit is handled by the global Express limiter in index.js.
 router.get('/ip-info', (req, res) => {
   // ipwho.is: free, HTTPS, CORS-enabled, 10k req/month.
-  // Do NOT forward X-Forwarded-For — sending the client's real IP to a
+  // Do NOT forward X-Forwarded-For - sending the client's real IP to a
   // third-party service defeats the purpose of the proxy and would persist
   // the user's real IP in ipwho.is logs.  ipwho.is returns the requester's
   // IP (the server's egress IP) which is what the client needs to verify
@@ -301,7 +301,7 @@ router.post('/vuln-scan', authMiddleware, async (req, res) => {
       return res.status(504).json({ error: 'OSV vulnerability database timed out' });
     }
     if (err.response?.status === 429) {
-      return res.status(429).json({ error: 'Rate-limited by OSV — try again in a few seconds' });
+      return res.status(429).json({ error: 'Rate-limited by OSV - try again in a few seconds' });
     }
     logger.error('Vuln scan error:', err.message);
     res.status(502).json({ error: 'Vulnerability scan failed' });

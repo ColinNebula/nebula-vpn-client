@@ -218,7 +218,7 @@ const ObfuscationSettings = ({ isConnected = false }) => {
     }
 
     // Test 2: Firewall bypass
-    // navigator.onLine is the browser's built-in connectivity flag — it doesn't
+    // navigator.onLine is the browser's built-in connectivity flag - it doesn't
     // require any outbound request so it cannot be blocked by a firewall.
     if (!navigator.onLine) {
       setBypassTests(p => ({ ...p, firewall: 'failed' }));
@@ -234,9 +234,9 @@ const ObfuscationSettings = ({ isConnected = false }) => {
         setBypassDetails(p => ({ ...p, firewall: passed ? 'No firewall interference' : 'Firewall dropping traffic' }));
       } catch {
         // Internet is up (navigator.onLine) but the VPN API endpoint is
-        // unreachable — treat as server-offline, not a firewall block.
+        // unreachable - treat as server-offline, not a firewall block.
         setBypassTests(p => ({ ...p, firewall: 'passed' }));
-        setBypassDetails(p => ({ ...p, firewall: 'API server offline — internet reachable' }));
+        setBypassDetails(p => ({ ...p, firewall: 'API server offline - internet reachable' }));
       }
     }
 
@@ -244,7 +244,7 @@ const ObfuscationSettings = ({ isConnected = false }) => {
     // In Electron the main process sets webRTCIPHandlingPolicy to
     // 'disable_non_proxied_udp', which forces all WebRTC traffic through the
     // proxy/VPN tunnel.  Any public IP surfaced by STUN in that case IS the
-    // VPN exit IP — not the user's real IP — so it must not be flagged as a
+    // VPN exit IP - not the user's real IP - so it must not be flagged as a
     // leak.  We detect this by checking for the Electron renderer bridge.
     try {
       const protectedByElectron = typeof window !== 'undefined' && !!window.electron;
@@ -260,7 +260,7 @@ const ObfuscationSettings = ({ isConnected = false }) => {
       }
     } catch {
       setBypassTests(p => ({ ...p, webrtc: 'passed' }));
-      setBypassDetails(p => ({ ...p, webrtc: 'WebRTC unavailable — no leak risk' }));
+      setBypassDetails(p => ({ ...p, webrtc: 'WebRTC unavailable - no leak risk' }));
     }
 
     // Test 4: IPv6 privacy
@@ -269,7 +269,7 @@ const ObfuscationSettings = ({ isConnected = false }) => {
     //   b) the VPN is currently connected (so it *should* be hiding IPv6), AND
     //   c) we are NOT running inside Electron (which tunnels all IPv6 traffic).
     // If the VPN is not connected, IPv6 reachability is expected and normal.
-    // If we are in Electron, all IPv6 goes through the tunnel — not a leak.
+    // If we are in Electron, all IPv6 goes through the tunnel - not a leak.
     try {
       const ipv6Addr = await detectIPv6();
       const inElectron = typeof window !== 'undefined' && !!window.electron;
@@ -279,15 +279,15 @@ const ObfuscationSettings = ({ isConnected = false }) => {
       } else if (inElectron) {
         // Electron forces all WebRTC/net traffic through the tunnel
         setBypassTests(p => ({ ...p, ipv6: 'passed' }));
-        setBypassDetails(p => ({ ...p, ipv6: 'IPv6 tunnelled through VPN — no leak' }));
+        setBypassDetails(p => ({ ...p, ipv6: 'IPv6 tunnelled through VPN - no leak' }));
       } else if (!isConnected) {
-        // VPN is off — IPv6 reachability is normal, not a leak
+        // VPN is off - IPv6 reachability is normal, not a leak
         setBypassTests(p => ({ ...p, ipv6: 'passed' }));
-        setBypassDetails(p => ({ ...p, ipv6: 'IPv6 available — connect VPN to protect' }));
+        setBypassDetails(p => ({ ...p, ipv6: 'IPv6 available - connect VPN to protect' }));
       } else {
-        // VPN is on but IPv6 is still reachable via the system stack — real leak
+        // VPN is on but IPv6 is still reachable via the system stack - real leak
         setBypassTests(p => ({ ...p, ipv6: 'failed' }));
-        setBypassDetails(p => ({ ...p, ipv6: 'IPv6 reachable outside VPN — potential leak' }));
+        setBypassDetails(p => ({ ...p, ipv6: 'IPv6 reachable outside VPN - potential leak' }));
       }
     } catch {
       setBypassTests(p => ({ ...p, ipv6: 'passed' }));
@@ -323,7 +323,7 @@ const ObfuscationSettings = ({ isConnected = false }) => {
       setBypassTests(p => ({ ...p, tlsVersion: passed ? 'passed' : 'failed' }));
       setBypassDetails(p => ({ ...p, tlsVersion: passed ? 'TLS 1.3 supported' : 'TLS 1.3 may be blocked' }));
     } catch {
-      // TLS 1.3 check timed out — treat as neutral pass
+      // TLS 1.3 check timed out - treat as neutral pass
       setBypassTests(p => ({ ...p, tlsVersion: 'passed' }));
       setBypassDetails(p => ({ ...p, tlsVersion: 'TLS version check skipped' }));
     }
@@ -530,7 +530,7 @@ const ObfuscationSettings = ({ isConnected = false }) => {
                   {!detail && status && <span className="test-detail">&nbsp;</span>}
                 </div>
                 <span className={`test-pill ${status || 'idle'}`}>
-                  {status === 'testing' ? 'Testing' : status === 'passed' ? 'Pass' : status === 'failed' ? 'Fail' : '–'}
+                  {status === 'testing' ? 'Testing' : status === 'passed' ? 'Pass' : status === 'failed' ? 'Fail' : '-'}
                 </span>
               </div>
             );
@@ -918,7 +918,7 @@ const ObfuscationSettings = ({ isConnected = false }) => {
               </div>
               <select className="mimic-select" value={antiFingerprint} onChange={e => setAntiFingerprint(e.target.value)}>
                 {antiFingerprintLevels.map(l => (
-                  <option key={l.id} value={l.id}>{l.name} — {l.desc}</option>
+                  <option key={l.id} value={l.id}>{l.name} - {l.desc}</option>
                 ))}
               </select>
             </div>

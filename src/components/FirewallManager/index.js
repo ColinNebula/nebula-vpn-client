@@ -38,7 +38,7 @@ function validateTarget(type, value) {
         return 'Enter a range as start-end, e.g. 8080-8090';
       const [lo, hi] = parts.map(Number);
       if (lo < 1 || hi > 65535 || lo >= hi)
-        return 'Invalid port range (1–65535, start must be less than end)';
+        return 'Invalid port range (1-65535, start must be less than end)';
       break;
     }
     default: break;
@@ -115,7 +115,7 @@ const TEMPLATES = [
   {
     id: 'max-security',
     name: '🔒 Maximum Security',
-    description: 'Strict policy — allow only HTTPS/DNS, block everything else',
+    description: 'Strict policy - allow only HTTPS/DNS, block everything else',
     color: '#607D8B',
     rules: [
       { name: 'Allow HTTPS',       action: 'allow', protocol: 'tcp', direction: 'outbound', targetType: 'port', target: 'port:443' },
@@ -255,7 +255,7 @@ const FirewallManager = ({ isConnected = false }) => {
     const newRules = tpl.rules.map(r => ({ id: nextId(), ...r, enabled: true }));
     setRules(prev => [...prev, ...newRules]);
     setAppliedTemplates(prev => new Set(prev).add(tpl.id));
-    showToast(`"${tpl.name}" applied — ${newRules.length} rule(s) added.`);
+    showToast(`"${tpl.name}" applied - ${newRules.length} rule(s) added.`);
   }, [showToast]);
 
   // ── Drag-and-drop reorder ─────────────────────────────────────────────────
@@ -311,8 +311,8 @@ const FirewallManager = ({ isConnected = false }) => {
               <h4>Firewall {firewallEnabled ? 'Active' : 'Inactive'}</h4>
               <p>
                 {firewallEnabled
-                  ? `${activeRules} of ${rules.length} rules enforced — default policy: ${defaultPolicy.toUpperCase()} all`
-                  : 'All rules suspended — traffic passes without filtering'}
+                  ? `${activeRules} of ${rules.length} rules enforced - default policy: ${defaultPolicy.toUpperCase()} all`
+                  : 'All rules suspended - traffic passes without filtering'}
               </p>
             </div>
           </div>
@@ -379,7 +379,7 @@ const FirewallManager = ({ isConnected = false }) => {
                 <p className="template-description">{tpl.description}</p>
                 <button className={`apply-btn ${applied ? 'applied' : ''}`}
                   onClick={() => applyTemplate(tpl)} disabled={!firewallEnabled}>
-                  {applied ? '✓ Applied — Add Again' : 'Apply Template'}
+                  {applied ? '✓ Applied - Add Again' : 'Apply Template'}
                 </button>
               </div>
             );
@@ -598,14 +598,14 @@ const FirewallManager = ({ isConnected = false }) => {
             <span className="info-icon">🌐</span>
             <div>
               <h5>Target Types</h5>
-              <p>Domain (site.com, *.ads.com), IP (1.2.3.4), CIDR (10.0.0.0/8), Port (443), Port Range (8080–8090)</p>
+              <p>Domain (site.com, *.ads.com), IP (1.2.3.4), CIDR (10.0.0.0/8), Port (443), Port Range (8080-8090)</p>
             </div>
           </div>
           <div className="info-item">
             <span className="info-icon">🔄</span>
             <div>
               <h5>Default Policy</h5>
-              <p>Traffic that matches no rule falls through to the default policy — Allow all or Block all.</p>
+              <p>Traffic that matches no rule falls through to the default policy - Allow all or Block all.</p>
             </div>
           </div>
           <div className="info-item">

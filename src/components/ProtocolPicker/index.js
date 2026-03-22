@@ -27,7 +27,7 @@ const PROTOCOLS = [
     icon: '🔒',
     speed: 2,
     security: 5,
-    description: 'Tunnels over TCP port 443 — bypasses most firewalls and deep packet inspection.',
+    description: 'Tunnels over TCP port 443 - bypasses most firewalls and deep packet inspection.',
     tags: ['Port 443', 'Firewall bypass'],
   },
   {

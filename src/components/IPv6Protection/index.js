@@ -18,7 +18,7 @@ const IPv6Protection = ({ isConnected = false }) => {
    * connectivity is exposed (i.e., not blocked by the kill switch / VPN).
    */
   const runLeakTest = async () => {
-    // Never probe external endpoints before the VPN tunnel is established —
+    // Never probe external endpoints before the VPN tunnel is established -
     // doing so would send the user's real IP to a third-party service.
     if (!isConnected) {
       setIpv6Status(prev => ({ ...prev, leakDetected: false, address: null }));
@@ -33,7 +33,7 @@ const IPv6Protection = ({ isConnected = false }) => {
       if (resp.ok) {
         const { ip } = await resp.json();
         if (ip && ip.includes(':')) {
-          // IPv6 address returned — the browser can reach IPv6 endpoints
+          // IPv6 address returned - the browser can reach IPv6 endpoints
           setIpv6Status(prev => ({ ...prev, leakDetected: true, address: ip }));
           setLastTest(new Date());
           setTestingLeaks(false);
@@ -41,7 +41,7 @@ const IPv6Protection = ({ isConnected = false }) => {
         }
       }
     } catch { /* fetch aborted or network error → no IPv6 reachability */ }
-    // No IPv6 connectivity detected — no leak
+    // No IPv6 connectivity detected - no leak
     setIpv6Status(prev => ({ ...prev, leakDetected: false, address: null }));
     setLastTest(new Date());
     setTestingLeaks(false);

@@ -31,6 +31,9 @@ const tls                = require('tls');
 const execFileAsync = promisify(execFile);
 const execAsync     = promisify(exec);
 
+// Import advanced security enhancements
+const { SecurityEnhancer } = require('./security-enhancements');
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 /** Validate a base64 string that should encode exactly 32 bytes. */
@@ -92,6 +95,20 @@ class WireGuardTunnel {
     
     // Whether to use trusted DNS automatically (default: true for privacy)
     this.useAutoTrustedDns = true;
+    
+    // Enhanced security features
+    this._killSwitchReconnecting = false;  // Prevents disconnect during kill switch reconnect
+    this._lastServerConfig = null;         // Cached for auto-reconnect
+    this._macAddressRandomized = false;    // Track MAC randomization state
+    this._originalMacAddress = null;       // Original MAC to restore on disconnect
+    this._randomizedPort = null;           // Randomized source port for obfuscation
+    this._trafficObfuscationEnabled = false; // Packet timing obfuscation
+    this._dnsOverHttpsOnly = true;         // Force DNS over HTTPS (DoH)
+    this._ipv6SystemWideBlocked = false;   // System-wide IPv6 blocking status
+    
+    // Initialize advanced security enhancer
+    this._securityEnhancer = new SecurityEnhancer();
+    console.log('[Security] Advanced security enhancer initialized');
   }
 
   _resolveConfigDir() {
@@ -254,6 +271,26 @@ class WireGuardTunnel {
     if      (this.platform === 'win32')  await this._ksWindows('add', serverIP);
     else if (this.platform === 'linux')  await this._ksLinux('add');
     else if (this.platform === 'darwin') await this._ksMacOS('add', serverIP);
+    
+    // Enable enhanced kill switch with auto-reconnect support
+    if (this.platform === 'win32') {
+      console.log('[Security] Enabling enhanced kill switch with auto-reconnect...');
+      const enhanced = await this._securityEnhancer.enableEnhancedKillSwitch(serverIP, this.tunnelName);
+      if (enhanced) {
+        console.log('[Security] ✓ Enhanced kill switch enabled');
+      }
+      
+      // Enforce DNS through VPN tunnel only (prevents DNS leaks)
+      console.log('[Security] Enforcing DNS through VPN tunnel...');
+      const dnsEnforced = await this._securityEnhancer.enforceDNSThroughVPN(
+        this.tunnelName,
+        this.trustedDnsServers.join(',')
+      );
+      if (dnsEnforced) {
+        console.log('[Security] ✓ DNS leak prevention enabled');
+      }
+    }
+    
     this.killSwitchActive = true;
     console.log('[KillSwitch] Enabled – blocking non-VPN traffic');
   }
@@ -1044,6 +1081,14 @@ class WireGuardTunnel {
       // activation, and protects users who don't use the kill switch.
       if (this.platform === 'win32') {
         await this._disableIPv6Windows();
+        
+        // Enhanced IPv6 blocking - system-wide firewall rules
+        console.log('[Security] Enabling system-wide IPv6 blocking...');
+        const ipv6Blocked = await this._securityEnhancer.enableIPv6SystemBlock();
+        if (ipv6Blocked) {
+          this._ipv6SystemWideBlocked = true;
+          console.log('[Security] ✓ System-wide IPv6 blocking enabled');
+        }
       }
 
       // Apply DNS to the appropriate adapter
@@ -1117,6 +1162,14 @@ class WireGuardTunnel {
         console.error('[WireGuard] Split tunnel teardown error:', e.message));
     }
     this._splitTunnel = null;
+
+    // Disable all advanced security enhancements before restoring network
+    if (this.platform === 'win32' && this._securityEnhancer) {
+      console.log('[Security] Disabling advanced security enhancements...');
+      await this._securityEnhancer.disableAllEnhancements().catch(e =>
+        console.error('[Security] Enhancement cleanup error:', e.message));
+      this._ipv6SystemWideBlocked = false;
+    }
 
     // Restore IPv6 on physical adapters before bringing the tunnel down
     if (this.platform === 'win32') {

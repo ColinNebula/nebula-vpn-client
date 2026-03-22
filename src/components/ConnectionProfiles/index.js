@@ -139,7 +139,7 @@ const ConnectionProfiles = ({ onActivate, isConnected, currentSettings }) => {
       {activeProfileId && (
         <div className="cp-active-banner">
           ✅ Profile active: <strong>{profiles.find(p => p.id === activeProfileId)?.name}</strong>
-          {isConnected && ' — settings applied to current session'}
+          {isConnected && ' - settings applied to current session'}
         </div>
       )}
 

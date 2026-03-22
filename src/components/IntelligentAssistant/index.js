@@ -32,7 +32,7 @@ const INTENTS = [
   {
     intent: 'security',
     keywords: ['security', 'secure', 'safe', 'threat', 'hack', 'danger', 'risk', 'protect', 'am i safe', 'security check'],
-    getResponse: () => `🛡️ Security audit complete:\n• AES-256-GCM encryption: ✅\n• DNS leak protection: ✅ None detected\n• WebRTC leak prevention: ✅ Active\n• Malware threats blocked: ✅ 0 active\n• Kill switch: ✅ Armed\n\n**Security score: 97/100** — Excellent`,
+    getResponse: () => `🛡️ Security audit complete:\n• AES-256-GCM encryption: ✅\n• DNS leak protection: ✅ None detected\n• WebRTC leak prevention: ✅ Active\n• Malware threats blocked: ✅ 0 active\n• Kill switch: ✅ Armed\n\n**Security score: 97/100** - Excellent`,
   },
   {
     intent: 'server',
@@ -44,7 +44,7 @@ const INTENTS = [
     keywords: ['optimiz', 'improv', 'better', 'boost', 'enhanc', 'upgrade', 'faster', 'tune'],
     getResponse: () => {
       const tips = [
-        `🎯 Optimization recommendations:\n1. Select a server within 500km\n2. Enable split tunneling for local services\n3. Schedule large downloads 2–6 AM (off-peak)\n\nEstimated improvement: **18–24%** ⬆️`,
+        `🎯 Optimization recommendations:\n1. Select a server within 500km\n2. Enable split tunneling for local services\n3. Schedule large downloads 2-6 AM (off-peak)\n\nEstimated improvement: **18-24%** ⬆️`,
         `⚙️ Performance tips:\n• Switch to **Performance** mode for streaming/gaming\n• Use **Efficiency** mode on battery\n• **Adaptive** mode auto-tunes over time using your usage history\n\nOpen the AI Optimizer to apply these now.`,
         `🚀 Quick wins available:\n• WireGuard runs 3× faster than OpenVPN\n• Traffic shaping prioritizes video calls\n• Smart load balancing routes around congestion\n\nAll toggleable from the AI Optimizer tab.`,
       ];
@@ -54,12 +54,12 @@ const INTENTS = [
   {
     intent: 'privacy',
     keywords: ['privacy', 'ip address', 'leak', 'anonymous', 'webrtc', 'dns leak', 'tracked', 'logs', 'logging', 'no log'],
-    getResponse: () => `🔒 Privacy summary:\n• Real IP: Hidden behind VPN tunnel\n• DNS queries: Encrypted (DoH/DoT)\n• WebRTC: Leak prevention active\n• Activity logs: Zero-log policy enforced\n• Jurisdiction: Privacy-friendly\n\n**Privacy score: 98/100** — Maximum protection 🌟`,
+    getResponse: () => `🔒 Privacy summary:\n• Real IP: Hidden behind VPN tunnel\n• DNS queries: Encrypted (DoH/DoT)\n• WebRTC: Leak prevention active\n• Activity logs: Zero-log policy enforced\n• Jurisdiction: Privacy-friendly\n\n**Privacy score: 98/100** - Maximum protection 🌟`,
   },
   {
     intent: 'killswitch',
     keywords: ['kill switch', 'killswitch', 'emergency stop', 'block traffic', 'if vpn drops', 'failsafe'],
-    getResponse: () => `⚔️ **Kill Switch** automatically blocks ALL internet traffic if your VPN drops — preventing accidental IP exposure.\n\n✅ Recommended: **Always ON** on public/untrusted networks.\nConfigure it under **Settings → Kill Switch**.`,
+    getResponse: () => `⚔️ **Kill Switch** automatically blocks ALL internet traffic if your VPN drops - preventing accidental IP exposure.\n\n✅ Recommended: **Always ON** on public/untrusted networks.\nConfigure it under **Settings → Kill Switch**.`,
   },
   {
     intent: 'protocol',
@@ -74,16 +74,16 @@ const INTENTS = [
       if (m.includes('vpn')) return `📖 **VPN** (Virtual Private Network)\nEncrypts your internet connection and routes it through a secure server, masking your real IP and protecting your data from ISPs, hackers, and surveillance agencies.`;
       if (m.includes('dns')) return `📖 **DNS** (Domain Name System)\nTranslates domain names (google.com) to IP addresses. VPN DNS protection routes these lookups through encrypted channels so your ISP can't log which sites you visit.`;
       if (m.includes('wireguard')) return `📖 **WireGuard**\nA modern, ultra-fast VPN protocol using state-of-the-art cryptography (ChaCha20, Curve25519). It's simpler, faster, and easier to audit than legacy protocols like OpenVPN or IPSec.`;
-      if (m.includes('kill')) return `📖 **Kill Switch**\nA safety mechanism that blocks all internet traffic the moment your VPN connection drops — ensuring your real IP address is never exposed, even during reconnects.`;
+      if (m.includes('kill')) return `📖 **Kill Switch**\nA safety mechanism that blocks all internet traffic the moment your VPN connection drops - ensuring your real IP address is never exposed, even during reconnects.`;
       if (m.includes('split tunnel')) return `📖 **Split Tunneling**\nRoutes only selected apps through the VPN while others use your regular connection. Useful for accessing local printers or streaming local content while keeping sensitive traffic encrypted.`;
-      if (m.includes('multihop') || m.includes('double vpn')) return `📖 **Multi-Hop VPN**\nChains your traffic through two or more VPN servers in different countries. Adds an extra privacy layer at the cost of some speed — ideal for high-risk environments.`;
+      if (m.includes('multihop') || m.includes('double vpn')) return `📖 **Multi-Hop VPN**\nChains your traffic through two or more VPN servers in different countries. Adds an extra privacy layer at the cost of some speed - ideal for high-risk environments.`;
       return `📖 Good question! Ask about specific terms like **VPN**, **WireGuard**, **Kill Switch**, **DNS**, or **Split Tunneling** and I'll explain in depth.`;
     },
   },
   {
     intent: 'help',
     keywords: ['help', 'what can you do', 'commands', 'guide', 'menu', 'options', 'capabilities', '?'],
-    getResponse: () => `💡 **Nebula AI can help with:**\n\n🔌 **Connect/Disconnect** — "Connect me now"\n📊 **Status** — "Am I connected?"\n⚡ **Speed** — "Why is my connection slow?"\n🛡️ **Security** — "Run a security check"\n🌍 **Servers** — "Best server for gaming?"\n⚙️ **Optimize** — "Improve my connection"\n🔒 **Privacy** — "Am I being tracked?"\n📖 **Explain** — "What is WireGuard?"\n\nJust ask naturally — no commands needed! 🤖`,
+    getResponse: () => `💡 **Nebula AI can help with:**\n\n🔌 **Connect/Disconnect** - "Connect me now"\n📊 **Status** - "Am I connected?"\n⚡ **Speed** - "Why is my connection slow?"\n🛡️ **Security** - "Run a security check"\n🌍 **Servers** - "Best server for gaming?"\n⚙️ **Optimize** - "Improve my connection"\n🔒 **Privacy** - "Am I being tracked?"\n📖 **Explain** - "What is WireGuard?"\n\nJust ask naturally - no commands needed! 🤖`,
   },
 ];
 
@@ -129,7 +129,7 @@ const IntelligentAssistant = () => {
       id: 1,
       type: 'assistant',
       timestamp: now,
-      message: `👋 Hi! I'm **Nebula AI**, your intelligent VPN assistant.\n\nI understand natural language — ask me anything about your connection, security, speed, or privacy.\n\nTry: *"Am I connected?"* or *"Help"*`,
+      message: `👋 Hi! I'm **Nebula AI**, your intelligent VPN assistant.\n\nI understand natural language - ask me anything about your connection, security, speed, or privacy.\n\nTry: *"Am I connected?"* or *"Help"*`,
     },
   ]);
   const [inputMessage, setInputMessage] = useState('');

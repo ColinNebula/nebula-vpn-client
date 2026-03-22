@@ -75,7 +75,7 @@ const InstallPWA = () => {
     }
     setPlatform(detectedPlatform);
 
-    // Enhanced service worker registration — production only.
+    // Enhanced service worker registration - production only.
     // In dev the sw.js path resolves incorrectly due to the homepage sub-path,
     // causing a MIME-type SecurityError. App.js handles production registration.
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
@@ -219,7 +219,7 @@ const InstallPWA = () => {
             { text: 'Tap "Add" in the top-right corner', detail: 'You can rename it first if you like' },
           ],
           icon: '📱',
-          browserNote: 'Safari only — does not work in Chrome or Firefox on iOS',
+          browserNote: 'Safari only - does not work in Chrome or Firefox on iOS',
           tip: null,
         };
       case 'android':
@@ -238,23 +238,23 @@ const InstallPWA = () => {
       case 'windows':
         if (browser === 'edge') {
           return {
-            title: 'Install on Windows — Microsoft Edge',
+            title: 'Install on Windows - Microsoft Edge',
             steps: [
-              { text: 'Look for the install icon in the address bar', detail: 'It looks like a "+" or a computer screen with a down arrow — on the right side of the address bar' },
+              { text: 'Look for the install icon in the address bar', detail: 'It looks like a "+" or a computer screen with a down arrow - on the right side of the address bar' },
               { text: 'Click it to open the install dialog', detail: 'If you don\'t see it, click the ⋯ menu (top-right) → Apps → Install this site as an app' },
               { text: 'Click "Install" in the popup', detail: null },
               { text: 'Nebula VPN will open as its own window and appear in your Start Menu', detail: null },
             ],
             icon: '🪟',
-            browserNote: 'Microsoft Edge — recommended for Windows',
+            browserNote: 'Microsoft Edge - recommended for Windows',
             tip: 'Tip: Edge gives the best Windows PWA experience with taskbar pinning.',
           };
         } else if (browser === 'chrome') {
           return {
-            title: 'Install on Windows — Google Chrome',
+            title: 'Install on Windows - Google Chrome',
             steps: [
               { text: 'Look for the install icon in the address bar', detail: 'It looks like a computer with a down arrow on the far right of the address bar' },
-              { text: 'Click it — or click the ⋮ menu → "Save and share" → "Install page as app…"', detail: null },
+              { text: 'Click it - or click the ⋮ menu → "Save and share" → "Install page as app…"', detail: null },
               { text: 'Click "Install" in the confirmation popup', detail: null },
               { text: 'Nebula VPN will launch as an app and be pinned to your taskbar', detail: null },
             ],

@@ -175,7 +175,7 @@ const ThreatProtection = ({ isConnected }) => {
           <span className="tp-always-on-badge">Always On</span>
         </div>
         <p className="tp-subtitle">
-          Blocks ads, trackers &amp; malware in real time — even when the VPN is off.
+          Blocks ads, trackers &amp; malware in real time - even when the VPN is off.
         </p>
       </div>
 
@@ -191,7 +191,7 @@ const ThreatProtection = ({ isConnected }) => {
                 : 'Enable Threat Protection to start blocking threats'}
             </div>
             {enabled && !isConnected && (
-              <div className="tp-vpn-off-note">⚡ Running independently — VPN not required</div>
+              <div className="tp-vpn-off-note">⚡ Running independently - VPN not required</div>
             )}
           </div>
         </div>
@@ -279,7 +279,7 @@ const ThreatProtection = ({ isConnected }) => {
       {activeView === 'filters' && (
         <div className="tp-panel">
           <p className="tp-panel-hint">
-            These filters apply to all network requests — whether or not the VPN is connected.
+            These filters apply to all network requests - whether or not the VPN is connected.
           </p>
           <div className="tp-filter-list">
             {[
@@ -316,7 +316,7 @@ const ThreatProtection = ({ isConnected }) => {
         <div className="tp-panel">
           <p className="tp-panel-hint">
             Routing DNS queries through a filtering resolver blocks malicious domains before
-            a connection is ever made — no VPN required.
+            a connection is ever made - no VPN required.
           </p>
           <div className="tp-dns-list">
             {DNS_PROVIDERS.map(p => (

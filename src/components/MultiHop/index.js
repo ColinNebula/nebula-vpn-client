@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import './MultiHop.css';
 
 // ── Tunnel modes ──────────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ const PRESETS = [
   { id: 'anti-censorship', name: 'Anti-Censorship',  icon: '🌐', desc: 'Enter locally, exit through neutral jurisdiction',   mode: 'standard', countries: ['SE', 'NL'],        tags: ['china', 'iran'],          color: '#FF5722' },
   { id: 'streaming',       name: 'Streaming',         icon: '🎬', desc: 'Two-hop optimised for low latency and bandwidth',   mode: 'standard', countries: ['US', 'GB'],        tags: ['netflix', 'bbc'],         color: '#E91E63' },
   { id: 'gaming',          name: 'Gaming',            icon: '🎮', desc: 'Nearest two hops to minimise added latency',        mode: 'standard', countries: ['US', 'DE'],        tags: ['low-latency'],            color: '#00BCD4' },
-  { id: 'balanced',        name: 'Balanced',          icon: '⚖️', desc: 'Double-hop — good security, minimal speed penalty', mode: 'standard', countries: ['NL', 'SG'],        tags: ['everyday'],               color: '#4CAF50' },
+  { id: 'balanced',        name: 'Balanced',          icon: '⚖️', desc: 'Double-hop - good security, minimal speed penalty', mode: 'standard', countries: ['NL', 'SG'],        tags: ['everyday'],               color: '#4CAF50' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -122,11 +122,11 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
       return matching.reduce((best, s) => parseInt(s.ping, 10) < parseInt(best.ping, 10) ? s : best);
     }).filter(Boolean).slice(0, 4);
     if (picked.length === 0) {
-      setPresetWarnMsg(`No servers available for “${preset.name}” — ensure servers with multi-hop support are loaded.`);
+      setPresetWarnMsg(`No servers available for “${preset.name}” - ensure servers with multi-hop support are loaded.`);
       return;
     }
     if (picked.length < preset.countries.length) {
-      setPresetWarnMsg(`“${preset.name}” applied with ${picked.length}/${preset.countries.length} hops — some countries have no available servers.`);
+      setPresetWarnMsg(`“${preset.name}” applied with ${picked.length}/${preset.countries.length} hops - some countries have no available servers.`);
     } else {
       setPresetWarnMsg('');
     }
@@ -364,7 +364,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
           </div>
           <p className="mh-layer-note">
             Traffic is encrypted {selectedServers.length}× before leaving your device.
-            Each server can only see its adjacent hops — never both endpoints simultaneously.
+            Each server can only see its adjacent hops - never both endpoints simultaneously.
           </p>
         </div>
       )}
@@ -482,7 +482,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
         <div className="mh-notes">
           <strong>ℹ️ Notes</strong>
           <ul>
-            {tunnelMode === 'nested'   && <li>Nested mode wraps each hop in a separate AES-256-GCM envelope — maximum anonymity, ~40% higher overhead.</li>}
+            {tunnelMode === 'nested'   && <li>Nested mode wraps each hop in a separate AES-256-GCM envelope - maximum anonymity, ~40% higher overhead.</li>}
             {tunnelMode === 'rotating' && <li>Auto-Rotating mode swaps entry/exit nodes every 10 min to defeat long-term traffic analysis.</li>}
             <li>Each hop prevents any single server from knowing both your identity and your destination.</li>
             {selectedServers.length >= 3 && <li>3+ hops: even a compromised middle server cannot correlate traffic unless first and last nodes collude.</li>}

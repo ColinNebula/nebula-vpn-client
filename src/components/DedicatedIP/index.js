@@ -128,7 +128,7 @@ const DedicatedIP = () => {
             assigned: new Date().toLocaleDateString(),
           });
         } else {
-          // API returned error (e.g. feature not yet deployed) — show pending state
+          // API returned error (e.g. feature not yet deployed) - show pending state
           setAssignedIP({
             ip:       'Pending assignment',
             region:   region.name,

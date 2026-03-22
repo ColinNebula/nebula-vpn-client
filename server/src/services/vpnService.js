@@ -1,5 +1,5 @@
 /**
- * Nebula VPN – Server-Side VPN Service
+ * Nebula VPN - Server-Side VPN Service
  * =====================================
  * Manages WireGuard peers on the VPN server host.
  *
@@ -15,11 +15,11 @@
  * be relaxed with ALLOW_INSECURE_WG_DEV=true.
  *
  * Required env vars (add to server/.env):
- *   WG_INTERFACE          – WireGuard interface name  (default: wg0)
- *   WG_SERVER_PUBLIC_KEY  – Server's base64 public key
- *   WG_SERVER_ENDPOINT    – Public IP or hostname + UDP port (host:port)
- *   WG_DNS                – Comma-separated DNS IPs for clients (default: 1.1.1.1,1.0.0.1)
- *   WG_SUBNET             – VPN subnet in CIDR (default: 10.8.0.0/24)
+ *   WG_INTERFACE          - WireGuard interface name  (default: wg0)
+ *   WG_SERVER_PUBLIC_KEY  - Server's base64 public key
+ *   WG_SERVER_ENDPOINT    - Public IP or hostname + UDP port (host:port)
+ *   WG_DNS                - Comma-separated DNS IPs for clients (default: 1.1.1.1,1.0.0.1)
+ *   WG_SUBNET             - VPN subnet in CIDR (default: 10.8.0.0/24)
  */
 
 'use strict';
@@ -134,7 +134,7 @@ class VPNService {
     if (!this.serverPubKey || !this.endpoint) {
       logger.warn(
         'WG_SERVER_PUBLIC_KEY and/or WG_SERVER_ENDPOINT are not set in .env. ' +
-        'Returning config with placeholder values — set real values for production.'
+        'Returning config with placeholder values - set real values for production.'
       );
     }
 
@@ -183,7 +183,7 @@ class VPNService {
    * @param {string} params.userId
    * @param {string} params.serverId
    * @param {string} [params.protocol='wireguard']
-   * @param {string} [params.clientPublicKey]  – Client's Curve25519 public key (base64).
+   * @param {string} [params.clientPublicKey]  - Client's Curve25519 public key (base64).
    *                                             If omitted (legacy), a throwaway key is used.
    */
   async connect({ userId, serverId, protocol = 'wireguard', clientPublicKey }) {    // Fail loudly instead of returning placeholder values that produce a
@@ -341,7 +341,7 @@ class VPNService {
       const stats = await wgGetPeerTransfer(this.iface, conn.clientPublicKey);
       return { ...stats, duration: Math.floor((Date.now() - conn.connectedAt.getTime()) / 1000) };
     } catch {
-      // WireGuard not available (development) — return uptime-based placeholder
+      // WireGuard not available (development) - return uptime-based placeholder
       const duration = Date.now() - conn.connectedAt.getTime();
       return {
         download: 0,

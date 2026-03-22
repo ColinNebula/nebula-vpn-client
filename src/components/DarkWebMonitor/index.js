@@ -128,7 +128,7 @@ const DarkWebMonitor = () => {
           <div className="dwm-stat-label">Breaches Found</div>
         </div>
         <div className="dwm-stat">
-          <div className="dwm-stat-value">{lastScan || '—'}</div>
+          <div className="dwm-stat-value">{lastScan || '-'}</div>
           <div className="dwm-stat-label">Last Scan</div>
         </div>
         <div className="dwm-stat">

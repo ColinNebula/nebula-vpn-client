@@ -87,7 +87,7 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Stricter rate limit for auth endpoints — count ALL attempts (success and failure)
+// Stricter rate limit for auth endpoints - count ALL attempts (success and failure)
 // to prevent password-spraying attacks across many valid accounts
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -131,7 +131,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/security', securityRoutes);
 app.use('/api/admin', adminRoutes);
-// Speed-test upload uses raw body (binary stream), not JSON — mount before body parsers cap the size
+// Speed-test upload uses raw body (binary stream), not JSON - mount before body parsers cap the size
 app.use('/api/speedtest', speedtestRoutes);
 
 // Error handling (sanitized - don't expose internal errors)

@@ -5,7 +5,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 
 // Suppress errors injected by browser extensions (e.g. MetaMask) into the
-// Electron Chromium context — they are not our code and must not crash the app.
+// Electron Chromium context - they are not our code and must not crash the app.
 // Use capture phase (true) so these handlers fire before CRA's dev error overlay.
 const isExtensionError = (filename, message, stack) => {
   return (
@@ -56,7 +56,7 @@ if ('serviceWorker' in navigator) {
           if (!newWorker) return;
 
           newWorker.addEventListener('statechange', () => {
-            // A new SW is installed and waiting — prompt the user
+            // A new SW is installed and waiting - prompt the user
             if (
               newWorker.state === 'installed' &&
               navigator.serviceWorker.controller

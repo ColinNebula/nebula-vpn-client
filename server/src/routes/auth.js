@@ -193,21 +193,21 @@ router.get('/verify', (req, res) => {
   }
 });
 
-// OAuth / Social Sign-In — finds or creates a user from a provider identity
+// OAuth / Social Sign-In - finds or creates a user from a provider identity
 //
 // SECURITY: This endpoint MUST verify the provider-issued token server-side
 // before trusting any profile data. The provider token (id_token / access_token)
 // must be sent by the client and validated here using the provider's SDK:
-//   • Google  – google-auth-library: verifyIdToken()
-//   • Apple   – apple-signin-auth: verifyIdToken()
-// Logout — revoke the token server-side so it can't be reused even if stolen
+//   • Google  - google-auth-library: verifyIdToken()
+//   • Apple   - apple-signin-auth: verifyIdToken()
+// Logout - revoke the token server-side so it can't be reused even if stolen
 router.post('/logout', authMiddleware, (req, res) => {
   revokeToken(req.token);
   logger.info(`User logged out: ${req.user.email}`);
   res.json({ ok: true });
 });
 
-//   • Microsoft – @azure/msal-node
+//   • Microsoft - @azure/msal-node
 //
 // Until that verification is in place the endpoint is disabled to prevent
 // authentication bypass (an attacker could supply any email as `profile.email`
@@ -237,7 +237,7 @@ router.post('/oauth', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email in OAuth profile' });
     }
 
-    // Sanitise name — strip any control characters and limit length
+    // Sanitise name - strip any control characters and limit length
     const rawName = typeof profile.name === 'string' ? profile.name : '';
     const name = rawName.replace(/[\x00-\x1F\x7F]/g, '').slice(0, 100) || email.split('@')[0];
 
@@ -247,7 +247,7 @@ router.post('/oauth', async (req, res) => {
     if (isNewUser) {
       user = {
         email,
-        password: null, // OAuth users authenticate via provider — no local password
+        password: null, // OAuth users authenticate via provider - no local password
         name,
         role: 'user',
         plan: 'free',
@@ -368,7 +368,7 @@ router.get('/oauth/:provider/start', (req, res) => {
   res.redirect(`${config.authUrl}?${params}`);
 });
 
-// Handle provider callback — GET for Google/Microsoft, POST for Apple (form_post)
+// Handle provider callback - GET for Google/Microsoft, POST for Apple (form_post)
 const handleOAuthCallback = async (req, res) => {
   const { provider } = req.params;
   // Merge query + body so both GET and Apple's form POST work uniformly
@@ -417,7 +417,7 @@ const handleOAuthCallback = async (req, res) => {
       name  = decoded.name || decoded.given_name || '';
       sub   = String(decoded.sub || email).slice(0, 128);
     } else {
-      // GitHub: exchange gives only access_token — call the user API
+      // GitHub: exchange gives only access_token - call the user API
       if (!access_token) throw new Error('No access_token in provider response');
       const [userRes, emailsRes] = await Promise.all([
         axios.get('https://api.github.com/user', {

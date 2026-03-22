@@ -85,7 +85,7 @@ const PerformanceMetrics = ({ isConnected, currentServer, trafficData }) => {
       }
 
       if (newLatency === null) {
-        // Probe failed — record packet loss, skip latency/jitter update
+        // Probe failed - record packet loss, skip latency/jitter update
         setMetrics(prev => {
           const newData = {
             latency: [...prev.latency],

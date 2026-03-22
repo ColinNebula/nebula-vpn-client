@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import logo from './logo.svg';
 import { savePrefs, loadPrefs } from './utils/persistence';
@@ -76,19 +76,6 @@ import UpdateNotification from './components/UpdateNotification';
 import DonateModal from './components/DonateModal';
 import OnboardingWizard from './components/OnboardingWizard';
 
-// Initialize Electron safety check
-if (typeof window !== 'undefined' && !window.electron) {
-  console.warn('[App] window.electron is undefined, creating fallback object');
-  window.electron = {
-    vpn: {
-      connect: () => Promise.reject(new Error('Electron IPC not available')),
-      disconnect: () => Promise.reject(new Error('Electron IPC not available')),
-      getStats: () => Promise.reject(new Error('Electron IPC not available')),
-      multiHopConnect: () => Promise.reject(new Error('Electron IPC not available')),
-    }
-  };
-}
-
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -99,9 +86,9 @@ function App() {
   
   // Debug: Track user state changes
   useEffect(() => {
-    console.log('🔍 DEBUG - User state changed:', user);
-    console.log('🔍 DEBUG - User role:', user?.role);
-    console.log('🔍 DEBUG - Is admin?', user?.role === 'admin');
+    console.log('?? DEBUG - User state changed:', user);
+    console.log('?? DEBUG - User role:', user?.role);
+    console.log('?? DEBUG - Is admin?', user?.role === 'admin');
   }, [user]);
   
   const isElectronApp = typeof window !== 'undefined' && !!(window.electron?.vpn || window.nebulaVPN?.vpn);
@@ -160,55 +147,55 @@ function App() {
   // Flag set during preference restoration to prevent a save-on-restore loop
   const isRestoringPrefs = useRef(false);
 
-  // Enhanced server data with multi-hop capabilities — 40+ locations across 30+ countries
+  // Enhanced server data with multi-hop capabilities - 40+ locations across 30+ countries
   const allServers = [
     // North America
-    { id: '1',  name: 'US East',          location: 'New York',      ping: '25ms',  load: 45, country: 'US', flag: '🇺🇸', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
-    { id: '2',  name: 'US West',          location: 'Los Angeles',   ping: '18ms',  load: 32, country: 'US', flag: '🇺🇸', purpose: 'streaming', streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'streaming' },
-    { id: '3',  name: 'US Central',       location: 'Chicago',       ping: '22ms',  load: 41, country: 'US', flag: '🇺🇸', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
-    { id: '4',  name: 'US P2P',           location: 'Dallas',        ping: '28ms',  load: 38, country: 'US', flag: '🇺🇸', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
-    { id: '5',  name: 'Canada East',      location: 'Toronto',       ping: '30ms',  load: 56, country: 'CA', flag: '🇨🇦', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
-    { id: '6',  name: 'Canada West',      location: 'Vancouver',     ping: '35ms',  load: 29, country: 'CA', flag: '🇨🇦', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
-    { id: '7',  name: 'Mexico',           location: 'Mexico City',   ping: '55ms',  load: 22, country: 'MX', flag: '🇲🇽', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '1',  name: 'US East',          location: 'New York',      ping: '25ms',  load: 45, country: 'US', flag: 'US', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '2',  name: 'US West',          location: 'Los Angeles',   ping: '18ms',  load: 32, country: 'US', flag: 'US', purpose: 'streaming', streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '3',  name: 'US Central',       location: 'Chicago',       ping: '22ms',  load: 41, country: 'US', flag: 'US', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '4',  name: 'US P2P',           location: 'Dallas',        ping: '28ms',  load: 38, country: 'US', flag: 'US', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '5',  name: 'Canada East',      location: 'Toronto',       ping: '30ms',  load: 56, country: 'CA', flag: 'CA', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '6',  name: 'Canada West',      location: 'Vancouver',     ping: '35ms',  load: 29, country: 'CA', flag: 'CA', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '7',  name: 'Mexico',           location: 'Mexico City',   ping: '55ms',  load: 22, country: 'MX', flag: 'MX', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
     // Europe
-    { id: '8',  name: 'Germany',          location: 'Frankfurt',     ping: '45ms',  load: 67, country: 'DE', flag: '🇩🇪', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: true,  specialty: null },
-    { id: '9',  name: 'UK Streaming',     location: 'London',        ping: '55ms',  load: 78, country: 'GB', flag: '🇬🇧', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: 'streaming' },
-    { id: '10', name: 'UK General',       location: 'Manchester',    ping: '58ms',  load: 44, country: 'GB', flag: '🇬🇧', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
-    { id: '11', name: 'Netherlands P2P',  location: 'Amsterdam',     ping: '50ms',  load: 42, country: 'NL', flag: '🇳🇱', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
-    { id: '12', name: 'France',           location: 'Paris',         ping: '48ms',  load: 65, country: 'FR', flag: '🇫🇷', purpose: 'streaming', streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'streaming' },
-    { id: '13', name: 'Switzerland',      location: 'Zurich',        ping: '52ms',  load: 31, country: 'CH', flag: '🇨🇭', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'privacy' },
-    { id: '14', name: 'Sweden',           location: 'Stockholm',     ping: '60ms',  load: 27, country: 'SE', flag: '🇸🇪', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
-    { id: '15', name: 'Norway',           location: 'Oslo',          ping: '62ms',  load: 19, country: 'NO', flag: '🇳🇴', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
-    { id: '16', name: 'Spain',            location: 'Madrid',        ping: '58ms',  load: 48, country: 'ES', flag: '🇪🇸', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: 'streaming' },
-    { id: '17', name: 'Italy',            location: 'Milan',         ping: '55ms',  load: 53, country: 'IT', flag: '🇮🇹', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
-    { id: '18', name: 'Poland',           location: 'Warsaw',        ping: '65ms',  load: 35, country: 'PL', flag: '🇵🇱', purpose: 'general',   streaming: false, gaming: true,  p2p: false, multiHopSupport: true,  specialty: null },
-    { id: '19', name: 'Romania',          location: 'Bucharest',     ping: '70ms',  load: 28, country: 'RO', flag: '🇷🇴', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
-    { id: '20', name: 'Iceland',          location: 'Reykjavik',     ping: '75ms',  load: 12, country: 'IS', flag: '🇮🇸', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: true,  specialty: 'privacy' },
-    { id: '21', name: 'Austria',          location: 'Vienna',        ping: '53ms',  load: 40, country: 'AT', flag: '🇦🇹', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
-    { id: '22', name: 'Belgium',          location: 'Brussels',      ping: '52ms',  load: 37, country: 'BE', flag: '🇧🇪', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: null },
+    { id: '8',  name: 'Germany',          location: 'Frankfurt',     ping: '45ms',  load: 67, country: 'DE', flag: 'DE', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '9',  name: 'UK Streaming',     location: 'London',        ping: '55ms',  load: 78, country: 'GB', flag: 'GB', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '10', name: 'UK General',       location: 'Manchester',    ping: '58ms',  load: 44, country: 'GB', flag: 'GB', purpose: 'general',   streaming: true,  gaming: true,  p2p: true,  multiHopSupport: true,  specialty: null },
+    { id: '11', name: 'Netherlands P2P',  location: 'Amsterdam',     ping: '50ms',  load: 42, country: 'NL', flag: 'NL', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '12', name: 'France',           location: 'Paris',         ping: '48ms',  load: 65, country: 'FR', flag: 'FR', purpose: 'streaming', streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '13', name: 'Switzerland',      location: 'Zurich',        ping: '52ms',  load: 31, country: 'CH', flag: 'CH', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'privacy' },
+    { id: '14', name: 'Sweden',           location: 'Stockholm',     ping: '60ms',  load: 27, country: 'SE', flag: 'SE', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '15', name: 'Norway',           location: 'Oslo',          ping: '62ms',  load: 19, country: 'NO', flag: 'NO', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '16', name: 'Spain',            location: 'Madrid',        ping: '58ms',  load: 48, country: 'ES', flag: 'ES', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: 'streaming' },
+    { id: '17', name: 'Italy',            location: 'Milan',         ping: '55ms',  load: 53, country: 'IT', flag: 'IT', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '18', name: 'Poland',           location: 'Warsaw',        ping: '65ms',  load: 35, country: 'PL', flag: 'PL', purpose: 'general',   streaming: false, gaming: true,  p2p: false, multiHopSupport: true,  specialty: null },
+    { id: '19', name: 'Romania',          location: 'Bucharest',     ping: '70ms',  load: 28, country: 'RO', flag: 'RO', purpose: 'p2p',       streaming: false, gaming: false, p2p: true,  multiHopSupport: true,  specialty: 'p2p' },
+    { id: '20', name: 'Iceland',          location: 'Reykjavik',     ping: '75ms',  load: 12, country: 'IS', flag: 'IS', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: true,  specialty: 'privacy' },
+    { id: '21', name: 'Austria',          location: 'Vienna',        ping: '53ms',  load: 40, country: 'AT', flag: 'AT', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '22', name: 'Belgium',          location: 'Brussels',      ping: '52ms',  load: 37, country: 'BE', flag: 'BE', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: true,  specialty: null },
     // Asia Pacific
-    { id: '23', name: 'Singapore',        location: 'Singapore',     ping: '120ms', load: 23, country: 'SG', flag: '🇸🇬', purpose: 'gaming',    streaming: false, gaming: true,  p2p: false, multiHopSupport: false, specialty: 'gaming' },
-    { id: '24', name: 'Japan Gaming',     location: 'Tokyo',         ping: '140ms', load: 89, country: 'JP', flag: '🇯🇵', purpose: 'gaming',    streaming: false, gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'gaming' },
-    { id: '25', name: 'Japan Streaming',  location: 'Osaka',         ping: '145ms', load: 55, country: 'JP', flag: '🇯🇵', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: 'streaming' },
-    { id: '26', name: 'South Korea',      location: 'Seoul',         ping: '150ms', load: 47, country: 'KR', flag: '🇰🇷', purpose: 'gaming',    streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'gaming' },
-    { id: '27', name: 'Australia',        location: 'Sydney',        ping: '180ms', load: 34, country: 'AU', flag: '🇦🇺', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: false, specialty: null },
-    { id: '28', name: 'Australia East',   location: 'Melbourne',     ping: '185ms', load: 26, country: 'AU', flag: '🇦🇺', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: 'streaming' },
-    { id: '29', name: 'India',            location: 'Mumbai',        ping: '130ms', load: 61, country: 'IN', flag: '🇮🇳', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
-    { id: '30', name: 'Hong Kong',        location: 'Hong Kong',     ping: '135ms', load: 72, country: 'HK', flag: '🇭🇰', purpose: 'general',   streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: null },
-    { id: '31', name: 'New Zealand',      location: 'Auckland',      ping: '200ms', load: 18, country: 'NZ', flag: '🇳🇿', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '23', name: 'Singapore',        location: 'Singapore',     ping: '120ms', load: 23, country: 'SG', flag: 'SG', purpose: 'gaming',    streaming: false, gaming: true,  p2p: false, multiHopSupport: false, specialty: 'gaming' },
+    { id: '24', name: 'Japan Gaming',     location: 'Tokyo',         ping: '140ms', load: 89, country: 'JP', flag: 'JP', purpose: 'gaming',    streaming: false, gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'gaming' },
+    { id: '25', name: 'Japan Streaming',  location: 'Osaka',         ping: '145ms', load: 55, country: 'JP', flag: 'JP', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: 'streaming' },
+    { id: '26', name: 'South Korea',      location: 'Seoul',         ping: '150ms', load: 47, country: 'KR', flag: 'KR', purpose: 'gaming',    streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: 'gaming' },
+    { id: '27', name: 'Australia',        location: 'Sydney',        ping: '180ms', load: 34, country: 'AU', flag: 'AU', purpose: 'general',   streaming: true,  gaming: false, p2p: true,  multiHopSupport: false, specialty: null },
+    { id: '28', name: 'Australia East',   location: 'Melbourne',     ping: '185ms', load: 26, country: 'AU', flag: 'AU', purpose: 'streaming', streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: 'streaming' },
+    { id: '29', name: 'India',            location: 'Mumbai',        ping: '130ms', load: 61, country: 'IN', flag: 'IN', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '30', name: 'Hong Kong',        location: 'Hong Kong',     ping: '135ms', load: 72, country: 'HK', flag: 'HK', purpose: 'general',   streaming: true,  gaming: true,  p2p: false, multiHopSupport: true,  specialty: null },
+    { id: '31', name: 'New Zealand',      location: 'Auckland',      ping: '200ms', load: 18, country: 'NZ', flag: 'NZ', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
     // Middle East & Africa
-    { id: '32', name: 'UAE',              location: 'Dubai',         ping: '110ms', load: 44, country: 'AE', flag: '🇦🇪', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
-    { id: '33', name: 'Israel',           location: 'Tel Aviv',      ping: '95ms',  load: 33, country: 'IL', flag: '🇮🇱', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
-    { id: '34', name: 'South Africa',     location: 'Johannesburg',  ping: '160ms', load: 29, country: 'ZA', flag: '🇿🇦', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '32', name: 'UAE',              location: 'Dubai',         ping: '110ms', load: 44, country: 'AE', flag: 'AE', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '33', name: 'Israel',           location: 'Tel Aviv',      ping: '95ms',  load: 33, country: 'IL', flag: 'IL', purpose: 'general',   streaming: true,  gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '34', name: 'South Africa',     location: 'Johannesburg',  ping: '160ms', load: 29, country: 'ZA', flag: 'ZA', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
     // South America
-    { id: '35', name: 'Brazil',           location: 'São Paulo',     ping: '95ms',  load: 52, country: 'BR', flag: '🇧🇷', purpose: 'general',   streaming: true,  gaming: true,  p2p: false, multiHopSupport: false, specialty: null },
-    { id: '36', name: 'Argentina',        location: 'Buenos Aires',  ping: '110ms', load: 38, country: 'AR', flag: '🇦🇷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
-    { id: '37', name: 'Chile',            location: 'Santiago',      ping: '115ms', load: 21, country: 'CL', flag: '🇨🇱', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '35', name: 'Brazil',           location: 'Sao Paulo',     ping: '95ms',  load: 52, country: 'BR', flag: 'BR', purpose: 'general',   streaming: true,  gaming: true,  p2p: false, multiHopSupport: false, specialty: null },
+    { id: '36', name: 'Argentina',        location: 'Buenos Aires',  ping: '110ms', load: 38, country: 'AR', flag: 'AR', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
+    { id: '37', name: 'Chile',            location: 'Santiago',      ping: '115ms', load: 21, country: 'CL', flag: 'CL', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: null },
     // Specialty / Privacy
-    { id: '38', name: 'Tor over VPN',     location: 'Special',       ping: '350ms', load: 15, country: 'XX', flag: '🧅', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'tor' },
-    { id: '39', name: 'Double VPN',       location: 'NL → US',       ping: '80ms',  load: 20, country: 'XX', flag: '🔐', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: true,  specialty: 'double' },
-    { id: '40', name: 'Obfuscated US',    location: 'New York',      ping: '35ms',  load: 30, country: 'US', flag: '🥷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
-    { id: '41', name: 'Obfuscated EU',    location: 'Amsterdam',     ping: '60ms',  load: 25, country: 'NL', flag: '🥷', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
+    { id: '38', name: 'Tor over VPN',     location: 'Special',       ping: '350ms', load: 15, country: 'XX', flag: 'XX', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'tor' },
+    { id: '39', name: 'Double VPN',       location: 'NL -> US',      ping: '80ms',  load: 20, country: 'XX', flag: 'XX', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: true,  specialty: 'double' },
+    { id: '40', name: 'Obfuscated US',    location: 'New York',      ping: '35ms',  load: 30, country: 'US', flag: 'US', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
+    { id: '41', name: 'Obfuscated EU',    location: 'Amsterdam',     ping: '60ms',  load: 25, country: 'NL', flag: 'NL', purpose: 'general',   streaming: false, gaming: false, p2p: false, multiHopSupport: false, specialty: 'obfuscated' },
   ];
 
   // Live server metrics fetched from /api/servers (ping ms + load %).
@@ -260,27 +247,27 @@ function App() {
   useEffect(() => {
     const electronAPI = window.electron || window.nebulaVPN;
     if (electronAPI && electronAPI.ipc) {
-      console.log('🔧 APP.JS - Testing electron/nebulaVPN API on startup...');
+      console.log('?? APP.JS - Testing electron/nebulaVPN API on startup...');
       // Test simple IPC methods
       electronAPI.ipc.test().then(result => {
-        console.log('🔧 APP.JS - test() result:', result);
+        console.log('?? APP.JS - test() result:', result);
       }).catch(error => {
-        console.log('🔧 APP.JS - test() error:', error);
+        console.log('?? APP.JS - test() error:', error);
       });
       
       electronAPI.ipc.ping().then(result => {
-        console.log('🔧 APP.JS - ping() result:', result);
+        console.log('?? APP.JS - ping() result:', result);
       }).catch(error => {
-        console.log('🔧 APP.JS - ping() error:', error);
+        console.log('?? APP.JS - ping() error:', error);
       });
     } else {
-      console.log('🔧 APP.JS - No electron/nebulaVPN IPC API available');
+      console.log('?? APP.JS - No electron/nebulaVPN IPC API available');
     }
   }, []);
 
   // PWA features and service worker registration
   useEffect(() => {
-    // Register service worker for PWA — production only.
+    // Register service worker for PWA - production only.
     // In development, CRA's dev server does not serve sw.js from the root so
     // registration would fail with a MIME-type error.  The PUBLIC_URL is also
     // set to the homepage sub-path (/nebula-vpn-client) at build time but is
@@ -291,10 +278,10 @@ function App() {
         const swUrl = `${process.env.PUBLIC_URL}/sw.js`;
         navigator.serviceWorker.register(swUrl)
           .then((registration) => {
-            console.log('✅ SW registered: ', registration);
+            console.log('? SW registered: ', registration);
           })
           .catch((registrationError) => {
-            console.log('❌ SW registration failed: ', registrationError);
+            console.log('? SW registration failed: ', registrationError);
           });
       });
     }
@@ -373,7 +360,7 @@ function App() {
     if (window.electron?.isElectron) {
       const status = {
         connected: isConnected && protectionState.tunnelVerified,
-        server: selectedServer?.name || (multiHopServers.length > 0 ? multiHopServers.map(s => s.name).join(' → ') : 'Unknown')
+        server: selectedServer?.name || (multiHopServers.length > 0 ? multiHopServers.map(s => s.name).join(' ? ') : 'Unknown')
       };
       
       // Send status to Electron main process
@@ -411,7 +398,7 @@ function App() {
             }, 3000);
           }
         } catch {
-          // Network error during health check — do nothing; offline handler covers this
+          // Network error during health check - do nothing; offline handler covers this
         }
       }, 10000); // Check every 10 seconds
 
@@ -419,7 +406,7 @@ function App() {
     }
   }, [buildProtectionState, isConnected, isElectronApp, settings.advancedKillSwitch]);
 
-  // ── Restore all saveable preferences for a user ────────────────────────
+  // -- Restore all saveable preferences for a user ------------------------
   // serverPrefs: settings object returned from the server (canonical)
   // localPrefs:  fallback from localStorage (used when server is offline)
   // serverList:  the full allServers array so we can look up objects by id
@@ -472,7 +459,7 @@ function App() {
     }
   }, []);
 
-  // ── OAuth redirect callback — store token before session restore runs ──────
+  // -- OAuth redirect callback - store token before session restore runs ------
   // After a provider sign-in the backend redirects here with ?_oauthToken=<JWT>.
   // We store it in localStorage and clean the URL; the session-restore effect
   // below will pick it up and call verifyToken() as normal.
@@ -482,7 +469,7 @@ function App() {
     const oauthError = params.get('oauth_error');
 
     if (oauthToken) {
-      // Store for session restore — clean token from visible URL immediately
+      // Store for session restore - clean token from visible URL immediately
       localStorage.setItem('token', oauthToken);
       apiService.token = oauthToken;
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -502,7 +489,7 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Restore session from token on first mount ──────────────────────────────
+  // -- Restore session from token on first mount ------------------------------
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -540,13 +527,13 @@ function App() {
         restorePrefs(serverPrefs, localPrefs, allServers);
       })
       .catch(() => {
-        // Token invalid or expired — clear it so login screen shows
+        // Token invalid or expired - clear it so login screen shows
         localStorage.removeItem('token');
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Ensure selectedServer state stays in sync with localStorage ─────────────
+  // -- Ensure selectedServer state stays in sync with localStorage -------------
   useEffect(() => {
     // Skip if we're currently restoring preferences to avoid conflicts
     if (isRestoringPrefs.current) return;
@@ -558,28 +545,28 @@ function App() {
     if (!selectedServer) {
       const localPrefs = loadPrefs(user.email);
       if (localPrefs && localPrefs.selectedServerId) {
-        console.log('🔄 Syncing selectedServer from localStorage:', localPrefs.selectedServerId);
+        console.log('?? Syncing selectedServer from localStorage:', localPrefs.selectedServerId);
         
         // First try exact match
         let srv = allServers.find(s => s.id === localPrefs.selectedServerId);
         
         // Fallback: try string comparison (same logic as restorePrefs)
         if (!srv) {
-          console.log('🔄 Trying string fallback comparison');
+          console.log('?? Trying string fallback comparison');
           srv = allServers.find(s => String(s.id) === String(localPrefs.selectedServerId));
         }
         
         if (srv) {
-          console.log('✅ Restoring selectedServer:', srv.name, 'ID:', srv.id);
+          console.log('? Restoring selectedServer:', srv.name, 'ID:', srv.id);
           setSelectedServer(srv);
         } else {
-          console.warn('❌ Server not found for ID:', localPrefs.selectedServerId, 'Available servers:', allServers.map(s => s.id).slice(0, 5));
+          console.warn('? Server not found for ID:', localPrefs.selectedServerId, 'Available servers:', allServers.map(s => s.id).slice(0, 5));
         }
       }
     }
   }, [selectedServer, user?.email, allServers]);
 
-  // ── Debug selectedServer state changes ──────────────────────────────────
+  // -- Debug selectedServer state changes ----------------------------------
   useEffect(() => {
     console.log('selectedServer state changed:', selectedServer);
     if (selectedServer) {
@@ -601,7 +588,7 @@ function App() {
     }
   }, [selectedServer, user?.email, allServers]);
 
-  // ── Auto-save preferences whenever they change ─────────────────────────────
+  // -- Auto-save preferences whenever they change -----------------------------
   useEffect(() => {
     if (!user?.email || isRestoringPrefs.current) return;
 
@@ -639,7 +626,7 @@ function App() {
   ]);
 
   const handleSplashComplete = () => {
-    console.log('🚀 Splash screen completed, transitioning to login...');
+    console.log('?? Splash screen completed, transitioning to login...');
     console.log('Current state - showSplashScreen:', showSplashScreen, 'isAuthenticated:', isAuthenticated);
     setShowSplashScreen(false);
     console.log('State updated - showSplashScreen should now be false');
@@ -656,14 +643,14 @@ function App() {
   };
 
   const handleLogin = async (credentials) => {
-    console.log('🔐 Login form submitted, authenticating...');
+    console.log('?? Login form submitted, authenticating...');
     try {
       const data = await apiService.login(credentials.email, credentials.password);
-      console.log('🔍 DEBUG - Login response data:', data);
+      console.log('?? DEBUG - Login response data:', data);
       const u = data.user;
-      console.log('🔍 DEBUG - User object from response:', u);
-      console.log('🔍 DEBUG - User role:', u.role);
-      console.log('🔍 DEBUG - User plan:', u.plan);
+      console.log('?? DEBUG - User object from response:', u);
+      console.log('?? DEBUG - User role:', u.role);
+      console.log('?? DEBUG - User plan:', u.plan);
       // Cache role+plan so offline mode can restore them for this account
       localStorage.setItem(`nebula_session_${u.email}`, JSON.stringify({
         role: u.role || 'user',
@@ -677,28 +664,28 @@ function App() {
         lastName: u.name ? u.name.split(' ').slice(1).join(' ') : '',
         verified: true
       };
-      console.log('🔍 DEBUG - Setting user state to:', userObj);
+      console.log('?? DEBUG - Setting user state to:', userObj);
       setUser(userObj);
       setCurrentPlan(u.plan || 'free');
       setIsAuthenticated(true);
       setShowSignup(false);
       // Restore saved preferences: server is canonical, localStorage is fallback
       restorePrefs(u.settings || {}, loadPrefs(u.email), allServers);
-      console.log('✅ Authentication successful (backend)');
+      console.log('? Authentication successful (backend)');
       addLog('User logged in successfully', 'success');
     } catch (err) {
       // err.status is set for HTTP errors (auth failure, validation, etc.)
-      // A missing status means a network/fetch error — server is truly unreachable
+      // A missing status means a network/fetch error - server is truly unreachable
       if (err.status) {
-        // Real auth error (401, 400, 429, …) — do NOT log the user in
-        console.warn('⚠️ Login rejected by server:', err.message);
+        // Real auth error (401, 400, 429, -) - do NOT log the user in
+        console.warn('?? Login rejected by server:', err.message);
         addLog(`Login failed: ${err.message}`, 'error');
         throw err;  // re-throw so LoginForm can display the error message
       }
 
-      // Network error — server offline, use offline mode
-      console.warn('⚠️ Backend unreachable, using offline mode:', err.message);
-      addLog('Server unreachable — running in offline mode', 'warning');
+      // Network error - server offline, use offline mode
+      console.warn('?? Backend unreachable, using offline mode:', err.message);
+      addLog('Server unreachable - running in offline mode', 'warning');
 
       // Still enforce basic offline credentials: reject obviously wrong attempts
       if (!credentials.password) {
@@ -744,7 +731,7 @@ function App() {
   };
 
   const handleSignup = (userData) => {
-    console.log('🎉 New user signup:', userData);
+    console.log('?? New user signup:', userData);
     const signupRole = userData.role || 'user';
     const signupPlan = userData.plan || 'free';
     // Cache role+plan so offline mode inherits them
@@ -768,7 +755,7 @@ function App() {
     setCurrentPlan(signupPlan);
     setIsAuthenticated(true);
     setShowSignup(false);
-    console.log('✅ Account created successfully!');
+    console.log('? Account created successfully!');
     addLog('New account created and verified', 'success');
 
     // Show onboarding wizard for first-time users
@@ -776,7 +763,7 @@ function App() {
     if (!localStorage.getItem(onboardingKey)) {
       setShowOnboarding(true);
     } else if (userData.plan === 'free') {
-      // Returning user — show subscription nudge as before
+      // Returning user - show subscription nudge as before
       setTimeout(() => setShowSubscriptionModal(true), 3000);
     }
   };
@@ -820,7 +807,7 @@ function App() {
 
   // Shared handler for Google / Apple / Microsoft OAuth
   const handleSocialAuth = async (provider, profile) => {
-    console.log(`🔐 Social auth: ${provider}`, profile.email);
+    console.log(`?? Social auth: ${provider}`, profile.email);
     try {
       const data = await apiService.oauthLogin(provider, profile);
       const u = data.user;
@@ -841,20 +828,20 @@ function App() {
       setIsAuthenticated(true);
       setShowSignup(false);
       restorePrefs(u.settings || {}, loadPrefs(u.email), allServers);
-      console.log(`✅ ${provider} authentication successful`);
+      console.log(`? ${provider} authentication successful`);
       addLog(`Signed in with ${provider}`, 'success');
       if (data.isNewUser && (u.plan || 'free') === 'free') {
         setTimeout(() => setShowSubscriptionModal(true), 3000);
       }
     } catch (err) {
       if (err.status) {
-        console.warn(`⚠️ ${provider} auth rejected:`, err.message);
+        console.warn(`?? ${provider} auth rejected:`, err.message);
         addLog(`${provider} sign-in failed: ${err.message}`, 'error');
         throw err;
       }
-      // Network unavailable — fall back to offline mode using last known role+plan
-      console.warn('⚠️ Backend unreachable, using offline mode for social auth');
-      addLog('Server unreachable — running in offline mode', 'warning');
+      // Network unavailable - fall back to offline mode using last known role+plan
+      console.warn('?? Backend unreachable, using offline mode for social auth');
+      addLog('Server unreachable - running in offline mode', 'warning');
       const cached = readSessionCache(profile.email);
       const offlineRole = cached.role || 'user';
       const offlinePlan = cached.plan || 'free';
@@ -884,7 +871,7 @@ function App() {
   };
 
   const handleToggleConnection = async () => {
-    console.log('🔗 Connect button clicked! Current state:', { 
+    console.log('?? Connect button clicked! Current state:', { 
       isConnected, 
       selectedServer: selectedServer?.name, 
       multiHopServers: multiHopServers.length,
@@ -902,7 +889,7 @@ function App() {
     setIsConnecting(true);
     
     if (multiHopServers.length > 0) {
-      const serverNames = multiHopServers.map(s => s.name).join(' → ');
+      const serverNames = multiHopServers.map(s => s.name).join(' ? ');
       addLog(`${isConnected ? 'Disconnecting from' : 'Connecting to'} multi-hop chain: ${serverNames}`, 'info');
     } else {
       addLog(`${isConnected ? 'Disconnecting from' : 'Connecting to'} ${selectedServer?.name || 'server'}`, 'info');
@@ -915,7 +902,7 @@ function App() {
                          !!electronAPI?.vpn &&
                          typeof electronAPI.vpn.connect === 'function';
                          
-    console.log('🔗 Electron context detection:', {
+    console.log('?? Electron context detection:', {
       windowExists: typeof window !== 'undefined',
       hasElectron: !!window.electron,
       hasNebulaVPN: !!window.nebulaVPN,
@@ -938,14 +925,14 @@ function App() {
     const isInBrowser = !isElectronCtx;
 
     if (isElectronCtx) {
-      console.log('🔗 Using Electron VPN mode');
+      console.log('?? Using Electron VPN mode');
       setProtectionState(buildProtectionState({ state: 'connecting', detail: 'Waiting for WireGuard handshake verification' }));
       try {
         const token = localStorage.getItem('token') || '';
-        console.log('🔗 Token available:', !!token, 'length:', token.length);
+        console.log('?? Token available:', !!token, 'length:', token.length);
         
         if (isConnected) {
-          console.log('🔗 Disconnecting...');
+          console.log('?? Disconnecting...');
           await electronAPI.vpn.disconnect({ token });
           setIsConnected(false);
           setProtectionState(buildProtectionState());
@@ -956,14 +943,14 @@ function App() {
             addLog('Advanced Kill Switch activated after disconnect', 'warning');
           }
         } else if (multiHopServers.length > 0) {
-          console.log('🔗 Multi-hop connection...', multiHopServers.map(s => s.name));
+          console.log('?? Multi-hop connection...', multiHopServers.map(s => s.name));
           const result = await electronAPI.vpn.multiHopConnect({
             serverIds:  multiHopServers.map(s => String(s.id)),
             protocol:   settings.protocol || 'wireguard',
             token,
             killSwitch: !!settings.advancedKillSwitch,
           });
-          console.log('🔗 Multi-hop result:', result);
+          console.log('?? Multi-hop result:', result);
           if (result?.success === false) throw new Error(result.error || 'Multi-hop connection failed');
           setKillSwitchActive(false);
           setIsConnected(true);
@@ -977,16 +964,16 @@ function App() {
               : 'Connected without handshake proof',
           }));
           setIsConnecting(false);
-          addLog(`WireGuard handshake verified via multi-hop: ${multiHopServers.map(s => s.name).join(' → ')}`, 'success');
+          addLog(`WireGuard handshake verified via multi-hop: ${multiHopServers.map(s => s.name).join(' ? ')}`, 'success');
         } else {
-          console.log('🔗 Single server connection...', selectedServer.name, 'ID:', selectedServer.id);
+          console.log('?? Single server connection...', selectedServer.name, 'ID:', selectedServer.id);
           const result = await electronAPI.vpn.connect({
             serverId:   String(selectedServer.id),
             protocol:   settings.protocol || 'wireguard',
             token,
             killSwitch: !!settings.advancedKillSwitch,
           });
-          console.log('🔗 Connection result:', result);
+          console.log('?? Connection result:', result);
           if (result?.success === false) throw new Error(result.error || 'Connection failed');
           setKillSwitchActive(false);
           setIsConnected(true);
@@ -1003,7 +990,7 @@ function App() {
           addLog(`WireGuard handshake verified. Connected to ${selectedServer.name}`, 'success');
         }
       } catch (err) {
-        console.error('🔗 VPN connection error:', err);
+        console.error('?? VPN connection error:', err);
         setIsConnected(false);
         setProtectionState(buildProtectionState({ state: 'error', detail: err.message }));
         setIsConnecting(false);
@@ -1012,48 +999,125 @@ function App() {
       return;
     }
 
-    console.log('🔗 Falling back to browser simulation mode');
-    // Simulate connection delay (longer for multi-hop)
-    const connectionDelay = multiHopServers.length > 0 ? 4000 : 2000;
-
-    // Warn immediately that this is a UI-only simulation — no real tunnel
-    addLog(
-      'Browser mode: VPN connection is simulated. Your real IP remains visible to websites. ' +
-      'Download the desktop app for a real WireGuard tunnel.',
-      'warning'
-    );
-    setProtectionState(buildProtectionState({
-      state: 'simulating',
-      simulated: true,
-      detail: 'Browser/PWA simulation only',
+    // ============================================
+    // Browser Mode: Use Backend API
+    // ============================================
+    console.log('?? Using browser API mode - connecting to backend');
+    setProtectionState(buildProtectionState({ 
+      state: 'connecting', 
+      detail: 'Connecting via backend API' 
     }));
 
-    setTimeout(() => {
-      const newConnectedState = !isConnected;
-      setIsConnected(newConnectedState);
-      setIsConnecting(false);
-      
-      if (newConnectedState) {
-        setKillSwitchActive(false);
-        setProtectionState(buildProtectionState({
-          state: 'simulated',
-          simulated: true,
-          detail: 'Browser/PWA UI simulation only — no OS tunnel exists',
-        }));
-        if (multiHopServers.length > 0) {
-          addLog(`Browser simulation started for multi-hop: ${multiHopServers.map(s => s.name).join(' → ')}. No real tunnel was created.`, 'warning');
-        } else {
-          addLog(`Browser simulation started for ${selectedServer.name}. No real tunnel was created.`, 'warning');
-        }
-      } else {
+    try {
+      if (isConnected) {
+        // Disconnect
+        console.log('?? API disconnect...');
+        await apiService.disconnectVPN();
+        setIsConnected(false);
         setProtectionState(buildProtectionState());
+        setIsConnecting(false);
         addLog('Disconnected from VPN', 'warning');
         if (settings.advancedKillSwitch) {
           setKillSwitchActive(true);
           addLog('Advanced Kill Switch activated after disconnect', 'warning');
         }
+      } else if (multiHopServers.length > 0) {
+        // Multi-hop connection via API
+        console.log('🔗 API multi-hop connection...', multiHopServers.map(s => s.name));
+        const result = await apiService.multiHopConnect(multiHopServers.map(s => String(s.id)));
+        console.log('🔗 API multi-hop result:', result);
+        setKillSwitchActive(false);
+        setIsConnected(true);
+        
+        // Verify the multi-hop connection through the API
+        try {
+          const statusCheck = await apiService.getVPNStatus();
+          console.log('🔗 API multi-hop status check:', statusCheck);
+          const isVerified = statusCheck?.connected === true;
+          const serverChain = multiHopServers.map(s => s.name).join(' -> ');
+          
+          setProtectionState(buildProtectionState({
+            state: isVerified ? 'verified' : 'connected',
+            tunnelVerified: isVerified,
+            verificationMethod: isVerified ? 'api-status-check' : null,
+            verifiedAt: isVerified ? new Date().toISOString() : null,
+            detail: isVerified 
+              ? `Server-side multi-hop tunnel verified via API: ${serverChain}`
+              : `Connected via API: ${serverChain}`,
+          }));
+          
+          setIsConnecting(false);
+          
+          if (isVerified) {
+            addLog(`Server-side multi-hop VPN tunnel verified: ${serverChain}`, 'success');
+          } else {
+            addLog(`Connected to multi-hop chain via API: ${serverChain} (verification pending)`, 'success');
+          }
+        } catch (verifyErr) {
+          console.warn('🔗 API multi-hop verification check failed:', verifyErr);
+          setProtectionState(buildProtectionState({
+            state: 'connected',
+            detail: `Connected via API: ${multiHopServers.map(s => s.name).join(' -> ')} (verification unavailable)`,
+          }));
+          setIsConnecting(false);
+          addLog(`Connected to multi-hop chain via API: ${multiHopServers.map(s => s.name).join(' -> ')}`, 'success');
+        }
+      } else {
+        // Single server connection via API
+        console.log('🔗 API single server connection...', selectedServer.name, 'ID:', selectedServer.id);
+        const result = await apiService.connectVPN(
+          String(selectedServer.id),
+          settings.protocol || 'wireguard',
+          !!settings.advancedKillSwitch
+        );
+        console.log('🔗 API connection result:', result);
+        setKillSwitchActive(false);
+        setIsConnected(true);
+        
+        // Verify the connection through the API
+        try {
+          const statusCheck = await apiService.getVPNStatus();
+          console.log('🔗 API status check:', statusCheck);
+          const isVerified = statusCheck?.connected === true;
+          
+          setProtectionState(buildProtectionState({
+            state: isVerified ? 'verified' : 'connected',
+            tunnelVerified: isVerified,
+            verificationMethod: isVerified ? 'api-status-check' : null,
+            verifiedAt: isVerified ? new Date().toISOString() : null,
+            detail: isVerified 
+              ? `Server-side tunnel verified via API to ${selectedServer.name}`
+              : `Connected via API to ${selectedServer.name}`,
+          }));
+          
+          setIsConnecting(false);
+          
+          if (isVerified) {
+            addLog(`Server-side VPN tunnel verified. Connected to ${selectedServer.name}`, 'success');
+          } else {
+            addLog(`Connected to ${selectedServer.name} via API (verification pending)`, 'success');
+          }
+        } catch (verifyErr) {
+          console.warn('🔗 API verification check failed:', verifyErr);
+          setProtectionState(buildProtectionState({
+            state: 'connected',
+            detail: `Connected via API to ${selectedServer.name} (verification unavailable)`,
+          }));
+          setIsConnecting(false);
+          addLog(`Connected to ${selectedServer.name} via API`, 'success');
+        }
       }
-    }, connectionDelay);
+    } catch (err) {
+      console.error('?? API VPN connection error:', err);
+      setIsConnected(false);
+      setProtectionState(buildProtectionState({ state: 'error', detail: err.message }));
+      setIsConnecting(false);
+      addLog(`Connection error: ${err.message}`, 'error');
+    }
+  };
+
+  const handleDisconnect = async () => {
+    handleToggleConnection(); // Toggle connection state
   };
 
   const handleServerSelect = (server) => {
@@ -1069,7 +1133,7 @@ function App() {
           ...currentPrefs,
           selectedServerId: server.id
         });
-        console.log('✅ Saved server selection to localStorage:', server.id);
+        console.log('? Saved server selection to localStorage:', server.id);
       }
     }
   };
@@ -1095,7 +1159,7 @@ function App() {
     setMultiHopServers(servers);
     setSelectedServer(null); // Clear single server when using multi-hop
     if (servers.length > 0) {
-      addLog(`Multi-hop chain configured: ${servers.map(s => s.name).join(' → ')}`, 'info');
+      addLog(`Multi-hop chain configured: ${servers.map(s => s.name).join(' ? ')}`, 'info');
     }
   };
 
@@ -1106,12 +1170,12 @@ function App() {
 
   // Show splash screen first
   if (showSplashScreen) {
-    console.log('🎬 Rendering splash screen...');
+    console.log('?? Rendering splash screen...');
     return <SplashScreen onComplete={handleSplashComplete} isDarkMode={isDarkMode} />;
   }
 
   if (!isAuthenticated) {
-    console.log('🔑 Rendering login/signup form...');
+    console.log('?? Rendering login/signup form...');
     
     if (showSignup) {
       return (
@@ -1134,7 +1198,7 @@ function App() {
     );
   }
 
-  console.log('🏠 Rendering main app...');
+  console.log('?? Rendering main app...');
 
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
@@ -1157,7 +1221,7 @@ function App() {
         onClose={() => setShowDonateModal(false)}
       />
 
-      {/* Onboarding Wizard — shown to first-time users after signup */}
+      {/* Onboarding Wizard - shown to first-time users after signup */}
       {showOnboarding && (
         <OnboardingWizard
           user={user}
@@ -1195,7 +1259,7 @@ function App() {
       {/* Offline indicator */}
       {!isOnline && (
         <div className="offline-banner">
-          📶 No internet connection - Check your network
+          ?? No internet connection - Check your network
         </div>
       )}
       
@@ -1203,7 +1267,7 @@ function App() {
       {killSwitchActive && (
         <div className="kill-switch-overlay">
           <div className="kill-switch-message">
-            🛡️ Kill Switch Active - All traffic blocked for security
+            ??? Kill Switch Active - All traffic blocked for security
           </div>
         </div>
       )}
@@ -1217,22 +1281,22 @@ function App() {
           <div className="header-controls">
             {effectivePlan === 'free' && (
               <button className="upgrade-btn" onClick={() => setShowSubscriptionModal(true)}>
-                ⭐ Upgrade
+                ? Upgrade
               </button>
             )}
             {user?.role === 'admin' && (
               <button className="admin-dashboard-btn" onClick={() => setShowAdminDashboard(true)}>
-                👑 Admin
+                ?? Admin
               </button>
             )}
             <button className="donate-btn" onClick={() => setShowDonateModal(true)} title="Support Nebula VPN">
-              ❤️ Donate
+              ?? Donate
             </button>
             <button className="admin-btn" onClick={() => setShowAdminPanel(true)}>
-              ⚙️ Settings
+              ?? Settings
             </button>
             <button className="theme-toggle" title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggleDarkMode}>
-              {isDarkMode ? '☀️' : '🌙'}
+              {isDarkMode ? '??' : '??'}
             </button>
             <div className="user-info">
               <div className="user-avatar" title={user.email}>
@@ -1240,7 +1304,7 @@ function App() {
               </div>
               <span title={user.email}>{user.email.split('@')[0]}</span>
               <span className={`plan-badge ${effectivePlan}`}>{effectivePlan}</span>
-              <button className="logout-btn" onClick={handleLogout}>↩ Out</button>
+              <button className="logout-btn" onClick={handleLogout}>? Out</button>
             </div>
           </div>
         </div>
@@ -1260,20 +1324,20 @@ function App() {
           className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
-          📊 Dashboard
+          ?? Dashboard
         </button>
         <button 
           className={`tab ${activeTab === 'servers' ? 'active' : ''}`}
           onClick={() => setActiveTab('servers')}
         >
-          🌍 Servers
+          ?? Servers
         </button>
         {hasFeature(effectivePlan, 'multiHop') && (
           <button 
             className={`tab ${activeTab === 'multihop' ? 'active' : ''}`}
             onClick={() => setActiveTab('multihop')}
           >
-            🔗 Multi-Hop
+            ?? Multi-Hop
           </button>
         )}
         {hasFeature(effectivePlan, 'splitTunneling') && (
@@ -1281,7 +1345,7 @@ function App() {
             className={`tab ${activeTab === 'splittunnel' ? 'active' : ''}`}
             onClick={() => setActiveTab('splittunnel')}
           >
-            📱 Split Tunnel
+            ?? Split Tunnel
           </button>
         )}
         {hasFeature(effectivePlan, 'trafficAnalytics') && (
@@ -1289,7 +1353,7 @@ function App() {
             className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
             onClick={() => setActiveTab('analytics')}
           >
-            📈 Analytics
+            ?? Analytics
           </button>
         )}
         {hasFeature(effectivePlan, 'threatDetection') && (
@@ -1297,8 +1361,8 @@ function App() {
             className={`tab ${activeTab === 'security' ? 'active' : ''}`}
             onClick={() => setActiveTab('security')}
           >
-            🛡️ Security
-            <span className="tab-shield-badge" title="Threat Protection active">●</span>
+            ??? Security
+            <span className="tab-shield-badge" title="Threat Protection active">?</span>
           </button>
         )}
         {hasFeature(effectivePlan, 'automationRules') && (
@@ -1306,7 +1370,7 @@ function App() {
             className={`tab ${activeTab === 'automation' ? 'active' : ''}`}
             onClick={() => setActiveTab('automation')}
           >
-            🤖 Automation
+            ?? Automation
           </button>
         )}
         {hasFeature(effectivePlan, 'liveDashboard') && (
@@ -1314,7 +1378,7 @@ function App() {
             className={`tab ${activeTab === 'experience' ? 'active' : ''}`}
             onClick={() => setActiveTab('experience')}
           >
-            ✨ Experience
+            ? Experience
           </button>
         )}
         {hasFeature(effectivePlan, 'networkTopology') && (
@@ -1322,7 +1386,7 @@ function App() {
             className={`tab ${activeTab === 'enterprise' ? 'active' : ''}`}
             onClick={() => setActiveTab('enterprise')}
           >
-            🏢 Enterprise
+            ?? Enterprise
           </button>
         )}
         {hasFeature(effectivePlan, 'aiNetworkOptimizer') && (
@@ -1330,7 +1394,7 @@ function App() {
             className={`tab ${activeTab === 'ai' ? 'active' : ''}`}
             onClick={() => setActiveTab('ai')}
           >
-            🤖 AI/ML
+            ?? AI/ML
           </button>
         )}
         {hasFeature(effectivePlan, 'collaborativeVPN') && (
@@ -1338,7 +1402,7 @@ function App() {
             className={`tab ${activeTab === 'nextgen' ? 'active' : ''}`}
             onClick={() => setActiveTab('nextgen')}
           >
-            🚀 Next-Gen
+            ?? Next-Gen
           </button>
         )}
         {hasFeature(effectivePlan, 'mobileOptimizations') && (
@@ -1346,7 +1410,7 @@ function App() {
             className={`tab ${activeTab === 'mobile' ? 'active' : ''}`}
             onClick={() => setActiveTab('mobile')}
           >
-            📱 Mobile
+            ?? Mobile
           </button>
         )}
         {hasFeature(effectivePlan, 'speedTest') && (
@@ -1354,50 +1418,50 @@ function App() {
             className={`tab ${activeTab === 'speedtest' ? 'active' : ''}`}
             onClick={() => setActiveTab('speedtest')}
           >
-            ⚡ Speed Test
+            ? Speed Test
           </button>
         )}
         <button 
           className={`tab ${activeTab === 'leaktest' ? 'active' : ''}`}
           onClick={() => setActiveTab('leaktest')}
         >
-          🔬 Leak Test
+          ?? Leak Test
         </button>
         <button 
           className={`tab ${activeTab === 'darkweb' ? 'active' : ''}`}
           onClick={() => setActiveTab('darkweb')}
         >
-          🕵️ Dark Web
+          ??? Dark Web
         </button>
         <button 
           className={`tab ${activeTab === 'profiles' ? 'active' : ''}`}
           onClick={() => setActiveTab('profiles')}
         >
-          ⚡ Profiles
+          ? Profiles
         </button>
         <button 
           className={`tab ${activeTab === 'traffic' ? 'active' : ''}`}
           onClick={() => setActiveTab('traffic')}
         >
-          📊 Traffic
+          ?? Traffic
         </button>
         <button 
           className={`tab ${activeTab === 'logs' ? 'active' : ''}`}
           onClick={() => setActiveTab('logs')}
         >
-          📝 Logs
+          ?? Logs
         </button>
         <button 
           className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
-          ⚙️ Settings
+          ?? Settings
         </button>
         <button
           className={`tab ${activeTab === 'trust' ? 'active' : ''}`}
           onClick={() => setActiveTab('trust')}
         >
-          🏛️ Trust
+          ??? Trust
         </button>
       </nav>
       </div>
@@ -1515,31 +1579,31 @@ function App() {
                     className={`analytics-tab ${activeTab === 'analytics' && !window.analyticsSubTab ? 'active' : ''}`}
                     onClick={() => { window.analyticsSubTab = 'overview'; setActiveTab('analytics'); }}
                   >
-                    📊 Overview
+                    ?? Overview
                   </button>
                   <button 
                     className={`analytics-tab ${window.analyticsSubTab === 'performance' ? 'active' : ''}`}
                     onClick={() => { window.analyticsSubTab = 'performance'; setActiveTab('analytics'); }}
                   >
-                    📈 Performance
+                    ?? Performance
                   </button>
                   <button 
                     className={`analytics-tab ${window.analyticsSubTab === 'history' ? 'active' : ''}`}
                     onClick={() => { window.analyticsSubTab = 'history'; setActiveTab('analytics'); }}
                   >
-                    📜 History
+                    ?? History
                   </button>
                   <button 
                     className={`analytics-tab ${window.analyticsSubTab === 'usage' ? 'active' : ''}`}
                     onClick={() => { window.analyticsSubTab = 'usage'; setActiveTab('analytics'); }}
                   >
-                    📱 App Usage
+                    ?? App Usage
                   </button>
                   <button 
                     className={`analytics-tab ${window.analyticsSubTab === 'map' ? 'active' : ''}`}
                     onClick={() => { window.analyticsSubTab = 'map'; setActiveTab('analytics'); }}
                   >
-                    🌍 Global Map
+                    ?? Global Map
                   </button>
                 </div>
                 
@@ -1594,43 +1658,43 @@ function App() {
                     className={`analytics-tab ${activeTab === 'security' && !window.securitySubTab ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = 'protection'; setActiveTab('security'); }}
                   >
-                    ✨ Threat Protection
+                    ? Threat Protection
                   </button>
                   <button 
                     className={`analytics-tab ${window.securitySubTab === 'threats' ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = 'threats'; setActiveTab('security'); }}
                   >
-                    🛡️ Threat Detection
+                    ??? Threat Detection
                   </button>
                   <button 
                     className={`analytics-tab ${window.securitySubTab === 'dns' ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = 'dns'; setActiveTab('security'); }}
                   >
-                    🔒 DNS Protection
+                    ?? DNS Protection
                   </button>
                   <button 
                     className={`analytics-tab ${window.securitySubTab === 'ipv6' ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = 'ipv6'; setActiveTab('security'); }}
                   >
-                    🌐 IPv6 Protection
+                    ?? IPv6 Protection
                   </button>
                   <button 
                     className={`analytics-tab ${window.securitySubTab === 'firewall' ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = 'firewall'; setActiveTab('security'); }}
                   >
-                    🔥 Firewall
+                    ?? Firewall
                   </button>
                   <button 
                     className={`analytics-tab ${window.securitySubTab === 'obfuscation' ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = 'obfuscation'; setActiveTab('security'); }}
                   >
-                    🥷 Obfuscation
+                    ?? Obfuscation
                   </button>
                   <button 
                     className={`analytics-tab ${window.securitySubTab === '2fa' ? 'active' : ''}`}
                     onClick={() => { window.securitySubTab = '2fa'; setActiveTab('security'); }}
                   >
-                    🔐 Two-Factor Auth
+                    ?? Two-Factor Auth
                   </button>
                 </div>
                 
@@ -1686,31 +1750,31 @@ function App() {
                     className={`analytics-tab ${activeTab === 'automation' && !window.automationSubTab ? 'active' : ''}`}
                     onClick={() => { window.automationSubTab = 'rules'; setActiveTab('automation'); }}
                   >
-                    ⚙️ Automation Rules
+                    ?? Automation Rules
                   </button>
                   <button 
                     className={`analytics-tab ${window.automationSubTab === 'bandwidth' ? 'active' : ''}`}
                     onClick={() => { window.automationSubTab = 'bandwidth'; setActiveTab('automation'); }}
                   >
-                    📊 Bandwidth Scheduler
+                    ?? Bandwidth Scheduler
                   </button>
                   <button 
                     className={`analytics-tab ${window.automationSubTab === 'monitor' ? 'active' : ''}`}
                     onClick={() => { window.automationSubTab = 'monitor'; setActiveTab('automation'); }}
                   >
-                    📡 Network Monitor
+                    ?? Network Monitor
                   </button>
                   <button 
                     className={`analytics-tab ${window.automationSubTab === 'chaining' ? 'active' : ''}`}
                     onClick={() => { window.automationSubTab = 'chaining'; setActiveTab('automation'); }}
                   >
-                    🔗 VPN Chaining
+                    ?? VPN Chaining
                   </button>
                   <button 
                     className={`analytics-tab ${window.automationSubTab === 'audit' ? 'active' : ''}`}
                     onClick={() => { window.automationSubTab = 'audit'; setActiveTab('automation'); }}
                   >
-                    🔒 Privacy Audit
+                    ?? Privacy Audit
                   </button>
                 </div>
                 
@@ -1754,25 +1818,25 @@ function App() {
                     className={`analytics-tab ${activeTab === 'experience' && !window.experienceSubTab ? 'active' : ''}`}
                     onClick={() => { window.experienceSubTab = 'customization'; setActiveTab('experience'); }}
                   >
-                    🎨 Customization
+                    ?? Customization
                   </button>
                   <button 
                     className={`analytics-tab ${window.experienceSubTab === 'quickactions' ? 'active' : ''}`}
                     onClick={() => { window.experienceSubTab = 'quickactions'; setActiveTab('experience'); }}
                   >
-                    ⚡ Quick Actions
+                    ? Quick Actions
                   </button>
                   <button 
                     className={`analytics-tab ${window.experienceSubTab === 'notifications' ? 'active' : ''}`}
                     onClick={() => { window.experienceSubTab = 'notifications'; setActiveTab('experience'); }}
                   >
-                    🔔 Notifications
+                    ?? Notifications
                   </button>
                   <button 
                     className={`analytics-tab ${window.experienceSubTab === 'sessions' ? 'active' : ''}`}
                     onClick={() => { window.experienceSubTab = 'sessions'; setActiveTab('experience'); }}
                   >
-                    💾 Sessions
+                    ?? Sessions
                   </button>
                 </div>
                 
@@ -1819,31 +1883,31 @@ function App() {
                   className={`analytics-tab ${activeTab === 'enterprise' && !window.enterpriseSubTab ? 'active' : ''}`}
                   onClick={() => { window.enterpriseSubTab = 'topology'; setActiveTab('enterprise'); }}
                 >
-                  🌐 Network Topology
+                  ?? Network Topology
                 </button>
                 <button 
                   className={`analytics-tab ${window.enterpriseSubTab === 'compliance' ? 'active' : ''}`}
                   onClick={() => { window.enterpriseSubTab = 'compliance'; setActiveTab('enterprise'); }}
                 >
-                  📋 Compliance
+                  ?? Compliance
                 </button>
                 <button 
                   className={`analytics-tab ${window.enterpriseSubTab === 'integrations' ? 'active' : ''}`}
                   onClick={() => { window.enterpriseSubTab = 'integrations'; setActiveTab('enterprise'); }}
                 >
-                  🔗 API Hub
+                  ?? API Hub
                 </button>
                 <button 
                   className={`analytics-tab ${window.enterpriseSubTab === 'analytics' ? 'active' : ''}`}
                   onClick={() => { window.enterpriseSubTab = 'analytics'; setActiveTab('enterprise'); }}
                 >
-                  📊 Analytics
+                  ?? Analytics
                 </button>
                 <button 
                   className={`analytics-tab ${window.enterpriseSubTab === 'security' ? 'active' : ''}`}
                   onClick={() => { window.enterpriseSubTab = 'security'; setActiveTab('enterprise'); }}
                 >
-                  🛡️ Security Ops
+                  ??? Security Ops
                 </button>
               </div>
               
@@ -1892,31 +1956,31 @@ function App() {
                   className={`analytics-tab ${activeTab === 'ai' && !window.aiSubTab ? 'active' : ''}`}
                   onClick={() => { window.aiSubTab = 'optimizer'; setActiveTab('ai'); }}
                 >
-                  🚀 Network Optimizer
+                  ?? Network Optimizer
                 </button>
                 <button 
                   className={`analytics-tab ${window.aiSubTab === 'security' ? 'active' : ''}`}
                   onClick={() => { window.aiSubTab = 'security'; setActiveTab('ai'); }}
                 >
-                  🔮 Predictive Security
+                  ?? Predictive Security
                 </button>
                 <button 
                   className={`analytics-tab ${window.aiSubTab === 'assistant' ? 'active' : ''}`}
                   onClick={() => { window.aiSubTab = 'assistant'; setActiveTab('ai'); }}
                 >
-                  💬 AI Assistant
+                  ?? AI Assistant
                 </button>
                 <button 
                   className={`analytics-tab ${window.aiSubTab === 'analytics' ? 'active' : ''}`}
                   onClick={() => { window.aiSubTab = 'analytics'; setActiveTab('ai'); }}
                 >
-                  📊 Smart Analytics
+                  ?? Smart Analytics
                 </button>
                 <button 
                   className={`analytics-tab ${window.aiSubTab === 'learning' ? 'active' : ''}`}
                   onClick={() => { window.aiSubTab = 'learning'; setActiveTab('ai'); }}
                 >
-                  🧠 Adaptive Learning
+                  ?? Adaptive Learning
                 </button>
               </div>
               
@@ -1965,31 +2029,31 @@ function App() {
                   className={`analytics-tab ${activeTab === 'nextgen' && !window.nextgenSubTab ? 'active' : ''}`}
                   onClick={() => { window.nextgenSubTab = 'collaboration'; setActiveTab('nextgen'); }}
                 >
-                  👥 Collaboration
+                  ?? Collaboration
                 </button>
                 <button 
                   className={`analytics-tab ${window.nextgenSubTab === 'mobile' ? 'active' : ''}`}
                   onClick={() => { window.nextgenSubTab = 'mobile'; setActiveTab('nextgen'); }}
                 >
-                  📱 Mobile Manager
+                  ?? Mobile Manager
                 </button>
                 <button 
                   className={`analytics-tab ${window.nextgenSubTab === 'blockchain' ? 'active' : ''}`}
                   onClick={() => { window.nextgenSubTab = 'blockchain'; setActiveTab('nextgen'); }}
                 >
-                  ⛓️ Blockchain
+                  ?? Blockchain
                 </button>
                 <button 
                   className={`analytics-tab ${window.nextgenSubTab === 'quantum' ? 'active' : ''}`}
                   onClick={() => { window.nextgenSubTab = 'quantum'; setActiveTab('nextgen'); }}
                 >
-                  🔮 Quantum Security
+                  ?? Quantum Security
                 </button>
                 <button 
                   className={`analytics-tab ${window.nextgenSubTab === 'edge' ? 'active' : ''}`}
                   onClick={() => { window.nextgenSubTab = 'edge'; setActiveTab('nextgen'); }}
                 >
-                  ⚡ Edge Computing
+                  ? Edge Computing
                 </button>
               </div>
               
@@ -2102,13 +2166,13 @@ function App() {
                   className={`analytics-tab ${!window.trustSubTab || window.trustSubTab === 'canary' ? 'active' : ''}`}
                   onClick={() => { window.trustSubTab = 'canary'; setActiveTab('trust'); }}
                 >
-                  🕊️ Warrant Canary
+                  ??? Warrant Canary
                 </button>
                 <button
                   className={`analytics-tab ${window.trustSubTab === 'transparency' ? 'active' : ''}`}
                   onClick={() => { window.trustSubTab = 'transparency'; setActiveTab('trust'); }}
                 >
-                  🏛️ Transparency Report
+                  ??? Transparency Report
                 </button>
               </div>
               <div className="analytics-content">
@@ -2131,17 +2195,17 @@ function App() {
               isElectron={isElectronApp}
             />
             {isConnecting && <div className="connecting-text">Connecting...</div>}
-            {killSwitchActive && <div className="kill-switch-text">🛡️ Traffic Blocked</div>}
+            {killSwitchActive && <div className="kill-switch-text">??? Traffic Blocked</div>}
             
             {multiHopServers.length > 0 ? (
               <div className="selected-server-info multi-hop">
-                <span className="connection-type">🔗 Multi-Hop Chain</span>
+                <span className="connection-type">?? Multi-Hop Chain</span>
                 <div className="hop-chain">
                   {multiHopServers.map((server, index) => (
                     <div key={server.id} className="hop-item">
                       <span className="server-flag">{server.flag}</span>
                       <span className="server-name">{server.name}</span>
-                      {index < multiHopServers.length - 1 && <span className="hop-arrow">→</span>}
+                      {index < multiHopServers.length - 1 && <span className="hop-arrow">?</span>}
                     </div>
                   ))}
                 </div>
@@ -2166,7 +2230,7 @@ function App() {
         </div>
       </main>
 
-      {/* Persistent update banner — renders in Electron only */}
+      {/* Persistent update banner - renders in Electron only */}
       <UpdateNotification />
     </div>
   );

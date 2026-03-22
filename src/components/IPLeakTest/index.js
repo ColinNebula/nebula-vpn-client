@@ -53,8 +53,8 @@ async function detectWebRTCIPs() {
 
 /**
  * DNS-leak test.
- * Primary:  dnsleaktest.com API — works reliably on iOS Safari.
- * Fallback: bash.ws — fewer restrictions but occasionally blocked.
+ * Primary:  dnsleaktest.com API - works reliably on iOS Safari.
+ * Fallback: bash.ws - fewer restrictions but occasionally blocked.
  * Returns an array of { ip, country_name } objects.
  */
 async function runDNSLeakProbe() {
@@ -157,7 +157,7 @@ async function detectIPv6() {
       const { ip } = await resp.json();
       if (ip && ip.includes(':')) return { leaked: true, address: ip };
     }
-  } catch { /* no IPv6 reachability — no leak */ }
+  } catch { /* no IPv6 reachability - no leak */ }
   return { leaked: false, address: null };
 }
 
@@ -236,7 +236,7 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
       let webRtcIPs = [];
       try {
         webRtcIPs = await detectWebRTCIPs();
-      } catch { /* WebRTC unavailable — treat as no data */ }
+      } catch { /* WebRTC unavailable - treat as no data */ }
       setProgress(50);
 
       // Step 3: DNS
@@ -244,7 +244,7 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
       let dnsServers = [];
       try {
         dnsServers = await runDNSLeakProbe();
-      } catch { /* DNS probe failed — report as inconclusive */ }
+      } catch { /* DNS probe failed - report as inconclusive */ }
       setProgress(75);
 
       // Step 4: IPv6
@@ -252,7 +252,7 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
       let ipv6Result = { leaked: false, address: null };
       try {
         ipv6Result = await detectIPv6();
-      } catch { /* IPv6 check failed — treat as no leak */ }
+      } catch { /* IPv6 check failed - treat as no leak */ }
       setProgress(90);
 
       // ── Analyse ──
@@ -264,7 +264,7 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
       const webRtcLeaked    = webRtcLeakedIPs.length > 0;
 
       // DNS leak: any returned resolver is NOT a known VPN/trusted DNS
-      // If dnsServers is empty the probe was inconclusive — don't flag as leaked
+      // If dnsServers is empty the probe was inconclusive - don't flag as leaked
       const dnsLeaked = dnsServers.length > 0 &&
         dnsServers.some(d => d.ip && !isExpectedDNS(d.ip));
       const dnsInconclusive = dnsServers.length === 0;
@@ -301,7 +301,7 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
       setStatus('done');
     } catch (err) {
       console.error('[IPLeakTest] test failed:', err);
-      setErrorMsg(err.message || 'Test failed — check your connection and try again.');
+      setErrorMsg(err.message || 'Test failed - check your connection and try again.');
       setStatus('error');
     }
     setCurrentStep('');
@@ -351,12 +351,12 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
       {/* VPN status banner */}
       <div className={`ilt-status-banner ${isConnected ? 'connected' : 'disconnected'}`}>
         {canRunExternalProbeSuite
-          ? '🛡️ Verified desktop tunnel active — external leak probes are allowed'
+          ? '🛡️ Verified desktop tunnel active - external leak probes are allowed'
           : isSimulated
-            ? '🧪 Browser/PWA simulation — external leak probes are blocked until a real tunnel is verified'
+            ? '🧪 Browser/PWA simulation - external leak probes are blocked until a real tunnel is verified'
             : isConnected
-              ? '🟡 Connected but not verified — external leak probes are blocked until the desktop tunnel is proven'
-              : '⚠️ VPN is not connected — external leak probes are blocked and your real IP and DNS may be exposed'}
+              ? '🟡 Connected but not verified - external leak probes are blocked until the desktop tunnel is proven'
+              : '⚠️ VPN is not connected - external leak probes are blocked and your real IP and DNS may be exposed'}
       </div>
 
       {!canRunExternalProbeSuite && (
@@ -442,12 +442,12 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
                 ? renderCheck(
                     null,
                     '',
-                    'DNS — Inconclusive',
+                    'DNS - Inconclusive',
                     'DNS probe could not reach the test server. Try again on a different network.'
                   )
                 : renderCheck(
                     !results.dnsLeaked,
-                    'DNS — No Leak',
+                    'DNS - No Leak',
                     'DNS Leak Detected',
                     results.dnsLeaked
                       ? `Leaking to: ${results.dnsServers.join(', ')}`
@@ -456,28 +456,28 @@ const IPLeakTest = ({ isConnected, isProtectionVerified = false, isSimulated = f
               }
               {renderCheck(
                 !results.webRtcLeaked,
-                'WebRTC — No Leak',
+                'WebRTC - No Leak',
                 'WebRTC Leak Detected',
                 results.webRtcLeaked
-                  ? (showRealIP ? `Exposed IP: ${results.webRtcIP}` : 'Real IP exposed — click Reveal to see address')
+                  ? (showRealIP ? `Exposed IP: ${results.webRtcIP}` : 'Real IP exposed - click Reveal to see address')
                   : 'WebRTC traffic is masked'
               )}
               {renderCheck(
                 !results.ipv6Leaked,
-                'IPv6 — No Leak',
+                'IPv6 - No Leak',
                 'IPv6 Leak Detected',
                 results.ipv6Leaked
-                  ? (showRealIP ? `Exposed: ${results.ipv6Address}` : 'IPv6 address exposed — click Reveal to see address')
+                  ? (showRealIP ? `Exposed: ${results.ipv6Address}` : 'IPv6 address exposed - click Reveal to see address')
                   : 'IPv6 traffic is blocked or tunnelled'
               )}
               {renderCheck(
                 isProtectionVerified,
-                'VPN Tunnel — Handshake Verified',
-                'VPN Tunnel — Not Verified',
+                'VPN Tunnel - Handshake Verified',
+                'VPN Tunnel - Not Verified',
                 isProtectionVerified
                   ? 'WireGuard handshake was observed from the desktop tunnel'
                   : isSimulated
-                    ? 'Browser/PWA mode is simulated only — no OS tunnel was created'
+                    ? 'Browser/PWA mode is simulated only - no OS tunnel was created'
                     : 'Connect to the desktop app to create and verify a real tunnel'
               )}
             </div>

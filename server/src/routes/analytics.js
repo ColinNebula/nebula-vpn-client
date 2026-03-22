@@ -46,7 +46,7 @@ const createAnalyticsRouter = (users) => {
       endTime:    endTime || null,
       duration:   duration || null,
       dataUsed:   dataUsed != null ? Number(dataUsed) : null,
-      // Always derive IP from the authenticated server-side request — never
+      // Always derive IP from the authenticated server-side request - never
       // accept a client-supplied ip field, which could record the pre-VPN
       // real IP or be spoofed by an attacker with a stolen token.
       ip:         req.ip ? String(req.ip).slice(0, 45) : null,

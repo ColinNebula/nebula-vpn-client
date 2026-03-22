@@ -40,7 +40,7 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// Role-based guard — call after authMiddleware
+// Role-based guard - call after authMiddleware
 const adminMiddleware = (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
     logger.warn(`Unauthorised admin access attempt by ${req.user?.email || 'unknown'}`);

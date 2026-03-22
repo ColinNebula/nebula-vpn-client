@@ -97,7 +97,7 @@ const LoginForm = ({ onLogin, onSwitchToSignup, onSocialLogin, isDarkMode, initi
   const handleSocialLogin = (provider) => {
     setSocialLoading(provider);
     setErrors({});
-    // Redirect browser to backend OAuth start — backend handles the full provider flow and
+    // Redirect browser to backend OAuth start - backend handles the full provider flow and
     // redirects back to this page with ?_oauthToken=<JWT> after successful authentication.
     const apiBase = process.env.REACT_APP_API_URL || 'https://api.nebula3ddev.com/api';
     const appUrl = encodeURIComponent(window.location.origin + window.location.pathname);

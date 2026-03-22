@@ -36,7 +36,7 @@ export const loadPrefs = (email) => {
 
 /**
  * Remove saved preferences for a user (e.g. on account deletion).
- * Does NOT remove on normal logout — saved prefs survive logout
+ * Does NOT remove on normal logout - saved prefs survive logout
  * so they're restored on next login.
  * @param {string} email
  */

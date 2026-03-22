@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './AutoConnectWiFi.css';
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron;

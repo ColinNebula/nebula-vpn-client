@@ -26,7 +26,7 @@ router.post('/connect', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Server ID required' });
     }
 
-    // clientPublicKey is optional here — when the Electron client sends it the
+    // clientPublicKey is optional here - when the Electron client sends it the
     // server registers it as a WireGuard peer.  Browser/PWA sessions omit it.
     if (clientPublicKey !== undefined) {
       // Validate: must be a 44-char base64 string encoding 32 bytes

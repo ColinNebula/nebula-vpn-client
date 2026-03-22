@@ -17,16 +17,16 @@ const NetworkMonitor = ({ isConnected, trafficData }) => {
 
   const [ispInfo, setIspInfo] = useState({
     provider: 'Loading…',
-    ip: '—',
-    location: '—',
-    asn: '—',
-    type: '—'
+    ip: '-',
+    location: '-',
+    asn: '-',
+    type: '-'
   });
 
   const [alerts, setAlerts] = useState([]);
 
   const [metrics, setMetrics] = useState({
-    uptime: '—',
+    uptime: '-',
     avgLatency: 0,
     peakBandwidth: 0,
     totalData: 0,
@@ -47,13 +47,13 @@ const NetworkMonitor = ({ isConnected, trafficData }) => {
         const data = await resp.json();
         setIspInfo({
           provider: data.org || data.isp || 'Unknown ISP',
-          ip:       data.ip  || '—',
-          location: [data.city, data.region, data.country].filter(Boolean).join(', ') || '—',
-          asn:      data.asn || '—',
-          type:     data.type || '—',
+          ip:       data.ip  || '-',
+          location: [data.city, data.region, data.country].filter(Boolean).join(', ') || '-',
+          asn:      data.asn || '-',
+          type:     data.type || '-',
         });
       } catch {
-        setIspInfo(prev => ({ ...prev, provider: 'Unavailable', ip: '—' }));
+        setIspInfo(prev => ({ ...prev, provider: 'Unavailable', ip: '-' }));
       }
     };
     fetchIspInfo();

@@ -41,7 +41,7 @@ const TrafficAnalytics = ({ isConnected, connectionTime, trafficData }) => {
         const history = Array.isArray(data.history) ? data.history : (Array.isArray(data) ? data : []);
 
         if (history.length === 0) {
-          // No history yet — leave chart empty with zero baselines
+          // No history yet - leave chart empty with zero baselines
           setChartData({ labels: [], bandwidth: [], upload: [], download: [] });
           setStats({ totalData: '0.00', uploadData: '0.00', downloadData: '0.00', peakSpeed: '0.00', avgSpeed: '0.00', sessions: 0 });
           return;
@@ -102,7 +102,7 @@ const TrafficAnalytics = ({ isConnected, connectionTime, trafficData }) => {
           sessions:     history.length,
         });
       } catch {
-        // API unavailable — show zeros; don't show fake data
+        // API unavailable - show zeros; don't show fake data
         setChartData({ labels: [], bandwidth: [], upload: [], download: [] });
       }
     };
@@ -115,7 +115,7 @@ const TrafficAnalytics = ({ isConnected, connectionTime, trafficData }) => {
       setRealtimeData({ currentUpload: 0, currentDownload: 0, currentTotal: 0 });
       return;
     }
-    // trafficData.download / upload are already in KB/s — convert to MB/s for display
+    // trafficData.download / upload are already in KB/s - convert to MB/s for display
     const dl = (trafficData.download / 1024).toFixed(2);
     const ul = (trafficData.upload   / 1024).toFixed(2);
     setRealtimeData({

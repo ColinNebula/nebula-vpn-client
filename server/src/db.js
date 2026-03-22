@@ -1,5 +1,5 @@
 /**
- * UserStore — SQLite-backed drop-in replacement for the in-memory users Map.
+ * UserStore - SQLite-backed drop-in replacement for the in-memory users Map.
  *
  * Exposes the same interface used throughout the codebase:
  *   users.get(email)       → user object | undefined
@@ -129,7 +129,7 @@ const stmtDelete = db.prepare('DELETE FROM users WHERE email = ? COLLATE NOCASE'
 const stmtAll    = db.prepare('SELECT * FROM users');
 
 /**
- * UserStore — Map-compatible interface backed by SQLite.
+ * UserStore - Map-compatible interface backed by SQLite.
  */
 class UserStore {
   get(email) {

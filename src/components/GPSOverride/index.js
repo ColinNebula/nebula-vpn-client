@@ -76,7 +76,7 @@ const GPSOverride = () => {
         <span className="header-subtitle">Surfshark-Style Location Spoofing</span>
       </div>
 
-      {/* Security notice — GPS override is a UI preference only */}
+      {/* Security notice - GPS override is a UI preference only */}
       <div className="gps-notice" style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '6px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#856404' }}>
         <strong>⚠️ Notice:</strong> GPS Override stores your preferred location within this app only. Nebula now blocks renderer geolocation requests to avoid exposing your real coordinates, but it does <strong>not</strong> spoof OS-level GPS for other applications.
       </div>

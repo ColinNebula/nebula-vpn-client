@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import './AutomationRules.css';
 
 // ---------------------------------------------------------------------------
-// Template definitions — each template produces one or more rules
+// Template definitions - each template produces one or more rules
 // ---------------------------------------------------------------------------
 const TEMPLATES = [
   {
@@ -317,7 +317,7 @@ const AutomationRules = () => {
       success:   true,
     };
     setTriggerLog(prev => [entry, ...prev]);
-    showToast(`Rule "${rule.name}" tested — ${getActionDisplay(rule.action)}`);
+    showToast(`Rule "${rule.name}" tested - ${getActionDisplay(rule.action)}`);
   };
 
   // ---- templates -----------------------------------------------------------
@@ -325,7 +325,7 @@ const AutomationRules = () => {
     const newRules = template.rules.map(r => ({ id: Date.now() + Math.random(), ...r, enabled: true }));
     setRules(prev => [...prev, ...newRules]);
     setAppliedTemplates(prev => new Set(prev).add(template.id));
-    showToast(`Template "${template.title}" applied — ${newRules.length} rule(s) added.`);
+    showToast(`Template "${template.title}" applied - ${newRules.length} rule(s) added.`);
   };
 
   // ---- form helpers --------------------------------------------------------
@@ -423,7 +423,7 @@ const AutomationRules = () => {
                   onClick={() => applyTemplate(tpl)}
                   title={applied ? 'Apply again to add another copy' : 'Add these rules to your list'}
                 >
-                  {applied ? '✓ Applied — Add Again' : '⚡ Apply Template'}
+                  {applied ? '✓ Applied - Add Again' : '⚡ Apply Template'}
                 </button>
               </div>
             );
@@ -469,7 +469,7 @@ const AutomationRules = () => {
             </div>
 
             <div className="form-section">
-              <h6>🎯 Trigger — When to activate</h6>
+              <h6>🎯 Trigger - When to activate</h6>
               <div className="trigger-types">
                 {TRIGGER_TYPES.map(type => (
                   <label
@@ -616,7 +616,7 @@ const AutomationRules = () => {
             </div>
 
             <div className="form-section">
-              <h6>⚡ Action — What to do</h6>
+              <h6>⚡ Action - What to do</h6>
               <div className="action-config">
                 <select
                   value={formData.action.type}

@@ -31,7 +31,7 @@ const AdminDashboard = ({ currentUser, onClose }) => {
       setUsers(userRes.users);
       setStats(statsRes);
     } catch (err) {
-      setError(err.message || 'Failed to load admin data — is the server running?');
+      setError(err.message || 'Failed to load admin data - is the server running?');
     } finally {
       setLoading(false);
     }
@@ -151,7 +151,7 @@ const AdminDashboard = ({ currentUser, onClose }) => {
                             <div className="ad-avatar">{user.email.charAt(0).toUpperCase()}</div>
                             <div>
                               <div className="ad-email">{user.email}</div>
-                              <div className="ad-name">{user.name || '—'}</div>
+                              <div className="ad-name">{user.name || '-'}</div>
                             </div>
                           </div>
                         </td>
@@ -176,7 +176,7 @@ const AdminDashboard = ({ currentUser, onClose }) => {
                         </td>
                         <td className="ad-center">{user.deviceCount ?? 0}</td>
                         <td className="ad-muted">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
                         </td>
                         <td>
                           {user.email !== currentUser.email && (

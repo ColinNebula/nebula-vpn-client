@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './AINetworkOptimizer.css';
 
 // ─── Scoring Engine ───────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ const calculateAIScore = (server, mode = 'adaptive') => {
   const loadScore = Math.max(0, 100 - load);
   // Reliability: deterministic from server name so it's stable across renders
   const reliabilityScore = 72 + ((hashStr(server.name || 'default') % 28));
-  // Time-of-day: peak hours (7pm–11pm) degrade score; off-peak (2am–8am) boost
+  // Time-of-day: peak hours (7pm-11pm) degrade score; off-peak (2am-8am) boost
   const hour = new Date().getHours();
   const timeScore = hour >= 19 && hour <= 23 ? 72 : hour >= 2 && hour <= 8 ? 96 : 84;
 
@@ -267,7 +267,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
       {/* Feature Importance */}
       {featureBreakdown && (
         <div className="feature-importance">
-          <h4>📊 Score Breakdown — {optimizationData.recommendedServer?.name}</h4>
+          <h4>📊 Score Breakdown - {optimizationData.recommendedServer?.name}</h4>
           <div className="feature-grid">
             {featureBreakdown.map((f, i) => (
               <div key={i} className="feature-card">
@@ -321,7 +321,7 @@ const AINetworkOptimizer = ({ servers, isConnected, onServerSelect }) => {
               <h5>Traffic Optimization</h5>
             </div>
             <div className="rec-content">
-              <p>Adaptive traffic shaping improves throughput by 12–18% during peak hours by deprioritizing background traffic.</p>
+              <p>Adaptive traffic shaping improves throughput by 12-18% during peak hours by deprioritizing background traffic.</p>
               <label className="rec-toggle">
                 <input type="checkbox" checked={adaptiveSettings.trafficShaping}
                   onChange={(e) => setAdaptiveSettings((prev) => ({ ...prev, trafficShaping: e.target.checked }))} />
