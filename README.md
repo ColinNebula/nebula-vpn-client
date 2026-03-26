@@ -13,10 +13,13 @@ Nebula VPN Client is a modern, feature-rich VPN application designed to provide 
 ## ✨ Key Features
 
 ### 🔐 **Security & Privacy**
-- **Advanced Encryption**: Support for multiple VPN protocols (OpenVPN, WireGuard, IKEv2)
+- **WireGuard Protocol**: Modern, fast, and secure VPN protocol with state-of-the-art cryptography
 - **Kill Switch**: Automatically blocks internet access if VPN connection drops
 - **No-Logs Policy**: Complete privacy protection with zero logging
-- **DNS Leak Protection**: Prevents DNS queries from bypassing the VPN tunnel
+- **Real DNS Enforcement**: OS-level DNS configuration via Windows `netsh` (not just UI toggle)
+- **Database Encryption**: AES-256-GCM encryption for sensitive user data (2FA secrets, OAuth tokens)
+- **Admin Privilege Detection**: Automatic detection and elevation prompts for full DNS protection
+- **DNS Leak Protection**: Prevents DNS queries from bypassing the VPN tunnel with verification tools
 
 ### 🌍 **Global Server Network**
 - **8+ Server Locations**: Strategically placed servers across US, Europe, Asia, and more
@@ -48,6 +51,8 @@ Nebula VPN Client is a modern, feature-rich VPN application designed to provide 
 - Node.js (v14 or higher)
 - npm or yarn package manager
 - Modern web browser (Chrome, Firefox, Safari, Edge)
+- **Windows**: Administrator privileges for DNS enforcement
+- **Linux/macOS**: sudo/root access for tunnel configuration
 
 ### Installation
 
@@ -60,16 +65,41 @@ Nebula VPN Client is a modern, feature-rich VPN application designed to provide 
 2. **Install dependencies**
    ```bash
    npm install
+   cd server && npm install && cd ..
    ```
 
-3. **Start the development server**
+3. **Configure server environment**
    ```bash
-   npm start
+   node scripts/generate-secrets.js --admin-email your@email.com --admin-password "YourStr0ng!Pass"
    ```
 
-4. **Open your browser**
+4. **Start the application (Windows)**
+   ```powershell
+   # Run as Administrator for full DNS enforcement
+   .\start-vpn-admin.ps1
+   ```
+   
+   Or manually:
+   ```bash
+   # Terminal 1: Start API server
+   cd server && npm start
+   
+   # Terminal 2: Start React dev server
+   npm start
+   
+   # Terminal 3: Start Electron (as Administrator)
+   npm run electron
+   ```
+
+5. **Verify DNS enforcement**
+   ```powershell
+   .\verify-dns-simple.ps1
+   ```
+
+6. **Access the web version**
    Navigate to [http://localhost:3000](http://localhost:3000)
-   https://colinnebula.github.io/nebula-vpn-client/
+   
+   Or visit the live deployment: https://colinnebula.github.io/nebula-vpn-client/
 
 ## 📱 Application Structure
 

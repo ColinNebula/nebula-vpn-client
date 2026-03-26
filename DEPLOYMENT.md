@@ -35,6 +35,26 @@ node scripts/generate-secrets.js \
 > **Never commit `server/.env` to version control.**  
 > It is already excluded by `.gitignore`.
 
+#### Encryption Key Requirements
+
+The `ENCRYPTION_KEY` is used for AES-256-GCM encryption of sensitive database fields:
+- Two-factor authentication secrets
+- OAuth tokens
+- Backup codes
+
+The key must be:
+- **64 hexadecimal characters** (32 bytes)
+- Generated cryptographically (via `crypto.randomBytes(32)`)
+- Stored securely in `server/.env`
+- **Never changed in production** (would break decryption of existing data)
+
+To manually generate an encryption key:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+The secrets generator automatically creates this key.
+
 ---
 
 ### 2 — Configure WireGuard Server Values
@@ -108,6 +128,90 @@ server {
 Set `NODE_ENV=production` in `server/.env`. This activates:
 - HSTS headers (`Strict-Transport-Security: max-age=31536000`)
 - Stricter rate limiting
+
+---
+
+### 5A — Database Encryption at Rest
+
+The server encrypts sensitive user data at rest using AES-256-GCM. This is automatically
+configured when you run `generate-secrets.js`, which creates a 64-character hex encryption key.
+
+**Encrypted fields:**
+- Two-factor authentication secrets
+- OAuth provider tokens
+- 2FA backup codes
+
+**Migration for existing databases:**
+```bash
+cd server
+node src/migrations/encrypt-existing-data.js
+```
+
+This script is **idempotent** — it detects already-encrypted data and skips it.
+
+**Key rotation** (advanced): If you need to rotate the encryption key:
+1. Back up the database
+2. Create a manual migration to decrypt with old key and re-encrypt with new key
+3. Never change `ENCRYPTION_KEY` without migrating data first
+
+See [server/DATABASE_ENCRYPTION.md](server/DATABASE_ENCRYPTION.md) for details.
+
+---
+
+### 5B — DNS Enforcement & Administrator Privileges
+
+The Electron desktop client enforces DNS through the VPN at the **OS level** using
+Windows `netsh` commands (or equivalent on Linux/macOS). This is **not** a UI toggle.
+
+#### Windows Requirements
+
+DNS enforcement requires **Administrator privileges** to execute:
+```cmd
+netsh interface ipv4 set dnsservers name="Nebulavpn" source=static address=1.1.1.1
+```
+
+**What happens without admin:**
+- VPN tunnel connects successfully
+- VPN IP assigned (e.g., `10.8.0.2`)
+- ⚠️ **DNS enforcement fails silently**
+- DNS queries leak through ISP's DNS servers
+
+**User experience:**
+1. On first launch, app detects missing admin privileges
+2. Shows dialog: "DNS enforcement requires Administrator access"
+3. Options: **Restart as Admin** | Continue Anyway | Quit
+4. If user continues without admin: connection works but DNS leaks
+
+**Deployment best practices:**
+- Document admin requirement in installation instructions
+- Provide `start-vpn-admin.ps1` launcher script (auto-elevates)
+- Show warnings in UI when running without admin
+- Provide `verify-dns-simple.ps1` script for users to verify DNS enforcement
+
+#### Linux/macOS Requirements
+
+On Unix-like systems, DNS enforcement requires `sudo`/root to:
+- Modify `/etc/resolv.conf` (Linux)
+- Run `networksetup -setdnsservers` (macOS)
+
+Electron apps don't typically have `sudo` access. Consider:
+- Install a system helper with elevated privileges
+- Use platform-specific permission dialogs (macOS)
+- Document manual verification steps
+
+#### Verification
+
+Users can verify DNS enforcement:
+```powershell
+# Windows
+.\verify-dns-simple.ps1
+
+# Or manually
+nslookup google.com
+# Should show VPN DNS (e.g., 1.1.1.1), not ISP DNS
+```
+
+See [DNS_ENFORCEMENT_VERIFICATION.md](DNS_ENFORCEMENT_VERIFICATION.md) for full documentation.
 
 ---
 

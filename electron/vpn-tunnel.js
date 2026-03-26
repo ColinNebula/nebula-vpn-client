@@ -63,7 +63,9 @@ function isValidEndpoint(ep) {
 class WireGuardTunnel {
   constructor() {
     this.platform        = process.platform; // 'win32' | 'linux' | 'darwin'
-    this.tunnelName      = 'nebula0';
+    // Must match the config filename used with wireguard.exe /installtunnelservice
+    // Service name on Windows will be: WireGuardTunnel$Nebulavpn
+    this.tunnelName      = this.platform === 'win32' ? 'Nebulavpn' : 'nebula0';
     this.configDir       = this._resolveConfigDir();
     this.configPath      = path.join(this.configDir, `${this.tunnelName}.conf`);
     this.connected       = false;
@@ -202,6 +204,9 @@ class WireGuardTunnel {
       await execFileAsync(wgExe, ['/installtunnelservice', this.configPath]);
       // Service start is async on Windows – poll until the interface is ready.
       await this._waitForInterface(8000);
+      
+      // Set a friendly adapter description for Windows Settings visibility
+      await this._setWindowsAdapterDescription();
       
       // Ensure tunnel becomes default gateway for proper traffic routing
       await this._configureWindowsRouting();
@@ -484,6 +489,37 @@ class WireGuardTunnel {
   }
 
   /**
+   * Set a friendly description for the WireGuard adapter in Windows Settings.
+   * This makes the VPN more visible and identifiable in the Windows UI.
+   */
+  async _setWindowsAdapterDescription() {
+    if (this.platform !== 'win32') return;
+
+    try {
+      const adapter = await this._getWindowsTunnelAdapter();
+      if (!adapter) {
+        console.warn('[Adapter] Could not find WireGuard adapter to set description');
+        return;
+      }
+
+      // The adapter description is already set by WireGuard, but we can rename it
+      // to be more user-friendly in the Network Connections window
+      const friendlyName = 'Nebula VPN';
+      await execAsync(
+        `powershell -NoProfile -Command "` +
+        `Rename-NetAdapter -Name '${adapter}' -NewName '${friendlyName}' -ErrorAction SilentlyContinue"`
+      ).catch(err => {
+        // Non-fatal - adapter might already have this name
+        console.log(`[Adapter] Rename skipped: ${err.message}`);
+      });
+
+      console.log(`[Adapter] Windows network adapter configured: ${friendlyName}`);
+    } catch (error) {
+      console.warn('[Adapter] Failed to set adapter description:', error.message);
+    }
+  }
+
+  /**
    * Configure Windows routing to ensure all traffic goes through the VPN tunnel.
    * This makes the WireGuard interface the default gateway.
    */
@@ -671,8 +707,19 @@ class WireGuardTunnel {
           console.warn(`[DNS] Verification failed on adapter "${adapter}", but continuing...`);
         }
         
-        console.log(`[DNS] Applied servers ${enforcedServers.join(', ')} to adapter "${adapter}"`);
+        console.log(`[DNS] ✅ Applied servers ${enforcedServers.join(', ')} to adapter "${adapter}"`);
       } catch (error) {
+        // Check if error is due to missing admin privileges
+        if (error.message?.includes('elevation') || error.message?.includes('Administrator')) {
+          const adminError = new Error(
+            `DNS enforcement requires Administrator privileges. ` +
+            `The VPN is connected but DNS may leak through non-VPN interfaces. ` +
+            `Please restart the application as Administrator for full DNS protection.`
+          );
+          adminError.code = 'REQUIRES_ADMIN';
+          console.error(`[DNS] ❌ ${adminError.message}`);
+          throw adminError;
+        }
         throw new Error(`Failed to apply DNS to adapter "${adapter}": ${error.message}`);
       }
       return;

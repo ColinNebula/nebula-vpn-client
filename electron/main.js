@@ -2,7 +2,7 @@ console.log('🚨🚨🚨 MAIN.JS STARTING UP - VERSION 2026-03-20-19-20 🚨�
 console.log('🔧 DEBUG - main.js current working directory:', process.cwd());
 console.log('🔧 DEBUG - main.js process.argv:', process.argv);
 
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, session, net, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, session, net, powerMonitor, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const https = require('https');
@@ -18,6 +18,72 @@ console.log('🚀 MAIN.JS - About to register IPC handlers...');
 console.log('🆔 MAIN.JS VERSION CHECK - FORCED SUCCESS VERSION LOADED:', new Date().toISOString());
 
 const execAsync = promisify(exec);
+
+// ── Admin Privilege Detection ────────────────────────────────────────────────
+/**
+ * Check if the app is running with Administrator privileges (Windows).
+ * On macOS/Linux, checks for root or sudo.
+ */
+async function isRunningAsAdmin() {
+  if (process.platform === 'win32') {
+    try {
+      // Try a simple netsh command that requires admin privileges
+      await execAsync('net session');
+      return true;
+    } catch {
+      return false;
+    }
+  } else {
+    // Unix-like: check if running as root
+    return process.getuid && process.getuid() === 0;
+  }
+}
+
+/**
+ * Prompt user to restart with Administrator privileges.
+ */
+async function promptForElevation(mainWindow) {
+  const choice = await dialog.showMessageBox(mainWindow || null, {
+    type: 'warning',
+    buttons: ['Restart as Admin', 'Continue Anyway', 'Quit'],
+    defaultId: 0,
+    title: 'Administrator Privileges Required',
+    message: 'VPN DNS Enforcement Requires Administrator Access',
+    detail: 'To properly enforce DNS through the VPN and prevent DNS leaks, this application needs to run with Administrator privileges.\n\n' +
+            '• Restart as Admin: Restart with elevated privileges (recommended)\n' +
+            '• Continue Anyway: VPN will connect but DNS may leak\n' +
+            '• Quit: Exit the application',
+    icon: nativeImage.createFromPath(path.join(__dirname, '../public/icon.png'))
+  });
+
+  if (choice.response === 0) {
+    // Restart as admin
+    if (process.platform === 'win32') {
+      const exePath = process.execPath;
+      const args = process.argv.slice(1);
+      
+      // Launch elevated using PowerShell Start-Process
+      const psCmd = `Start-Process -FilePath "${exePath}" -ArgumentList "${args.join(' ')}" -Verb RunAs`;
+      exec(`powershell -Command "${psCmd}"`);
+      app.quit();
+    } else {
+      // macOS/Linux: show instructions
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Restart Required',
+        message: 'Please restart the application with sudo or as root.',
+        detail: 'Run: sudo ' + process.execPath
+      });
+      app.quit();
+    }
+  } else if (choice.response === 2) {
+    // Quit
+    app.quit();
+  }
+  // else: Continue anyway (response === 1)
+}
+
+let hasAdminPrivileges = false;
 const isPrivacyRegressionMode = process.env.ELECTRON_PRIVACY_REGRESSION === '1';
 const privacyRegressionTargetUrl = process.env.ELECTRON_PRIVACY_REGRESSION_URL || 'http://127.0.0.1:3000';
 
@@ -1312,7 +1378,27 @@ app.on('ready', () => {
 });
 
 // App ready
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADMIN PRIVILEGE CHECK
+  // ═══════════════════════════════════════════════════════════════════════════
+  console.log('🔐 Checking for Administrator privileges...');
+  hasAdminPrivileges = await isRunningAsAdmin();
+  
+  if (hasAdminPrivileges) {
+    console.log('✅ Running with Administrator privileges - DNS enforcement will work');
+  } else {
+    console.warn('⚠️  NOT running as Administrator - DNS enforcement will FAIL');
+    console.warn('⚠️  VPN will connect but DNS may leak through non-VPN interfaces');
+    
+    // Prompt user to restart as admin (non-blocking, they can continue anyway)
+    setTimeout(async () => {
+      if (mainWindow) {
+        await promptForElevation(mainWindow);
+      }
+    }, 2000); // Delay to allow window to open first
+  }
+  
   // Register IPC handlers BEFORE creating window to avoid race conditions
   console.log('🚀 MAIN.JS - Registering IPC handlers inside app.whenReady()');
   
@@ -1361,6 +1447,16 @@ app.whenReady().then(() => {
     });
 
     console.log('🎯 MAIN.JS - vpn-connect-test IPC handler registered successfully inside app.whenReady()');
+    
+    // Register check-admin-privileges handler
+    ipcMain.handle('check-admin-privileges', async () => {
+      console.log('🔐 [IPC check-admin-privileges] Checking admin status...');
+      return { 
+        hasAdmin: hasAdminPrivileges,
+        platform: process.platform 
+      };
+    });
+    console.log('🎯 MAIN.JS - check-admin-privileges IPC handler registered');
     
     // Register vpn-update-status handler
     ipcMain.handle('vpn-update-status', async (event, status) => {

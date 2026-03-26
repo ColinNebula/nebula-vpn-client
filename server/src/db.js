@@ -10,9 +10,16 @@
  *
  * Complex fields (settings, devices, connectionHistory, twoFactorBackupCodes)
  * are stored as JSON strings and transparently serialised/deserialised.
+ *
+ * Sensitive fields are encrypted at rest using AES-256-GCM:
+ *   - twoFactorSecret
+ *   - twoFactorTempSecret
+ *   - twoFactorBackupCodes (when set)
+ *   - oauthId
  */
 
 const Database = require('better-sqlite3');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
@@ -28,6 +35,68 @@ const db = new Database(DB_PATH);
 // Enable WAL mode for better concurrent read performance
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// ── Encryption ────────────────────────────────────────────────────────────
+// Use ENCRYPTION_KEY from .env (must be 32 bytes hex = 64 characters)
+if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length !== 64) {
+  throw new Error('ENCRYPTION_KEY must be a 64-character hex string (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+}
+
+const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12; // GCM standard IV length
+const AUTH_TAG_LENGTH = 16; // GCM auth tag length
+
+// Fields that should be encrypted at rest
+const ENCRYPTED_FIELDS = ['twoFactorSecret', 'twoFactorTempSecret', 'oauthId'];
+
+/**
+ * Encrypt a value using AES-256-GCM.
+ * Returns: iv:authTag:ciphertext (all base64)
+ */
+function encrypt(plaintext) {
+  if (!plaintext) return null;
+  
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+  
+  let ciphertext = cipher.update(String(plaintext), 'utf8', 'base64');
+  ciphertext += cipher.final('base64');
+  
+  const authTag = cipher.getAuthTag();
+  
+  // Format: iv:authTag:ciphertext (all base64)
+  return `${iv.toString('base64')}:${authTag.toString('base64')}:${ciphertext}`;
+}
+
+/**
+ * Decrypt a value encrypted with encrypt().
+ * Expects format: iv:authTag:ciphertext (all base64)
+ */
+function decrypt(encrypted) {
+  if (!encrypted) return null;
+  
+  try {
+    const parts = encrypted.split(':');
+    if (parts.length !== 3) return encrypted; // Not encrypted, return as-is
+    
+    const [ivB64, authTagB64, ciphertextB64] = parts;
+    const iv = Buffer.from(ivB64, 'base64');
+    const authTag = Buffer.from(authTagB64, 'base64');
+    const ciphertext = Buffer.from(ciphertextB64, 'base64');
+    
+    const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(authTag);
+    
+    let plaintext = decipher.update(ciphertext, undefined, 'utf8');
+    plaintext += decipher.final('utf8');
+    
+    return plaintext;
+  } catch (error) {
+    console.error('[DB] Decryption failed:', error.message);
+    return null; // Return null on decryption failure
+  }
+}
 
 // ── Schema ────────────────────────────────────────────────────────────────
 db.exec(`
@@ -92,6 +161,12 @@ function rowToUser(row) {
       try { user[field] = JSON.parse(user[field]); } catch { user[field] = field === 'settings' ? {} : []; }
     }
   }
+  // Decrypt encrypted fields
+  for (const field of ENCRYPTED_FIELDS) {
+    if (user[field]) {
+      user[field] = decrypt(user[field]);
+    }
+  }
   // Normalise boolean
   user.twoFactorEnabled = !!user.twoFactorEnabled;
   // Normalise date
@@ -109,6 +184,9 @@ function userToRow(user) {
       let val = user[js];
       if (JSON_FIELDS.includes(js)) {
         val = JSON.stringify(val ?? (js === 'settings' ? {} : []));
+      } else if (ENCRYPTED_FIELDS.includes(js)) {
+        // Encrypt sensitive fields before storing
+        val = val ? encrypt(val) : null;
       } else if (val instanceof Date) {
         val = val.toISOString();
       } else if (typeof val === 'boolean') {
