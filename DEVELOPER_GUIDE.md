@@ -9,19 +9,19 @@ Quick reference for developers working on Nebula VPN. Updated: March 26, 2026
 ### Development (Windows)
 
 ```powershell
-# Start everything with admin privileges (recommended)
-.\start-vpn-admin.ps1
+# All-in-one launcher: Starts API server + Electron app (RECOMMENDED)
+.\start-nebula.ps1
 
-# Or manually:
+# Or use npm script:
+npm run start:vpn
+
+# Or manually (separate terminals):
 # Terminal 1: API Server
 cd server
 npm start
 
-# Terminal 2: React Dev Server
-npm start
-
-# Terminal 3: Electron (Run as Administrator!)
-npm run electron
+# Terminal 2: Electron app (Run as Administrator!)
+.\start-vpn-admin.ps1
 ```
 
 ### Verify Installation
@@ -29,6 +29,8 @@ npm run electron
 ```powershell
 # Check DNS enforcement is working
 .\verify-dns-simple.ps1
+# OR:
+npm run verify:dns
 
 # Run security audit
 npm run security:audit

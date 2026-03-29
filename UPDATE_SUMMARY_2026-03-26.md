@@ -51,12 +51,14 @@ This document summarizes all updates made to Nebula VPN on March 26, 2026, inclu
 | File | Purpose |
 |------|---------|
 | `server/src/migrations/encrypt-existing-data.js` | Migrate existing database to encrypted format |
+| `start-nebula.ps1` | **All-in-one launcher** for API server + Electron app |
 | `verify-dns-simple.ps1` | Windows PowerShell script for DNS verification |
 | `verify-dns-enforcement.ps1` | Detailed DNS enforcement verification (has encoding issues) |
 | `DNS_ENFORCEMENT_VERIFICATION.md` | Complete proof of OS-level DNS enforcement |
 | `server/DATABASE_ENCRYPTION.md` | Database encryption implementation guide |
 | `CHANGELOG.md` | Version history and detailed changelog |
 | `DEVELOPER_GUIDE.md` | Quick reference guide for developers |
+| `QUICK_START.md` | One-page quick start guide |
 
 ### Documentation Files Updated
 
@@ -70,7 +72,12 @@ This document summarizes all updates made to Nebula VPN on March 26, 2026, inclu
 ## 🔧 New NPM Scripts
 
 Add these to your workflow:
+Start everything (API server + Electron app) - RECOMMENDED!
+npm run start:vpn
+# OR:
+.\start-nebula.ps1
 
+# 
 ```bash
 # Verify DNS enforcement is working (Windows)
 npm run verify:dns
@@ -129,8 +136,18 @@ Found X users in database
 ✅ Updated: X users
 ⏭️  Skipped: 0 users (already encrypted)
 📊 Total: X users
-🎉 Migration completed successfully!
+🎉 Migratio (all-in-one):
+```powershell
+.\start-nebula.ps1
 ```
+
+**Or manually**:
+```powershell
+# Terminal 1: API Server
+cd server
+npm start
+
+# Terminal 2: VPN App
 
 #### Step 5: Restart with Admin Privileges
 

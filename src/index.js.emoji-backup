@@ -82,7 +82,7 @@ if ('serviceWorker' in navigator) {
               });
 
               const msg = document.createElement('span');
-              msg.textContent = '[Launch] A new version of Nebula VPN is available.';
+              msg.textContent = '🚀 A new version of Nebula VPN is available.';
 
               const btn = document.createElement('button');
               btn.textContent = 'Update now';

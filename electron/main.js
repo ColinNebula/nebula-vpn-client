@@ -368,10 +368,12 @@ async function connectSingle({ serverId, protocol, token, killSwitch }) {
 
     tunnel.keyPair = keyPair;
 
+    /** @type {import('./types').VPNConnectionResult} */
     let result;
     console.log('[connectSingle] 🔧 About to call tunnel.connect()...');
     try {
-      result = await tunnel.connect({
+      /** @type {import('./types').WireGuardConfig} */
+      const config = {
         serverPublicKey,
         serverEndpoint,
         assignedIP,
@@ -379,7 +381,8 @@ async function connectSingle({ serverId, protocol, token, killSwitch }) {
         enableKillSwitch: !!killSwitch,
         presharedKey:     hybridPSK,
         ...buildReconnectFeatureArgs(),
-      });
+      };
+      result = await tunnel.connect(config);
       console.log('[connectSingle] 🔧 tunnel.connect() SUCCESS:', result);
     } catch (error) {
       console.error('[connectSingle] 🚨 tunnel.connect() FAILED:', {
@@ -413,7 +416,7 @@ async function connectSingle({ serverId, protocol, token, killSwitch }) {
       ip:         result.assignedIP,
       publicKey:  result.publicKey,
       pqcEnabled: !!hybridPSK,
-      tunnelVerified: !!result.tunnelVerified,
+      tunnelVerified: result.tunnelVerified || false,
       verificationMethod: result.verificationMethod || null,
       verification: result.verification || null,
     };
@@ -452,7 +455,8 @@ async function connectMultiHop({ serverIds, protocol, token, killSwitch }) {
 
   tunnel.keyPair = keyPair;
 
-  const result = await tunnel.connect({
+  /** @type {import('./types').WireGuardConfig} */
+  const config = {
     serverPublicKey,
     serverEndpoint,
     assignedIP,
@@ -460,7 +464,9 @@ async function connectMultiHop({ serverIds, protocol, token, killSwitch }) {
     enableKillSwitch: !!killSwitch,
     presharedKey:     null,
     ...buildReconnectFeatureArgs(),
-  });
+  };
+  /** @type {import('./types').VPNConnectionResult} */
+  const result = await tunnel.connect(config);
 
   if (tray) {
     tray.setToolTip(`Nebula VPN – Multi-Hop Connected (${assignedIP})`);
@@ -471,7 +477,7 @@ async function connectMultiHop({ serverIds, protocol, token, killSwitch }) {
     ip: result.assignedIP,
     servers: serverIds,
     type: 'multi-hop',
-    tunnelVerified: !!result.tunnelVerified,
+    tunnelVerified: result.tunnelVerified || false,
     verificationMethod: result.verificationMethod || null,
     verification: result.verification || null,
   };
@@ -492,6 +498,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      // @ts-expect-error - enableRemoteModule is deprecated but may exist in some Electron versions
       enableRemoteModule: false,
       webSecurity: true,
       allowRunningInsecureContent: false,
@@ -630,6 +637,35 @@ function createWindow() {
 
   console.log('🔴 MAIN.JS - About to load URL:', effectiveStartUrl);
   mainWindow.loadURL(effectiveStartUrl);
+
+  // Detect blank screen / load failures
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.log('❌ MAIN.JS - Page failed to load!');
+    console.log('❌ Error code:', errorCode);
+    console.log('❌ Error description:', errorDescription);
+    console.log('❌ URL:', validatedURL);
+    
+    if (!isDev) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Load Error',
+        message: 'Failed to Load Application',
+        detail: `The application failed to load. This usually happens when:\n\n` +
+                `1. The build was created for GitHub Pages (wrong paths)\n` +
+                `2. Build files are missing or corrupted\n\n` +
+                `Solution:\n` +
+                `Run: .\\BUILD-ELECTRON.ps1\n` +
+                `Then: npm run electron\n\n` +
+                `Error: ${errorDescription} (${errorCode})\n` +
+                `URL: ${validatedURL}`
+      });
+    }
+  });
+
+  // Log when page successfully loads
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('✅ MAIN.JS - Page loaded successfully');
+  });
 
   mainWindow.webContents.on('dom-ready', () => {
     console.log('🔴 MAIN.JS - DOM ready event fired');
@@ -770,10 +806,22 @@ function createWindow() {
     }
   });
 
-  // Open DevTools in development
+  // Open DevTools in development or on blank screen
   if (isDev && !isPrivacyRegressionMode) {
     mainWindow.webContents.openDevTools();
   }
+
+  // Add keyboard shortcut to open DevTools (F12 or Ctrl+Shift+I)
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' || (input.control && input.shift && input.key === 'I')) {
+      if (!mainWindow.webContents.isDevToolsOpened()) {
+        mainWindow.webContents.openDevTools();
+      } else {
+        mainWindow.webContents.closeDevTools();
+      }
+      event.preventDefault();
+    }
+  });
 
   // Handle window close - minimize to tray instead
   mainWindow.on('close', (event) => {
@@ -1283,6 +1331,7 @@ autoUpdater.logger = { info: (m) => console.log('[updater]', m), warn: (m) => co
 
 if (!isDev) {
   // Check for updates once the window is fully shown, then every 4 hours
+  // @ts-expect-error - browser-window-show is a valid Electron event but not in all type definitions
   app.once('browser-window-show', () => {
     setTimeout(() => autoUpdater.checkForUpdates().catch((e) => console.warn('[updater] initial check failed:', e.message)), 3000);
     setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
@@ -1476,6 +1525,7 @@ app.whenReady().then(async () => {
         console.log('🔍 MAIN.JS - ipcMain listenerCount for ping:', ipcMain.listenerCount('ping'));
         console.log('🔍 MAIN.JS - ipcMain listenerCount for vpn-connect-test:', ipcMain.listenerCount('vpn-connect-test'));
         console.log('🔍 MAIN.JS - All ipcMain eventNames:', ipcMain.eventNames());
+        // @ts-expect-error - listenerCount may accept 0 arguments in some Node versions
         console.log('🔍 MAIN.JS - Total event listeners:', ipcMain.listenerCount());
       } catch (err) {
         console.log('🔍 MAIN.JS - Error checking handlers:', err);

@@ -1,159 +1,178 @@
 {
-  "name": "nebula-vpn-client",
-  "version": "0.2.0",
-  "private": true,
-  "homepage": ".",
-  "main": "public/electron.js",
-  "author": "ColinNebula",
-  "description": "Nebula VPN - Secure, Fast, and Private VPN Client with WireGuard",
-  "dependencies": {
-    "@noble/post-quantum": "^0.2.1",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.8.0",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^13.5.0",
-    "electron-is-dev": "^2.0.0",
-    "electron-updater": "^6.8.3",
-    "qrcode": "^1.5.4",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "web-vitals": "^2.1.4"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
-    "electron": "electron .",
-    "electron-dev": "set NODE_ENV=development&& concurrently \"npm --prefix server start\" \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron-build": "npm run build && electron-builder",
-    "electron-pack": "electron-builder --dir",
-    "dist": "npm run build && electron-builder",
-    "generate-icons": "node scripts/generate-icons.js",
-    "generate-secrets": "node scripts/generate-secrets.js",
-    "electron:build:win": "npm run build && electron-builder --win",
-    "electron:build:mac": "npm run build && electron-builder --mac",
-    "electron:build:linux": "npm run build && electron-builder --linux",
-    "test:electron:privacy": "node scripts/electron-privacy-regression.js",
-    "security:audit": "node scripts/security-audit.js",
-    "security:prepare": "node scripts/prepare-for-github.js",
-    "verify:dns": "powershell -ExecutionPolicy Bypass -File verify-dns-simple.ps1",
-    "db:migrate:encrypt": "node server/src/migrations/encrypt-existing-data.js",
-    "security:prepare:clean": "node scripts/prepare-for-github.js --clean",
-    "security:prepare:fix": "node scripts/prepare-for-github.js --fix",
-    "security:check": "npm audit && node scripts/security-audit.js",
-    "security:generate-secrets": "node scripts/generate-secrets.js",
-    "precommit": "npm run security:prepare",
-    "prepush": "npm run security:check"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2",
-    "electron": "^39.2.4",
-    "electron-builder": "^26.8.1",
-    "gh-pages": "^6.3.0",
-    "png-to-ico": "^3.0.1",
-    "react-scripts": "^5.0.1",
-    "sharp": "^0.34.5",
-    "wait-on": "^7.2.0"
-  },
-  "build": {
-    "appId": "com.nebula.vpn",
-    "productName": "Nebula VPN",
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "ColinNebula",
-        "repo": "nebula-vpn-client",
-        "releaseType": "release"
-      }
-    ],
-    "files": [
-      "build/**/*",
-      "electron/**/*",
-      "public/electron.js",
-      "node_modules/**/*"
-    ],
-    "directories": {
-      "buildResources": "public"
-    },
-    "extraMetadata": {
-      "main": "public/electron.js"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "public/favicon.ico",
-      "requestedExecutionLevel": "requireAdministrator",
-      "artifactName": "${productName}-Setup-${version}.${ext}",
-      "verifyUpdateCodeSignature": false
-    },
-    "mac": {
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "category": "public.app-category.utilities",
-      "icon": "public/logo512.png",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Network",
-      "icon": "public/logo512.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "installerIcon": "public/favicon.ico",
-      "uninstallerIcon": "public/favicon.ico",
-      "installerHeaderIcon": "public/favicon.ico",
-      "deleteAppDataOnUninstall": true,
-      "menuCategory": true,
-      "shortcutName": "Nebula VPN",
-      "license": "LICENSE",
-      "runAfterFinish": true,
-      "perMachine": true
-    }
-  }
+    "name":  "nebula-vpn-client",
+    "version":  "0.2.0",
+    "private":  true,
+    "homepage":  "https://ColinNebula.github.io/nebula-vpn-client/",
+    "main":  "public/electron.js",
+    "author":  "ColinNebula",
+    "description":  "Nebula VPN - Secure, Fast, and Private VPN Client with WireGuard",
+    "dependencies":  {
+                         "@noble/post-quantum":  "^0.2.1",
+                         "@testing-library/dom":  "^10.4.1",
+                         "@testing-library/jest-dom":  "^6.8.0",
+                         "@testing-library/react":  "^16.3.0",
+                         "@testing-library/user-event":  "^13.5.0",
+                         "electron-is-dev":  "^2.0.0",
+                         "electron-updater":  "^6.8.3",
+                         "qrcode":  "^1.5.4",
+                         "react":  "^19.1.1",
+                         "react-dom":  "^19.1.1",
+                         "web-vitals":  "^2.1.4"
+                     },
+    "scripts":  {
+                    "start":  "react-scripts start",
+                    "build":  "react-scripts build",
+                    "test":  "react-scripts test",
+                    "eject":  "react-scripts eject",
+                    "predeploy":  "npm run build",
+                    "deploy":  "gh-pages -d build",
+                    "electron":  "electron .",
+                    "electron:prepare":  "powershell -ExecutionPolicy Bypass -File BUILD-ELECTRON.ps1",
+                    "electron:start":  "powershell -ExecutionPolicy Bypass -File BUILD-ELECTRON.ps1 \u0026\u0026 electron .",
+                    "electron-dev":  "set NODE_ENV=development\u0026\u0026 concurrently \"npm --prefix server start\" \"npm start\" \"wait-on http://localhost:3000 \u0026\u0026 electron .\"",
+                    "start:vpn":  "powershell -ExecutionPolicy Bypass -File start-nebula.ps1",
+                    "electron-build":  "npm run build \u0026\u0026 electron-builder",
+                    "electron-pack":  "electron-builder --dir",
+                    "dist":  "npm run build \u0026\u0026 electron-builder",
+                    "generate-icons":  "node scripts/generate-icons.js",
+                    "generate-secrets":  "node scripts/generate-secrets.js",
+                    "fix-emoji":  "node FIX-EMOJI.js",
+                    "emoji:restore":  "node FIX-EMOJI.js --restore",
+                    "electron:build:win":  "npm run electron:prepare \u0026\u0026 electron-builder --win",
+                    "electron:build:mac":  "npm run electron:prepare \u0026\u0026 electron-builder --mac",
+                    "electron:build:linux":  "npm run electron:prepare \u0026\u0026 electron-builder --linux",
+                    "test:electron:privacy":  "node scripts/electron-privacy-regression.js",
+                    "test:playwright":  "playwright test",
+                    "test:playwright:ui":  "playwright test --ui",
+                    "test:playwright:report":  "playwright show-report",
+                    "typecheck":  "tsc --noEmit",
+                    "deploy:azure":  "powershell -ExecutionPolicy Bypass -File DEPLOY-AZURE.ps1",
+                    "setup:mstools":  "powershell -ExecutionPolicy Bypass -File SETUP-MS-TOOLS.ps1",
+                    "security:audit":  "node scripts/security-audit.js",
+                    "security:prepare":  "node scripts/prepare-for-github.js",
+                    "verify:dns":  "powershell -ExecutionPolicy Bypass -File verify-dns-simple.ps1",
+                    "test:vpn":  "powershell -ExecutionPolicy Bypass -File TEST-VPN-TUNNEL.ps1",
+                    "test:vpn:quick":  "powershell -ExecutionPolicy Bypass -File TEST-VPN-QUICK.ps1",
+                    "fix:vpn":  "powershell -ExecutionPolicy Bypass -File FIX-VPN-LEAKS.ps1 -DisableIPv6 -FixRouting",
+                    "db:migrate:encrypt":  "node server/src/migrations/encrypt-existing-data.js",
+                    "security:prepare:clean":  "node scripts/prepare-for-github.js --clean",
+                    "security:prepare:fix":  "node scripts/prepare-for-github.js --fix",
+                    "security:check":  "npm audit \u0026\u0026 node scripts/security-audit.js",
+                    "security:generate-secrets":  "node scripts/generate-secrets.js",
+                    "precommit":  "npm run security:prepare",
+                    "prepush":  "npm run security:check"
+                },
+    "eslintConfig":  {
+                         "extends":  [
+                                         "react-app",
+                                         "react-app/jest"
+                                     ]
+                     },
+    "browserslist":  {
+                         "production":  [
+                                            "\u003e0.2%",
+                                            "not dead",
+                                            "not op_mini all"
+                                        ],
+                         "development":  [
+                                             "last 1 chrome version",
+                                             "last 1 firefox version",
+                                             "last 1 safari version"
+                                         ]
+                     },
+    "devDependencies":  {
+                            "@types/electron":  "^1.4.38",
+                            "@types/node":  "^25.5.0",
+                            "@types/react":  "^19.2.14",
+                            "@types/react-dom":  "^19.2.3",
+                            "concurrently":  "^8.2.2",
+                            "electron":  "^39.2.4",
+                            "electron-builder":  "^26.8.1",
+                            "gh-pages":  "^6.3.0",
+                            "png-to-ico":  "^3.0.1",
+                            "react-scripts":  "^5.0.1",
+                            "sharp":  "^0.34.5",
+                            "typescript":  "~4.9.5",
+                            "wait-on":  "^7.2.0"
+                        },
+    "build":  {
+                  "appId":  "com.nebula.vpn",
+                  "productName":  "Nebula VPN",
+                  "publish":  [
+                                  {
+                                      "provider":  "github",
+                                      "owner":  "ColinNebula",
+                                      "repo":  "nebula-vpn-client",
+                                      "releaseType":  "release"
+                                  }
+                              ],
+                  "files":  [
+                                "build/**/*",
+                                "electron/**/*",
+                                "public/electron.js",
+                                "node_modules/**/*"
+                            ],
+                  "directories":  {
+                                      "buildResources":  "public"
+                                  },
+                  "extraMetadata":  {
+                                        "main":  "public/electron.js"
+                                    },
+                  "win":  {
+                              "target":  [
+                                             {
+                                                 "target":  "nsis",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             },
+                                             {
+                                                 "target":  "portable",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ],
+                              "icon":  "public/favicon.ico",
+                              "requestedExecutionLevel":  "requireAdministrator",
+                              "artifactName":  "${productName}-Setup-${version}.${ext}",
+                              "verifyUpdateCodeSignature":  false
+                          },
+                  "mac":  {
+                              "target":  [
+                                             "dmg",
+                                             "zip"
+                                         ],
+                              "category":  "public.app-category.utilities",
+                              "icon":  "public/logo512.png",
+                              "hardenedRuntime":  true,
+                              "gatekeeperAssess":  false,
+                              "entitlements":  "build/entitlements.mac.plist",
+                              "entitlementsInherit":  "build/entitlements.mac.plist"
+                          },
+                  "linux":  {
+                                "target":  [
+                                               "AppImage",
+                                               "deb"
+                                           ],
+                                "category":  "Network",
+                                "icon":  "public/logo512.png"
+                            },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "allowElevation":  true,
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true,
+                               "installerIcon":  "public/favicon.ico",
+                               "uninstallerIcon":  "public/favicon.ico",
+                               "installerHeaderIcon":  "public/favicon.ico",
+                               "deleteAppDataOnUninstall":  true,
+                               "menuCategory":  true,
+                               "shortcutName":  "Nebula VPN",
+                               "license":  "LICENSE",
+                               "runAfterFinish":  true,
+                               "perMachine":  true
+                           }
+              }
 }

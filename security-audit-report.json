@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-12-03T00:51:28.488Z",
-  "score": 88,
+  "timestamp": "2026-03-29T00:19:03.973Z",
+  "score": 93,
   "passed": [
     "Electron: nodeIntegration disabled",
     "Electron: contextIsolation enabled",
@@ -18,7 +18,6 @@
     "Storage: Encryption implemented"
   ],
   "warnings": [
-    "Environment: server/.env has placeholders",
     "Storage: Avoid localStorage for sensitive data"
   ],
   "failed": [],

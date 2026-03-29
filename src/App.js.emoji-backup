@@ -914,7 +914,7 @@ function App() {
       // DETAILED DEBUGGING:
       electronObject: window.electron || 'undefined',
       nebulaVPNObject: window.nebulaVPN || 'undefined',
-      electronAPIDetected: electronAPI || 'undefined',
+      electronAPI: electronAPI || 'undefined',
       hasElectronPreload: !!window.electron?.DEBUG_PRELOAD_LOADED,
       hasNebulaVPNPreload: !!window.nebulaVPN?.minimal,
       preloadDebug: window.electron?.DEBUG_PRELOAD_LOADED || 'not present',
@@ -1023,16 +1023,16 @@ function App() {
         }
       } else if (multiHopServers.length > 0) {
         // Multi-hop connection via API
-        console.log('[Link] API multi-hop connection...', multiHopServers.map(s => s.name));
+        console.log('🔗 API multi-hop connection...', multiHopServers.map(s => s.name));
         const result = await apiService.multiHopConnect(multiHopServers.map(s => String(s.id)));
-        console.log('[Link] API multi-hop result:', result);
+        console.log('🔗 API multi-hop result:', result);
         setKillSwitchActive(false);
         setIsConnected(true);
         
         // Verify the multi-hop connection through the API
         try {
           const statusCheck = await apiService.getVPNStatus();
-          console.log('[Link] API multi-hop status check:', statusCheck);
+          console.log('🔗 API multi-hop status check:', statusCheck);
           const isVerified = statusCheck?.connected === true;
           const serverChain = multiHopServers.map(s => s.name).join(' -> ');
           
@@ -1054,7 +1054,7 @@ function App() {
             addLog(`Connected to multi-hop chain via API: ${serverChain} (verification pending)`, 'success');
           }
         } catch (verifyErr) {
-          console.warn('[Link] API multi-hop verification check failed:', verifyErr);
+          console.warn('🔗 API multi-hop verification check failed:', verifyErr);
           setProtectionState(buildProtectionState({
             state: 'connected',
             detail: `Connected via API: ${multiHopServers.map(s => s.name).join(' -> ')} (verification unavailable)`,
@@ -1064,20 +1064,20 @@ function App() {
         }
       } else {
         // Single server connection via API
-        console.log('[Link] API single server connection...', selectedServer.name, 'ID:', selectedServer.id);
+        console.log('🔗 API single server connection...', selectedServer.name, 'ID:', selectedServer.id);
         const result = await apiService.connectVPN(
           String(selectedServer.id),
           settings.protocol || 'wireguard',
           !!settings.advancedKillSwitch
         );
-        console.log('[Link] API connection result:', result);
+        console.log('🔗 API connection result:', result);
         setKillSwitchActive(false);
         setIsConnected(true);
         
         // Verify the connection through the API
         try {
           const statusCheck = await apiService.getVPNStatus();
-          console.log('[Link] API status check:', statusCheck);
+          console.log('🔗 API status check:', statusCheck);
           const isVerified = statusCheck?.connected === true;
           
           setProtectionState(buildProtectionState({
@@ -1098,7 +1098,7 @@ function App() {
             addLog(`Connected to ${selectedServer.name} via API (verification pending)`, 'success');
           }
         } catch (verifyErr) {
-          console.warn('[Link] API verification check failed:', verifyErr);
+          console.warn('🔗 API verification check failed:', verifyErr);
           setProtectionState(buildProtectionState({
             state: 'connected',
             detail: `Connected via API to ${selectedServer.name} (verification unavailable)`,
@@ -1560,7 +1560,7 @@ function App() {
           
           {activeTab === 'speedtest' && (
             hasFeature(effectivePlan, 'speedTest') ? (
-              <SpeedTest isConnected={isConnected} selectedServer={selectedServer} />
+              <SpeedTest isConnected={isConnected} />
             ) : (
               <UpgradePrompt 
                 feature="speedTest"
@@ -1780,11 +1780,11 @@ function App() {
                 
                 <div className="analytics-content">
                   {(!window.automationSubTab || window.automationSubTab === 'rules') && (
-                    <AutomationRules />
+                    <AutomationRules isConnected={isConnected} />
                   )}
                   
                   {window.automationSubTab === 'bandwidth' && (
-                    <BandwidthScheduler />
+                    <BandwidthScheduler isConnected={isConnected} />
                   )}
                   
                   {window.automationSubTab === 'monitor' && (
@@ -1792,11 +1792,11 @@ function App() {
                   )}
                   
                   {window.automationSubTab === 'chaining' && (
-                    <VPNChaining />
+                    <VPNChaining isConnected={isConnected} />
                   )}
                   
                   {window.automationSubTab === 'audit' && (
-                    <PrivacyAudit />
+                    <PrivacyAudit isConnected={isConnected} />
                   )}
                 </div>
               </div>
@@ -1988,6 +1988,7 @@ function App() {
                 {(!window.aiSubTab || window.aiSubTab === 'optimizer') && (
                   <AINetworkOptimizer 
                     isConnected={isConnected}
+                    selectedServer={selectedServer}
                     servers={servers}
                     onServerSelect={handleServerSelect}
                   />

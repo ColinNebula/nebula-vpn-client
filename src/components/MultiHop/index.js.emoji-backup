@@ -3,25 +3,25 @@ import './MultiHop.css';
 
 // ── Tunnel modes ──────────────────────────────────────────────────────────────
 const TUNNEL_MODES = [
-  { id: 'standard',  name: 'Standard Multi-Hop',    icon: '[Link]', desc: 'Traffic routed through each server sequentially', badge: null },
-  { id: 'nested',    name: 'Nested Encryption',      icon: '[Onion]', desc: 'Each hop wraps traffic in an additional layer (Tor-style)', badge: 'Max Security' },
-  { id: 'rotating',  name: 'Auto-Rotating Hops',     icon: '[Rotate]', desc: 'Entry/exit nodes rotate every 10 minutes', badge: 'Anti-Surveillance' },
+  { id: 'standard',  name: 'Standard Multi-Hop',    icon: '🔗', desc: 'Traffic routed through each server sequentially', badge: null },
+  { id: 'nested',    name: 'Nested Encryption',      icon: '🧅', desc: 'Each hop wraps traffic in an additional layer (Tor-style)', badge: 'Max Security' },
+  { id: 'rotating',  name: 'Auto-Rotating Hops',     icon: '🔄', desc: 'Entry/exit nodes rotate every 10 minutes', badge: 'Anti-Surveillance' },
 ];
 
 // ── Per-hop protocols ─────────────────────────────────────────────────────────
 const HOP_PROTOCOLS = [
-  { id: 'wireguard',   name: 'WireGuard',   icon: '[Fast]', color: '#4CAF50' },
-  { id: 'openvpn',     name: 'OpenVPN',     icon: '[Lock]', color: '#2196F3' },
-  { id: 'shadowsocks', name: 'Shadowsocks', icon: '[Cloud]', color: '#9C27B0' },
+  { id: 'wireguard',   name: 'WireGuard',   icon: '⚡', color: '#4CAF50' },
+  { id: 'openvpn',     name: 'OpenVPN',     icon: '🔒', color: '#2196F3' },
+  { id: 'shadowsocks', name: 'Shadowsocks', icon: '🌫️', color: '#9C27B0' },
 ];
 
 // ── Preset chain configs ──────────────────────────────────────────────────────
 const PRESETS = [
-  { id: 'max-privacy',     name: 'Max Privacy',      icon: '[Lock]', desc: 'Triple-hop through no-log jurisdictions',            mode: 'nested',   countries: ['IS', 'CH', 'PA'],  tags: ['journalism', 'activism'], color: '#9C27B0' },
-  { id: 'anti-censorship', name: 'Anti-Censorship',  icon: '[Globe]', desc: 'Enter locally, exit through neutral jurisdiction',   mode: 'standard', countries: ['SE', 'NL'],        tags: ['china', 'iran'],          color: '#FF5722' },
-  { id: 'streaming',       name: 'Streaming',         icon: '[Play]', desc: 'Two-hop optimised for low latency and bandwidth',   mode: 'standard', countries: ['US', 'GB'],        tags: ['netflix', 'bbc'],         color: '#E91E63' },
-  { id: 'gaming',          name: 'Gaming',            icon: '[Game]', desc: 'Nearest two hops to minimise added latency',        mode: 'standard', countries: ['US', 'DE'],        tags: ['low-latency'],            color: '#00BCD4' },
-  { id: 'balanced',        name: 'Balanced',          icon: '[Balance]', desc: 'Double-hop - good security, minimal speed penalty', mode: 'standard', countries: ['NL', 'SG'],        tags: ['everyday'],               color: '#4CAF50' },
+  { id: 'max-privacy',     name: 'Max Privacy',      icon: '🔒', desc: 'Triple-hop through no-log jurisdictions',            mode: 'nested',   countries: ['IS', 'CH', 'PA'],  tags: ['journalism', 'activism'], color: '#9C27B0' },
+  { id: 'anti-censorship', name: 'Anti-Censorship',  icon: '🌐', desc: 'Enter locally, exit through neutral jurisdiction',   mode: 'standard', countries: ['SE', 'NL'],        tags: ['china', 'iran'],          color: '#FF5722' },
+  { id: 'streaming',       name: 'Streaming',         icon: '🎬', desc: 'Two-hop optimised for low latency and bandwidth',   mode: 'standard', countries: ['US', 'GB'],        tags: ['netflix', 'bbc'],         color: '#E91E63' },
+  { id: 'gaming',          name: 'Gaming',            icon: '🎮', desc: 'Nearest two hops to minimise added latency',        mode: 'standard', countries: ['US', 'DE'],        tags: ['low-latency'],            color: '#00BCD4' },
+  { id: 'balanced',        name: 'Balanced',          icon: '⚖️', desc: 'Double-hop - good security, minimal speed penalty', mode: 'standard', countries: ['NL', 'SG'],        tags: ['everyday'],               color: '#4CAF50' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -162,21 +162,21 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
       {/* Header */}
       <div className="mh-header">
         <div className="mh-title-group">
-          <h3>[Link] Multi-Hop Tunnel</h3>
+          <h3>🔗 Multi-Hop Tunnel</h3>
           <span className="mh-subtitle">Chain up to 4 servers for layered anonymity</span>
         </div>
         <div className="mh-header-actions">
           {selectedServers.length > 0 && !isConnected &&
-            <button className="mh-btn-ghost" onClick={handleClearChain}>X Clear</button>}
+            <button className="mh-btn-ghost" onClick={handleClearChain}>✕ Clear</button>}
           {!isConnected &&
-            <button className="mh-btn-accent" onClick={handleAutoBuild}>[Auto] Auto-Build</button>}
+            <button className="mh-btn-accent" onClick={handleAutoBuild}>✨ Auto-Build</button>}
         </div>
       </div>
 
       {/* Security score row */}
       <div className="mh-score-row">
         <div className="mh-score-card">
-          <span className="mh-score-icon">[Shield]</span>
+          <span className="mh-score-icon">🛡️</span>
           <div className="mh-score-info">
             <span className="mh-score-label">Security Rating</span>
             <div className="mh-score-bar-wrap">
@@ -191,24 +191,24 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
           <span className="mh-stat-lbl">Added latency</span></div>
         </div>
         <div className="mh-stat-pill">
-          <span>[Secure]</span>
+          <span>🔐</span>
           <div><span className="mh-stat-num">{encryptionLayers}</span>
           <span className="mh-stat-lbl">Encryption layer{encryptionLayers !== 1 ? 's' : ''}</span></div>
         </div>
         <div className="mh-stat-pill">
-          <span>[World]</span>
+          <span>🌍</span>
           <div><span className="mh-stat-num">{new Set(selectedServers.map(s => s.country)).size}</span>
           <span className="mh-stat-lbl">Countries</span></div>
         </div>
         {estimatedBandwidth !== null && (
           <div className="mh-stat-pill">
-            <span>[Signal]</span>
+            <span>📶</span>
             <div><span className="mh-stat-num">{fmtBandwidth(estimatedBandwidth)}</span>
             <span className="mh-stat-lbl">Est. throughput</span></div>
           </div>
         )}
         <div className="mh-stat-pill">
-          <span>[Map]</span>
+          <span>🗺️</span>
           <div><span className="mh-stat-num">{geoScore}%</span>
           <span className="mh-stat-lbl">Geo diversity</span></div>
         </div>
@@ -238,12 +238,12 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
       <div className="mh-section">
         <div className="mh-section-title">
           Connection Chain
-          {autoBuilt && <span className="mh-auto-tag">[Auto] Auto-built</span>}
+          {autoBuilt && <span className="mh-auto-tag">✨ Auto-built</span>}
         </div>
         {selectedServers.length === 0 ? (
           <div className="mh-empty-chain">
-            <span className="mh-empty-icon">[Link]</span>
-            <p>No servers in chain. Use [Auto] Auto-Build, apply a preset, or pick servers below.</p>
+            <span className="mh-empty-icon">🔗</span>
+            <p>No servers in chain. Use ✨ Auto-Build, apply a preset, or pick servers below.</p>
           </div>
         ) : (
           <div className="mh-chain-wrapper">
@@ -258,7 +258,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
               return (
                 <React.Fragment key={server.id}>
                   <div className={`mh-chain-arrow${tunnelMode === 'nested' ? ' layered' : ''}`}>
-                    {tunnelMode === 'nested' ? '[Lock]→' : '→'}
+                    {tunnelMode === 'nested' ? '🔒→' : '→'}
                   </div>
                   <div
                     className={`mh-hop-card${dragOverIdx === idx ? ' drag-over' : ''}${draggedIdx === idx ? ' dragging' : ''}`}
@@ -267,7 +267,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
                     onDragOver={e => handleDragOver(e, idx)}
                     onDrop={e => handleDrop(e, idx)}
                     onDragEnd={handleDragEnd}
-                    ref={el => { hopRefs.current[idx] = el; }}
+                    ref={el => (hopRefs.current[idx] = el)}
                   >
                     <div className="mh-hop-badge">{idx === 0 ? 'Entry' : idx === selectedServers.length - 1 ? 'Exit' : `Hop ${idx + 1}`}</div>
                     {!isConnected && <div className="mh-hop-drag-hint">⠿</div>}
@@ -299,7 +299,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
                       <div className="mh-hop-controls">
                         <button className="mh-hop-ctrl" title="Move up"    disabled={idx === 0}                           onClick={() => handleMoveHop(idx, idx - 1)}>↑</button>
                         <button className="mh-hop-ctrl" title="Move down"  disabled={idx === selectedServers.length - 1}  onClick={() => handleMoveHop(idx, idx + 1)}>↓</button>
-                        <button className="mh-hop-ctrl remove" title="Remove"                                              onClick={() => handleRemoveServer(server.id)}>X</button>
+                        <button className="mh-hop-ctrl remove" title="Remove"                                              onClick={() => handleRemoveServer(server.id)}>✕</button>
                       </div>
                     )}
                   </div>
@@ -308,7 +308,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
             })}
             <div className="mh-chain-arrow">→</div>
             <div className="mh-endpoint-node">
-              <div className="mh-endpoint-icon">[Globe]</div>
+              <div className="mh-endpoint-icon">🌐</div>
               <span>Internet</span>
             </div>
             {!isConnected && selectedServers.length < 4 && (
@@ -388,13 +388,13 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
                   <span className="mh-preset-name">{p.name}</span>
                   <span className="mh-preset-desc">{p.desc}</span>
                   <div className="mh-preset-tags">{p.tags.map(t => <span key={t} className="mh-tag">{t}</span>)}</div>
-                  {activePreset === p.id && <span className="mh-preset-check">[OK]</span>}
+                  {activePreset === p.id && <span className="mh-preset-check">✓</span>}
                 </button>
               ))}
             </div>
           )}
           {presetWarnMsg && (
-            <p className="mh-preset-warn">[!]️ {presetWarnMsg}</p>
+            <p className="mh-preset-warn">⚠️ {presetWarnMsg}</p>
           )}
         </div>
       )}
@@ -403,7 +403,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
       {!isConnected && (
         <div className="mh-section">
           <div className="mh-section-header" onClick={() => setShowAdvanced(v => !v)}>
-            <div className="mh-section-title" style={{ margin: 0 }}>[Settings] Advanced Options</div>
+            <div className="mh-section-title" style={{ margin: 0 }}>⚙️ Advanced Options</div>
             <span className="mh-toggle-caret">{showAdvanced ? '▲' : '▼'}</span>
           </div>
           {showAdvanced && (
@@ -460,7 +460,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
                       <span className="mh-srv-name">{server.name}</span>
                       <span className="mh-srv-loc">{server.location}</span>
                     </div>
-                    {isSelected && <span className="mh-srv-check">[OK]</span>}
+                    {isSelected && <span className="mh-srv-check">✓</span>}
                   </div>
                   <div className="mh-srv-metrics">
                     <span className="mh-srv-ping" style={{ color: getLatencyColor(pingMs) }}>{server.ping}</span>
@@ -480,7 +480,7 @@ const MultiHop = ({ servers = [], selectedServers, onServersChange, isConnected 
       {/* Notes */}
       {selectedServers.length > 0 && (
         <div className="mh-notes">
-          <strong>[i]️ Notes</strong>
+          <strong>ℹ️ Notes</strong>
           <ul>
             {tunnelMode === 'nested'   && <li>Nested mode wraps each hop in a separate AES-256-GCM envelope - maximum anonymity, ~40% higher overhead.</li>}
             {tunnelMode === 'rotating' && <li>Auto-Rotating mode swaps entry/exit nodes every 10 min to defeat long-term traffic analysis.</li>}

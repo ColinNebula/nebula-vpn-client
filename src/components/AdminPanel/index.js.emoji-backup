@@ -299,13 +299,13 @@ const AdminPanel = ({ onClose, currentUser, onUpdateUser }) => {
     <div className="admin-panel-overlay" onClick={onClose}>
       <div className="admin-panel" onClick={(e) => e.stopPropagation()}>
         <div className="admin-header">
-          <h2>[Settings] Admin Settings</h2>
-          <button className="close-btn" onClick={onClose}>X</button>
+          <h2>⚙️ Admin Settings</h2>
+          <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 
         {successMessage && (
           <div className="success-banner">
-            [OK] {successMessage}
+            ✓ {successMessage}
           </div>
         )}
 
@@ -316,35 +316,35 @@ const AdminPanel = ({ onClose, currentUser, onUpdateUser }) => {
               className={`sidebar-btn ${activeSection === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveSection('profile')}
             >
-              <span className="icon">[User]</span>
+              <span className="icon">👤</span>
               Profile
             </button>
             <button
               className={`sidebar-btn ${activeSection === 'security' ? 'active' : ''}`}
               onClick={() => setActiveSection('security')}
             >
-              <span className="icon">[Lock]</span>
+              <span className="icon">🔒</span>
               Security
             </button>
             <button
               className={`sidebar-btn ${activeSection === 'preferences' ? 'active' : ''}`}
               onClick={() => setActiveSection('preferences')}
             >
-              <span className="icon">[Theme]</span>
+              <span className="icon">🎨</span>
               Preferences
             </button>
             <button
               className={`sidebar-btn ${activeSection === 'storage' ? 'active' : ''}`}
               onClick={() => setActiveSection('storage')}
             >
-              <span className="icon">[Save]</span>
+              <span className="icon">💾</span>
               Storage
             </button>
             <button
               className={`sidebar-btn ${activeSection === 'privacy' ? 'active' : ''}`}
               onClick={() => setActiveSection('privacy')}
             >
-              <span className="icon">[Shield]</span>
+              <span className="icon">🛡️</span>
               Privacy
             </button>
           </div>
@@ -459,7 +459,7 @@ const AdminPanel = ({ onClose, currentUser, onUpdateUser }) => {
                       className="toggle-password"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? '[Eye]' : '[Eye]‍🗨️'}
+                      {showPassword ? '👁️' : '👁️‍🗨️'}
                     </button>
                   </div>
                   {errors.currentPassword && <span className="error-text">{errors.currentPassword}</span>}
@@ -684,7 +684,7 @@ const AdminPanel = ({ onClose, currentUser, onUpdateUser }) => {
                   </div>
 
                   <div className="storage-item danger-zone">
-                    <h4>[!]️ Danger Zone</h4>
+                    <h4>⚠️ Danger Zone</h4>
                     <p>Clear all storage data. This action cannot be undone.</p>
                     <button 
                       className="danger-btn"

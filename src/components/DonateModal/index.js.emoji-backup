@@ -52,7 +52,7 @@ const PLATFORMS = [
     hoverBg: 'linear-gradient(135deg, #e04e4b, #e07550)',
     textColor: '#fff',
     description: 'Buy us a coffee to keep the servers running',
-    badge: '[Coffee] Friendly',
+    badge: '☕ Friendly',
     badgeColor: '#ff5e5b',
   },
 ];
@@ -94,11 +94,11 @@ const DonateModal = ({ isOpen, onClose }) => {
   return (
     <div className="donate-overlay" onClick={onClose}>
       <div className="donate-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="donate-close" onClick={onClose} aria-label="Close">X</button>
+        <button className="donate-close" onClick={onClose} aria-label="Close">✕</button>
 
         {thanked ? (
           <div className="donate-thanks">
-            <div className="thanks-heart">[Heart]</div>
+            <div className="thanks-heart">❤️</div>
             <h2>Thank you so much!</h2>
             <p>Every contribution helps keep Nebula VPN free and improving for everyone.</p>
             <button className="thanks-close-btn" onClick={onClose}>Close</button>
@@ -107,7 +107,7 @@ const DonateModal = ({ isOpen, onClose }) => {
           <>
             {/* Header */}
             <div className="donate-header">
-              <div className="donate-header-icon">[Heart]</div>
+              <div className="donate-header-icon">💜</div>
               <h2>Support Nebula VPN</h2>
               <p className="donate-subtitle">
                 Nebula VPN is free and always will be. Your donation helps pay for server
@@ -187,7 +187,7 @@ const DonateModal = ({ isOpen, onClose }) => {
 
             {/* Footer note */}
             <p className="donate-footer">
-              [Lock] You'll be taken to a secure third-party payment page. We never store your payment details.
+              🔒 You'll be taken to a secure third-party payment page. We never store your payment details.
             </p>
           </>
         )}

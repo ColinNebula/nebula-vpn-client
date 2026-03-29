@@ -75,20 +75,17 @@ Nebula VPN Client is a modern, feature-rich VPN application designed to provide 
 
 4. **Start the application (Windows)**
    ```powershell
-   # Run as Administrator for full DNS enforcement
-   .\start-vpn-admin.ps1
+   # All-in-one launcher: Starts API server + Electron app (RECOMMENDED)
+   .\start-nebula.ps1
    ```
    
-   Or manually:
+   Or manually (separate terminals):
    ```bash
    # Terminal 1: Start API server
    cd server && npm start
    
-   # Terminal 2: Start React dev server
-   npm start
-   
-   # Terminal 3: Start Electron (as Administrator)
-   npm run electron
+   # Terminal 2: Start Electron app (as Administrator)
+   .\start-vpn-admin.ps1
    ```
 
 5. **Verify DNS enforcement**

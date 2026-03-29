@@ -11,11 +11,11 @@ function assessThreat(scan, captive) {
 
   if (scan.isOpen) {
     score += 3;
-    reasons.push('Open network â€” traffic is unencrypted at the WiFi layer');
+    reasons.push('Open network — traffic is unencrypted at the WiFi layer');
   }
   if (captive === true) {
     score += 3;
-    reasons.push('Captive portal detected â€” network is intercepting your connections');
+    reasons.push('Captive portal detected — network is intercepting your connections');
   }
   if (scan.security && /wep/i.test(scan.security)) {
     score += 2;
@@ -23,7 +23,7 @@ function assessThreat(scan, captive) {
   }
   if (scan.signal !== null && scan.signal < 20) {
     score += 1;
-    reasons.push('Very weak signal â€” may indicate a rogue / evil-twin AP nearby');
+    reasons.push('Very weak signal — may indicate a rogue / evil-twin AP nearby');
   }
 
   if (score === 0) return { level: 'safe',     reasons };
@@ -33,11 +33,11 @@ function assessThreat(scan, captive) {
 }
 
 const THREAT_META = {
-  unknown:  { label: 'Unknown',       color: '#9e9e9e', icon: 'â“' },
-  safe:     { label: 'Low Risk',      color: '#43a047', icon: 'âœ…' },
-  low:      { label: 'Low Risk',      color: '#7cb342', icon: 'ðŸŸ¡' },
-  moderate: { label: 'Moderate Risk', color: '#f57c00', icon: 'âš ï¸' },
-  high:     { label: 'High Risk',     color: '#d32f2f', icon: 'ðŸš¨' },
+  unknown:  { label: 'Unknown',       color: '#9e9e9e', icon: '❓' },
+  safe:     { label: 'Low Risk',      color: '#43a047', icon: '✅' },
+  low:      { label: 'Low Risk',      color: '#7cb342', icon: '🟡' },
+  moderate: { label: 'Moderate Risk', color: '#f57c00', icon: '⚠️' },
+  high:     { label: 'High Risk',     color: '#d32f2f', icon: '🚨' },
 };
 
 const AutoConnectWiFi = ({
@@ -60,7 +60,7 @@ const AutoConnectWiFi = ({
   const scanInterval = useRef(null);
   const prevSsid     = useRef(null);
 
-  // â”€â”€ Real network scan (Electron) or browser fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Real network scan (Electron) or browser fallback ─────────────────
   const doScan = useCallback(async () => {
     setScanning(true);
     try {
@@ -79,7 +79,7 @@ const AutoConnectWiFi = ({
         }
         setLastScanTime(new Date());
       } else {
-        // Browser / PWA fallback â€” no OS access, use navigator APIs only
+        // Browser / PWA fallback — no OS access, use navigator APIs only
         const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         setScan({
           ssid:     'Current Network',
@@ -92,16 +92,16 @@ const AutoConnectWiFi = ({
         setCaptive(null);
         setLastScanTime(new Date());
       }
-    } catch { /* scan failed â€” leave previous result in place */ }
+    } catch { /* scan failed — leave previous result in place */ }
     setScanning(false);
   }, []);
 
-  // â”€â”€ Auto-connect logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Auto-connect logic ────────────────────────────────────────────────
   useEffect(() => {
     if (!scan?.ssid) return;
     const ssid = scan.ssid;
 
-    // Network changed â€” re-evaluate
+    // Network changed — re-evaluate
     if (ssid !== prevSsid.current) {
       prevSsid.current = ssid;
 
@@ -122,7 +122,7 @@ const AutoConnectWiFi = ({
     }
   }, [scan, isEnabled, trustedNetworks, onConnect]);
 
-  // â”€â”€ Poll + event listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Poll + event listeners ────────────────────────────────────────────
   useEffect(() => {
     doScan();
     scanInterval.current = setInterval(doScan, 30_000); // re-scan every 30 s
@@ -140,9 +140,9 @@ const AutoConnectWiFi = ({
     // Electron-specific events
     let removeResume, removeNetStatus;
     if (isElectron) {
-      // System woke from sleep â€” immediately re-scan and potentially reconnect
+      // System woke from sleep — immediately re-scan and potentially reconnect
       removeResume = window.electron.network.onResume(() => {
-        console.log('[AutoConnectWiFi] System resumed â€” re-scanning network');
+        console.log('[AutoConnectWiFi] System resumed — re-scanning network');
         doScan();
         if (isEnabled && onConnect) onConnect();
       });
@@ -189,11 +189,11 @@ const AutoConnectWiFi = ({
       {/* Header */}
       <div className="auto-connect-header">
         <div className="header-left">
-          <span className="feature-icon">ðŸ›¡ï¸</span>
+          <span className="feature-icon">🛡️</span>
           <div className="header-text">
             <span className="feature-title">Auto-Connect on WiFi</span>
             <span className="feature-subtitle">
-              {isEnabled ? 'Active â€” will auto-connect on untrusted networks' : 'Enable to auto-protect on public WiFi'}
+              {isEnabled ? 'Active — will auto-connect on untrusted networks' : 'Enable to auto-protect on public WiFi'}
             </span>
           </div>
         </div>
@@ -203,14 +203,14 @@ const AutoConnectWiFi = ({
         </label>
       </div>
 
-      {/* â”€â”€ Captive portal warning â”€â”€ */}
+      {/* ── Captive portal warning ── */}
       {captive === true && (
         <div className="captive-portal-warning">
-          <span className="captive-icon">ðŸš¨</span>
+          <span className="captive-icon">🚨</span>
           <div className="captive-body">
             <strong>Captive Portal Detected</strong>
             <p>
-              This network is intercepting your connections â€” a common tactic on hotel, airport, and coffee shop WiFi.
+              This network is intercepting your connections — a common tactic on hotel, airport, and coffee shop WiFi.
               Your traffic is <em>not</em> private until you connect to the VPN.
               {captiveUrl && <> Login page: <code>{captiveUrl}</code></>}
             </p>
@@ -223,26 +223,26 @@ const AutoConnectWiFi = ({
         </div>
       )}
 
-      {/* â”€â”€ Current network card â”€â”€ */}
+      {/* ── Current network card ── */}
       <div className="current-network-status">
         <div className="network-info">
-          <span className="network-icon">{isOnline ? 'ðŸ“¶' : 'ðŸš«'}</span>
+          <span className="network-icon">{isOnline ? '📶' : '🚫'}</span>
           <div className="network-details">
-            <span className="network-name">{scan?.ssid || (isOnline ? 'Detectingâ€¦' : 'No Network')}</span>
+            <span className="network-name">{scan?.ssid || (isOnline ? 'Detecting…' : 'No Network')}</span>
             {scan?.bssid && <span className="network-bssid">{scan.bssid}</span>}
             <span className="network-type">
               {scan?.security || 'Unknown security'}
-              {scan?.signal != null ? ` Â· Signal ${scan.signal}%` : ''}
-              {scan?.isOpen ? ' Â· âš ï¸ OPEN' : ''}
+              {scan?.signal != null ? ` · Signal ${scan.signal}%` : ''}
+              {scan?.isOpen ? ' · ⚠️ OPEN' : ''}
             </span>
           </div>
-          {scanning && <span className="scanning-indicator">ðŸ”„</span>}
+          {scanning && <span className="scanning-indicator">🔄</span>}
         </div>
 
         {scan?.ssid && (
           <div className="network-trust-status">
             {isTrusted ? (
-              <span className="trust-badge trusted">âœ“ Trusted Network</span>
+              <span className="trust-badge trusted">✓ Trusted Network</span>
             ) : (
               <div className="untrusted-actions">
                 <span className="trust-badge untrusted">! Untrusted</span>
@@ -255,12 +255,12 @@ const AutoConnectWiFi = ({
         {lastScanTime && (
           <div className="last-scan-time">
             Last scan: {lastScanTime.toLocaleTimeString()}
-            <button className="rescan-btn" onClick={doScan} disabled={scanning}>â†» Rescan</button>
+            <button className="rescan-btn" onClick={doScan} disabled={scanning}>↻ Rescan</button>
           </div>
         )}
       </div>
 
-      {/* â”€â”€ Threat assessment panel â”€â”€ */}
+      {/* ── Threat assessment panel ── */}
       <div className="threat-panel" style={{ borderColor: tm.color }}>
         <div className="threat-header">
           <span className="threat-icon">{tm.icon}</span>
@@ -277,30 +277,30 @@ const AutoConnectWiFi = ({
 
         <div className="protection-checklist">
           <div className={`check-row ${isEnabled ? 'pass' : 'fail'}`}>
-            <span>{isEnabled ? 'âœ…' : 'âŒ'}</span>
+            <span>{isEnabled ? '✅' : '❌'}</span>
             <span>Auto-connect VPN on untrusted networks</span>
           </div>
           <div className={`check-row ${scan?.isOpen === false ? 'pass' : 'warn'}`}>
-            <span>{scan?.isOpen === false ? 'âœ…' : 'âš ï¸'}</span>
+            <span>{scan?.isOpen === false ? '✅' : '⚠️'}</span>
             <span>Network uses encryption (WPA2/WPA3)</span>
           </div>
           <div className={`check-row ${captive === false ? 'pass' : captive === null ? 'unknown' : 'fail'}`}>
-            <span>{captive === false ? 'âœ…' : captive === null ? 'â“' : 'âŒ'}</span>
+            <span>{captive === false ? '✅' : captive === null ? '❓' : '❌'}</span>
             <span>No captive portal / MitM interception</span>
           </div>
           <div className={`check-row ${isTrusted ? 'warn' : 'pass'}`}>
-            <span>{isTrusted ? 'ðŸ ' : 'âœ…'}</span>
-            <span>{isTrusted ? 'Trusted network â€” VPN auto-connect skipped' : 'Unknown network â€” VPN will auto-connect'}</span>
+            <span>{isTrusted ? '🏠' : '✅'}</span>
+            <span>{isTrusted ? 'Trusted network — VPN auto-connect skipped' : 'Unknown network — VPN will auto-connect'}</span>
           </div>
         </div>
       </div>
 
-      {/* â”€â”€ Behavior settings â”€â”€ */}
+      {/* ── Behavior settings ── */}
       {isEnabled && (
         <div className="behavior-settings">
           <div className="setting-item">
             <div className="setting-info">
-              <span className="setting-icon">ðŸ”„</span>
+              <span className="setting-icon">🔄</span>
               <div className="setting-text">
                 <span className="setting-title">Auto-connect on untrusted</span>
                 <span className="setting-desc">VPN connects automatically on public WiFi</span>
@@ -310,7 +310,7 @@ const AutoConnectWiFi = ({
           </div>
           <div className="setting-item">
             <div className="setting-info">
-              <span className="setting-icon">ðŸ˜´</span>
+              <span className="setting-icon">😴</span>
               <div className="setting-text">
                 <span className="setting-title">Reconnect after sleep</span>
                 <span className="setting-desc">Auto-connect when device wakes up on an untrusted network</span>
@@ -320,7 +320,7 @@ const AutoConnectWiFi = ({
           </div>
           <div className="setting-item">
             <div className="setting-info">
-              <span className="setting-icon">ðŸš¨</span>
+              <span className="setting-icon">🚨</span>
               <div className="setting-text">
                 <span className="setting-title">Captive portal alerts</span>
                 <span className="setting-desc">Warn when a network is intercepting connections</span>
@@ -331,12 +331,12 @@ const AutoConnectWiFi = ({
         </div>
       )}
 
-      {/* â”€â”€ Trusted Networks â”€â”€ */}
+      {/* ── Trusted Networks ── */}
       <div className="trusted-networks">
         <div className="section-header">
           <span className="section-title">Trusted Networks</span>
           <button className="add-network-btn" onClick={() => setShowAddNetwork(!showAddNetwork)}>
-            {showAddNetwork ? 'âœ•' : '+'}
+            {showAddNetwork ? '✕' : '+'}
           </button>
         </div>
 
@@ -358,19 +358,19 @@ const AutoConnectWiFi = ({
             {trustedNetworks.map(network => (
               <div key={network.id} className="network-item">
                 <div className="network-item-info">
-                  <span className="network-item-icon">ðŸ“¶</span>
+                  <span className="network-item-icon">📶</span>
                   <span className="network-item-name">{network.name}</span>
                 </div>
                 <button className="remove-network-btn"
                   onClick={() => onRemoveTrustedNetwork && onRemoveTrustedNetwork(network.id)}>
-                  âœ•
+                  ✕
                 </button>
               </div>
             ))}
           </div>
         ) : (
           <div className="no-networks">
-            <span className="no-networks-icon">ðŸ </span>
+            <span className="no-networks-icon">🏠</span>
             <span className="no-networks-text">
               No trusted networks yet. Add your home or work WiFi to skip auto-connect.
             </span>
@@ -378,11 +378,11 @@ const AutoConnectWiFi = ({
         )}
       </div>
 
-      {/* â”€â”€ Auto-connect log â”€â”€ */}
+      {/* ── Auto-connect log ── */}
       {autoConnectLog.length > 0 && (
         <div className="auto-connect-log">
           <div className="log-header">
-            <span className="log-icon">ðŸ“‹</span>
+            <span className="log-icon">📋</span>
             <span>Recent Auto-Connections</span>
           </div>
           <div className="log-list">
@@ -398,7 +398,7 @@ const AutoConnectWiFi = ({
       )}
 
       <div className="info-note">
-        <span className="note-icon">ðŸ’¡</span>
+        <span className="note-icon">💡</span>
         <span>
           VPN auto-connects on untrusted and open WiFi. Captive portals, open networks,
           and wake-from-sleep events are all detected and handled automatically.
