@@ -1,0 +1,547 @@
+.network-topology {
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.topology-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.topology-header h3 {
+  color: var(--text-primary);
+  font-size: 24px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.topology-controls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.view-selector {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-card);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.view-btn {
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.view-btn.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+}
+
+/* Topology Content */
+.topology-content {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 25px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+/* Network View */
+.network-view {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.network-canvas {
+  flex: 1;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.network-canvas svg {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+}
+
+.node-details {
+  width: 300px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.node-details h4 {
+  color: var(--text-primary);
+  font-size: 16px;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.details-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--bg-card);
+  border-radius: 8px;
+}
+
+.detail-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.detail-value {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.online {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.status-badge.offline {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.close-details {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 5px;
+}
+
+.close-details:hover {
+  color: var(--text-primary);
+}
+
+/* Routes View */
+.routes-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.routes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.route-card,
+.latency-heatmap {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.route-card h4,
+.latency-heatmap h4 {
+  color: var(--text-primary);
+  font-size: 16px;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.route-hops {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hop-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+}
+
+.hop-number {
+  width: 30px;
+  height: 30px;
+  background: var(--accent-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.hop-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hop-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.hop-latency {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.heatmap-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 8px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.heatmap-cell.low {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.heatmap-cell.medium {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.heatmap-cell.high {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.05);
+}
+
+.cell-flag {
+  font-size: 24px;
+}
+
+.cell-name {
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cell-latency {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Traffic View */
+.traffic-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.traffic-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.traffic-flow,
+.network-stats {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.traffic-flow h4,
+.network-stats h4 {
+  color: var(--text-primary);
+  font-size: 16px;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.flow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.flow-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: var(--bg-card);
+  border-radius: 10px;
+}
+
+.flow-path {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flow-from,
+.flow-to {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.flow-arrow {
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+.flow-metrics {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.flow-protocol {
+  padding: 4px 10px;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--accent-color);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flow-volume {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-bar {
+  width: 80px;
+  height: 8px;
+  background: var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.volume-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color), #10b981);
+  transition: width 0.5s ease;
+}
+
+.volume-text {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 35px;
+}
+
+.stats-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateX(5px);
+}
+
+.stat-card.critical {
+  border-left: 4px solid #ef4444;
+}
+
+.stat-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Legend */
+.topology-legend {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.topology-legend h5 {
+  color: var(--text-primary);
+  font-size: 14px;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.legend-items {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+}
+
+.legend-item span {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .routes-grid,
+  .traffic-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .network-topology {
+    padding: 15px;
+  }
+
+  .topology-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topology-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .network-view {
+    flex-direction: column;
+  }
+
+  .node-details {
+    width: 100%;
+  }
+
+  .heatmap-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+
+  .legend-items {
+    justify-content: center;
+  }
+}

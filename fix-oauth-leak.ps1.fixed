@@ -1,0 +1,180 @@
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Emergency OAuth Secret Cleanup
+.DESCRIPTION
+    Removes exposed OAuth secrets from git history and prepares for fresh push
+#>
+
+param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet('quick', 'bfg', 'nuclear')]
+    [string]$Method = 'quick'
+)
+
+$ErrorActionPreference = 'Stop'
+
+Write-Host ""
+Write-Host `"================================================================`" -ForegroundColor Red
+Write-Host `"  ⚠️  OAUTH SECRET EXPOSURE - EMERGENCY CLEANUP`" -ForegroundColor Red
+Write-Host `"================================================================`" -ForegroundColor Red
+Write-Host ""
+
+# Step 1: Check if secrets are still in files
+Write-Host `"[Step 1/5] Checking current files...`" -ForegroundColor Yellow
+
+$exposedSecrets = @(
+    `"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`",
+    `"7cb347d3cb948a8b59f44cc1a519fbae91d34f18`",
+    `"Ov23liJ1FGqfH64PAiUn`"
+)
+
+$foundInFiles = $false
+foreach ($secret in $exposedSecrets) {
+    $matches = Select-String -Path `"*.md`" -Pattern $secret -SimpleMatch -ErrorAction SilentlyContinue
+    if ($matches) {
+        Write-Host `"  ❌ Found in: $($matches.Path)`" -ForegroundColor Red
+        $foundInFiles = $true
+    }
+}
+
+if (-not $foundInFiles) {
+    Write-Host `"  ✓ Secrets removed from current files`" -ForegroundColor Green
+} else {
+    Write-Host `"  ⚠️  Secrets still in files! Running cleanup...`" -ForegroundColor Yellow
+    
+    # Replace in OAUTH-FIXED.md
+    if (Test-Path `"OAUTH-FIXED.md`") {
+        (Get-Content `"OAUTH-FIXED.md`" -Raw) `
+            -replace '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', 'your_google_client_secret' `
+            -replace '7cb347d3cb948a8b59f44cc1a519fbae91d34f18', 'your_github_client_secret' `
+            -replace 'Ov23liJ1FGqfH64PAiUn', 'your_github_client_id' `
+            -replace '552502615021-77abgci54c2kmfqkjm4fdosaeacjsu87\.apps\.googleusercontent\.com', 'your_google_client_id.apps.googleusercontent.com' `
+            | Set-Content `"OAUTH-FIXED.md`"
+    }
+    
+    # Replace in OAUTH-FIX-SUMMARY.md
+    if (Test-Path `"OAUTH-FIX-SUMMARY.md`") {
+        (Get-Content `"OAUTH-FIX-SUMMARY.md`" -Raw) `
+            -replace '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', 'your_google_client_secret' `
+            -replace '7cb347d3cb948a8b59f44cc1a519fbae91d34f18', 'your_github_client_secret' `
+            | Set-Content `"OAUTH-FIX-SUMMARY.md`"
+    }
+    
+    Write-Host `"  ✓ Secrets sanitized in files`" -ForegroundColor Green
+}
+
+# Step 2: Check git status
+Write-Host ""
+Write-Host `"[Step 2/5] Checking git status...`" -ForegroundColor Yellow
+
+$gitStatus = git status --porcelain
+if ($gitStatus) {
+    Write-Host `"  ⚠️  Uncommitted changes detected`" -ForegroundColor Yellow
+    Write-Host `"  Committing cleanup...`" -ForegroundColor Cyan
+    
+    git add .
+    git commit -m `"security: Remove exposed OAuth secrets from documentation`"
+    
+    Write-Host `"  ✓ Changes committed`" -ForegroundColor Green
+} else {
+    Write-Host `"  ✓ No uncommitted changes`" -ForegroundColor Green
+}
+
+# Step 3: Choose cleanup method
+Write-Host ""
+Write-Host `"[Step 3/5] Cleaning git history ($Method method)...`" -ForegroundColor Yellow
+
+switch ($Method) {
+    'nuclear' {
+        Write-Host `"  ⚠️  NUCLEAR OPTION: Deleting entire git history!`" -ForegroundColor Red
+        Write-Host `"  Creating backup first...`" -ForegroundColor Yellow
+        
+        # Backup
+        $backupPath = `"..\nebula-vpn-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')`"
+        Copy-Item -Recurse . $backupPath -Exclude '.git'
+        Write-Host `"  ✓ Backup created: $backupPath`" -ForegroundColor Green
+        
+        # Get remote URL
+        $remoteUrl = git remote get-url origin
+        
+        # Delete .git
+        Remove-Item -Recurse -Force .git
+        
+        # Re-initialize
+        git init
+        git add .
+        git commit -m `"Initial commit (secrets removed from history)`"
+        git branch -M main
+        git remote add origin $remoteUrl
+        
+        Write-Host `"  ✓ Fresh repository created`" -ForegroundColor Green
+        Write-Host `"  ⚠️  You will need to force push: git push -u --force origin main`" -ForegroundColor Yellow
+    }
+    
+    'quick' {
+        Write-Host `"  Using amend + force push method...`" -ForegroundColor Cyan
+        
+        # Amend the last commit
+        git commit --amend --no-edit
+        
+        Write-Host `"  ✓ Commit amended`" -ForegroundColor Green
+        Write-Host `"  ⚠️  You will need to force push: git push --force`" -ForegroundColor Yellow
+    }
+    
+    'bfg' {
+        Write-Host `"  ⚠️  BFG requires manual download and setup`" -ForegroundColor Yellow
+        Write-Host `"  See: https://rtyley.github.io/bfg-repo-cleaner/`" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host `"  Quick BFG commands:`" -ForegroundColor White
+        Write-Host `"    java -jar bfg.jar --delete-files OAUTH-FIXED.md .`" -ForegroundColor Gray
+        Write-Host `"    git reflog expire --expire=now --all`" -ForegroundColor Gray
+        Write-Host `"    git gc --prune=now --aggressive`" -ForegroundColor Gray
+        Write-Host `"    git push --force`" -ForegroundColor Gray
+    }
+}
+
+# Step 4: Reminder
+Write-Host ""
+Write-Host `"[Step 4/5] ⚠️  CRITICAL REMINDERS`" -ForegroundColor Red
+Write-Host ""
+Write-Host `"  You MUST do these BEFORE pushing:`" -ForegroundColor Yellow
+Write-Host ""
+Write-Host `"  1. Revoke Google OAuth secret:`" -ForegroundColor White
+Write-Host `"     https://console.cloud.google.com/apis/credentials`" -ForegroundColor Cyan
+Write-Host ""
+Write-Host `"  2. Revoke GitHub OAuth secret:`" -ForegroundColor White
+Write-Host `"     https://github.com/settings/developers`" -ForegroundColor Cyan
+Write-Host ""
+Write-Host `"  3. Generate NEW secrets and update server/.env`" -ForegroundColor White
+Write-Host ""
+Write-Host `"  4. Update production server:`" -ForegroundColor White
+Write-Host `"     ssh root@165.227.32.85`" -ForegroundColor Cyan
+Write-Host `"     nano /opt/nebula-vpn-server/.env`" -ForegroundColor Cyan
+Write-Host `"     systemctl restart nebula-vpn-server`" -ForegroundColor Cyan
+Write-Host ""
+
+# Step 5: Next steps
+Write-Host `"[Step 5/5] Next Steps`" -ForegroundColor Yellow
+Write-Host ""
+
+if ($Method -ne 'bfg') {
+    Write-Host `"  To push the cleaned history:`" -ForegroundColor White
+    if ($Method -eq 'nuclear') {
+        Write-Host `"    git push -u --force origin main`" -ForegroundColor Cyan
+    } else {
+        Write-Host `"    git push --force`" -ForegroundColor Cyan
+    }
+    Write-Host ""
+}
+
+Write-Host `"  After pushing, verify secrets are gone:`" -ForegroundColor White
+Write-Host `"    git log -S '$($exposedSecrets[0])' --all`" -ForegroundColor Cyan
+Write-Host `"    (should return nothing)`" -ForegroundColor Gray
+Write-Host ""
+
+Write-Host `"================================================================`" -ForegroundColor Green
+Write-Host `"  CLEANUP PREPARED - REVOKE SECRETS BEFORE PUSHING!`" -ForegroundColor Green
+Write-Host `"================================================================`" -ForegroundColor Green
+Write-Host ""
+

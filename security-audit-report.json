@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-04-17T13:31:45.694Z",
+  "score": 93,
+  "passed": [
+    "Electron: nodeIntegration disabled",
+    "Electron: contextIsolation enabled",
+    "Electron: Remote module disabled",
+    "Electron: webSecurity default (enabled)",
+    "Electron: Using preload script",
+    "Server: Helmet middleware",
+    "Server: CORS configured",
+    "Server: Rate limiting enabled",
+    "Server: Body size limits configured",
+    "Server: Custom security middleware",
+    "Git: .env files ignored",
+    "React: No dangerous HTML injection",
+    "React: No eval() usage",
+    "Storage: Encryption implemented"
+  ],
+  "warnings": [
+    "Storage: Avoid localStorage for sensitive data"
+  ],
+  "failed": [],
+  "info": []
+}

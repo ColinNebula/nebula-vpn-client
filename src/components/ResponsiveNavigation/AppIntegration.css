@@ -1,0 +1,129 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔧 APP.CSS INTEGRATION UPDATES 
+   Add these styles to integrate ResponsiveNavigation with existing App.css
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ━━━ Update existing .tab-nav-wrapper for responsive navigation ━━━ */
+.tab-nav-wrapper {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 16px;
+}
+
+/* ━━━ Ensure main content doesn't interfere with mobile nav ━━━ */
+@media (max-width: 768px) {
+  .App-main {
+    position: relative;
+    z-index: 1; /* Keep below mobile navigation overlay */
+  }
+  
+  .vpn-container {
+    padding: 16px 16px 20px;
+  }
+  
+  /* Prevent content from jumping when mobile menu opens */
+  body.mobile-nav-open {
+    overflow: hidden;
+  }
+}
+
+/* ━━━ Integration with existing tab styles ━━━ */
+.tab-navigation.desktop-nav .tab {
+  /* Inherit your existing tab button styles here if needed */
+  color: var(--text-secondary, rgba(255,255,255,0.7));
+  background: transparent;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.tab-navigation.desktop-nav .tab:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary, #fff);
+}
+
+.tab-navigation.desktop-nav .tab.active {
+  background: linear-gradient(135deg, var(--accent-primary, #3b82f6) 0%, var(--accent-secondary, #1d4ed8) 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* ━━━ Hide old navigation styles on mobile ━━━ */
+@media (max-width: 768px) {
+  .tab-navigation:not(.desktop-nav) {
+    display: none;
+  }
+}
+
+/* ━━━ Responsive header adjustments ━━━ */
+@media (max-width: 768px) {
+  .App-header {
+    padding: 12px 16px;
+    flex-wrap: nowrap; /* Prevent wrapping on mobile */
+  }
+  
+  .App-logo {
+    height: 32px; /* Smaller logo on mobile if needed */
+  }
+}
+
+/* ━━━ Ensure hamburger menu has proper stacking context ━━━ */
+.nav-mobile-container {
+  position: relative;
+  z-index: 1001;
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.mobile-navigation {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1001;
+}
+
+/* ━━━ Smooth transitions for responsive changes ━━━ */
+.responsive-navigation {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ━━━ Focus and accessibility improvements ━━━ */
+.hamburger-menu:focus,
+.mobile-nav-item:focus,
+.category-header:focus {
+  outline: 2px solid var(--accent-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* ━━━ High contrast mode support ━━━ */
+@media (prefers-contrast: high) {
+  .mobile-navigation {
+    border-left: 3px solid var(--border-mobile-nav, rgba(255,255,255,0.3));
+  }
+  
+  .hamburger-menu {
+    border: 2px solid var(--border-hamburger, rgba(255,255,255,0.4));
+  }
+}
+
+/* ━━━ Print media - hide navigation ━━━ */
+@media print {
+  .responsive-navigation,
+  .tab-nav-wrapper {
+    display: none;
+  }
+}

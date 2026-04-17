@@ -1,0 +1,94 @@
+/* Modern VPN Connect Button - 2026 Standards */
+.connect-button {
+  padding: 16px 40px;
+  border: none;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 180px;
+  min-height: 56px;
+  font-family: inherit;
+  letter-spacing: 0.025em;
+  position: relative;
+  overflow: hidden;
+}
+
+.connect-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.6s;
+}
+
+.connect-button:hover::before {
+  left: 100%;
+}
+
+/* Disconnected State - Modern Blue */
+.connect-button.disconnected {
+  background: linear-gradient(135deg, #3050FF 0%, #2845E5 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(48,80,255,0.4), 
+              0 1px 0 rgba(255,255,255,0.1) inset;
+  border: 1px solid rgba(48,80,255,0.3);
+}
+
+.connect-button.disconnected:hover {
+  background: linear-gradient(135deg, #2845E5 0%, #1E3A8A 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(48,80,255,0.5), 
+              0 1px 0 rgba(255,255,255,0.15) inset;
+}
+
+/* Connected State - Modern Red for Disconnect */
+.connect-button.connected {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(239,68,68,0.4), 
+              0 1px 0 rgba(255,255,255,0.1) inset;
+  border: 1px solid rgba(239,68,68,0.3);
+}
+
+.connect-button.connected:hover {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239,68,68,0.5), 
+              0 1px 0 rgba(255,255,255,0.15) inset;
+}
+
+/* Disabled State */
+.connect-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+.connect-button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .connect-button {
+    padding: 14px 32px;
+    font-size: 16px;
+    min-width: 160px;
+    min-height: 52px;
+  }
+}
+
+@media (max-width: 480px) {
+  .connect-button {
+    width: 100%;
+    min-width: auto;
+    padding: 16px 24px;
+  }
+}

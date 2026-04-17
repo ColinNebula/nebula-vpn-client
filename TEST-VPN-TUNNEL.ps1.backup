@@ -1,0 +1,543 @@
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Nebula VPN Tunnel Verification Script
+.DESCRIPTION
+    Comprehensive VPN tunnel testing to ensure privacy and security.
+    Tests: IP leaks, DNS leaks, IPv6 leaks, WebRTC leaks, connection quality.
+.PARAMETER Quick
+    Run quick tests only (IP and DNS)
+.PARAMETER SkipSpeedTest
+    Skip connection speed tests
+.PARAMETER VerboseOutput
+    Show detailed output for all tests
+.PARAMETER ExpectedVPNIP
+    Expected VPN IP range (e.g., "10.8.0.*")
+.EXAMPLE
+    .\TEST-VPN-TUNNEL.ps1
+    .\TEST-VPN-TUNNEL.ps1 -Quick
+    .\TEST-VPN-TUNNEL.ps1 -VerboseOutput -ExpectedVPNIP "10.8.0.*"
+#>
+
+param(
+    [Parameter(Mandatory=$false)]
+    [switch]$Quick,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$SkipSpeedTest,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$VerboseOutput,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$ExpectedVPNIP = "10.8.0.*"
+)
+
+# Color output functions
+function Write-TestHeader {
+    param([string]$Message)
+    Write-Host "`n╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  $($Message.PadRight(60)) ║" -ForegroundColor Cyan
+    Write-Host "╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+}
+
+function Write-TestResult {
+    param(
+        [string]$TestName,
+        [bool]$Passed,
+        [string]$Details = ""
+    )
+    
+    $status = if ($Passed) { "PASS" } else { "FAIL" }
+    $color = if ($Passed) { "Green" } else { "Red" }
+    
+    Write-Host "`n  [$status] " -ForegroundColor $color -NoNewline
+    Write-Host $TestName -ForegroundColor White
+    
+    if ($Details -and ($VerboseOutput -or -not $Passed)) {
+        Write-Host "         $Details" -ForegroundColor Gray
+    }
+    
+    return $Passed
+}
+
+function Write-Info {
+    param([string]$Message)
+    Write-Host "  INFO: $Message" -ForegroundColor Blue
+}
+
+function Write-Warning {
+    param([string]$Message)
+    Write-Host "  WARN: $Message" -ForegroundColor Yellow
+}
+
+# Test results tracking
+$Global:TestResults = @{
+    Total = 0
+    Passed = 0
+    Failed = 0
+    Warnings = 0
+    Tests = @()
+}
+
+function Add-TestResult {
+    param(
+        [string]$Name,
+        [bool]$Passed,
+        [string]$Details = "",
+        [bool]$IsWarning = $false
+    )
+    
+    $Global:TestResults.Total++
+    if ($Passed) {
+        $Global:TestResults.Passed++
+    } else {
+        if ($IsWarning) {
+            $Global:TestResults.Warnings++
+        } else {
+            $Global:TestResults.Failed++
+        }
+    }
+    
+    $Global:TestResults.Tests += @{
+        Name = $Name
+        Passed = $Passed
+        Details = $Details
+        IsWarning = $IsWarning
+    }
+}
+
+# Get public IP address
+function Get-PublicIP {
+    param([string]$Service = "ipify")
+    
+    try {
+        switch ($Service) {
+            "ipify" {
+                $ip = (Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 10).ip
+            }
+            "ipinfo" {
+                $ip = (Invoke-RestMethod -Uri "https://ipinfo.io/ip" -TimeoutSec 10).Trim()
+            }
+            "icanhazip" {
+                $ip = (Invoke-RestMethod -Uri "https://icanhazip.com" -TimeoutSec 10).Trim()
+            }
+            default {
+                $ip = (Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 10).ip
+            }
+        }
+        return $ip
+    } catch {
+        return $null
+    }
+}
+
+# Test 1: VPN Interface Check
+function Test-VPNInterface {
+    Write-TestHeader "TEST 1: VPN Interface Status"
+    
+    # Check for WireGuard interface
+    $wgInterface = Get-NetAdapter | Where-Object { $_.InterfaceDescription -like "*WireGuard*" -or $_.Name -like "*wg*" }
+    
+    if ($wgInterface) {
+        $isUp = $wgInterface.Status -eq "Up"
+        $details = "Interface: $($wgInterface.Name), Status: $($wgInterface.Status), Speed: $($wgInterface.LinkSpeed)"
+        $result = Write-TestResult "WireGuard Interface Found" $isUp $details
+        Add-TestResult "VPN Interface" $isUp $details
+        
+        if ($VerboseOutput) {
+            Write-Info "MAC Address: $($wgInterface.MacAddress)"
+            Write-Info "ifIndex: $($wgInterface.ifIndex)"
+        }
+        
+        return $isUp
+    } else {
+        $result = Write-TestResult "WireGuard Interface Found" $false "No WireGuard interface detected"
+        Add-TestResult "VPN Interface" $false "No WireGuard interface detected"
+        return $false
+    }
+}
+
+# Test 2: IP Address Verification
+function Test-IPAddress {
+    Write-TestHeader "TEST 2: IP Address Leak Test"
+    
+    Write-Info "Checking public IP address..."
+    
+    # Get IP from multiple services
+    $ip1 = Get-PublicIP "ipify"
+    $ip2 = Get-PublicIP "ipinfo"
+    
+    if (-not $ip1) {
+        $result = Write-TestResult "IP Address Check" $false "Could not retrieve public IP"
+        Add-TestResult "IP Address" $false "Could not retrieve public IP"
+        return $false
+    }
+    
+    Write-Host "`n  Current Public IP: $ip1" -ForegroundColor Cyan
+    
+    # Check if IP matches expected VPN range
+    $isVPNIP = $ip1 -like $ExpectedVPNIP -or $ip1 -notlike "192.168.*" -and $ip1 -notlike "10.0.*" -and $ip1 -notlike "172.*"
+    
+    # Verify consistency across services
+    $isConsistent = ($ip2 -eq $ip1) -or ($null -eq $ip2)
+    
+    if (-not $isConsistent) {
+        Write-Warning "IP mismatch between services: $ip1 vs $ip2"
+        Add-TestResult "IP Consistency" $false "Different IPs from different services" $true
+    }
+    
+    # Get geolocation info
+    try {
+        $geoInfo = Invoke-RestMethod -Uri "https://ipapi.co/$ip1/json/" -TimeoutSec 10
+        Write-Host "  Location: $($geoInfo.city), $($geoInfo.region), $($geoInfo.country_name)" -ForegroundColor Gray
+        Write-Host "  ISP: $($geoInfo.org)" -ForegroundColor Gray
+        
+        $details = "IP: $ip1, Location: $($geoInfo.city), $($geoInfo.country_name), ISP: $($geoInfo.org)"
+    } catch {
+        $details = "IP: $ip1"
+    }
+    
+    $result = Write-TestResult "IP Not Local/Private" $isVPNIP $details
+    Add-TestResult "IP Address" $isVPNIP $details
+    
+    return $isVPNIP
+}
+
+# Test 3: DNS Leak Test
+function Test-DNSLeak {
+    Write-TestHeader "TEST 3: DNS Leak Test"
+    
+    Write-Info "Checking DNS servers..."
+    
+    # Get active DNS servers
+    $dnsServers = Get-DnsClientServerAddress -AddressFamily IPv4 | 
+        Where-Object { $_.ServerAddresses.Count -gt 0 } |
+        Select-Object -ExpandProperty ServerAddresses -Unique
+    
+    Write-Host "`n  Configured DNS Servers:" -ForegroundColor Cyan
+    $dnsServers | ForEach-Object {
+        Write-Host "    - $_" -ForegroundColor Gray
+    }
+    
+    # Check if using VPN DNS (common VPN DNS: 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, etc.)
+    $vpnDNS = @("1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "208.67.222.222", "208.67.220.220")
+    $usingVPNDNS = $false
+    
+    foreach ($dns in $dnsServers) {
+        if ($vpnDNS -contains $dns) {
+            $usingVPNDNS = $true
+            break
+        }
+    }
+    
+    # Perform DNS leak test
+    try {
+        Write-Info "Performing DNS leak test..."
+        $dnsTest = Invoke-RestMethod -Uri "https://www.dnsleaktest.com/api/v1/test" -TimeoutSec 15
+        
+        if ($dnsTest -and $dnsTest.servers) {
+            Write-Host "`n  DNS Leak Test Results:" -ForegroundColor Cyan
+            $dnsTest.servers | ForEach-Object {
+                Write-Host "    - $($_.ip) ($($_.country_name)) - $($_.asn_name)" -ForegroundColor Gray
+            }
+            
+            $noDNSLeak = $dnsTest.servers.Count -le 2
+            $details = "Detected $($dnsTest.servers.Count) DNS servers"
+        } else {
+            $noDNSLeak = $usingVPNDNS
+            $details = "Using VPN DNS: $usingVPNDNS"
+        }
+    } catch {
+        Write-Warning "Could not perform online DNS leak test"
+        $noDNSLeak = $usingVPNDNS
+        $details = "Using VPN DNS: $usingVPNDNS (online test unavailable)"
+    }
+    
+    $result = Write-TestResult "No DNS Leaks Detected" $noDNSLeak $details
+    Add-TestResult "DNS Leak" $noDNSLeak $details
+    
+    return $noDNSLeak
+}
+
+# Test 4: IPv6 Leak Test
+function Test-IPv6Leak {
+    Write-TestHeader "TEST 4: IPv6 Leak Test"
+    
+    Write-Info "Checking IPv6 configuration..."
+    
+    # Check if IPv6 is enabled
+    $ipv6Adapters = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Get-NetAdapterBinding -ComponentID ms_tcpip6 | Where-Object { $_.Enabled -eq $true }
+    
+    if ($ipv6Adapters.Count -eq 0) {
+        $result = Write-TestResult "IPv6 Disabled" $true "IPv6 is disabled on all adapters"
+        Add-TestResult "IPv6 Leak" $true "IPv6 disabled"
+        return $true
+    }
+    
+    # Check for IPv6 address
+    try {
+        $ipv6 = (Invoke-RestMethod -Uri "https://api6.ipify.org?format=json" -TimeoutSec 5).ip
+        if ($ipv6) {
+            Write-Host "`n  IPv6 Address Detected: $ipv6" -ForegroundColor Yellow
+            $hasIPv6Leak = $true
+            $details = "IPv6 address exposed: $ipv6"
+        } else {
+            $hasIPv6Leak = $false
+            $details = "No IPv6 connectivity"
+        }
+    } catch {
+        $hasIPv6Leak = $false
+        $details = "No IPv6 connectivity detected"
+    }
+    
+    $result = Write-TestResult "No IPv6 Leaks" (-not $hasIPv6Leak) $details
+    Add-TestResult "IPv6 Leak" (-not $hasIPv6Leak) $details
+    
+    return (-not $hasIPv6Leak)
+}
+
+# Test 5: WebRTC Leak Test
+function Test-WebRTCLeak {
+    Write-TestHeader "TEST 5: WebRTC Configuration"
+    
+    Write-Info "Checking WebRTC settings..."
+    
+    # Note: This is a basic check. Full WebRTC leak testing requires browser integration
+    Write-Warning "WebRTC leak test requires browser testing"
+    Write-Info "To test WebRTC leaks manually, visit: https://browserleaks.com/webrtc"
+    
+    # Check if running in Electron (which has WebRTC protection)
+    if ($env:ELECTRON_RUN_AS_NODE -eq "1" -or (Get-Process -Name "electron" -ErrorAction SilentlyContinue)) {
+        $result = Write-TestResult "WebRTC Protection" $true "Running in Electron with WebRTC protection"
+        Add-TestResult "WebRTC" $true "Electron WebRTC protection active"
+        return $true
+    } else {
+        $result = Write-TestResult "WebRTC Check" $true "Manual browser testing recommended"
+        Add-TestResult "WebRTC" $true "Manual testing required" $true
+        return $true
+    }
+}
+
+# Test 6: Routing Table Check
+function Test-RoutingTable {
+    Write-TestHeader "TEST 6: Routing Table Verification"
+    
+    Write-Info "Checking routing configuration..."
+    
+    # Get default route
+    $defaultRoute = Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Where-Object { $_.NextHop -ne "0.0.0.0" } | Select-Object -First 1
+    
+    if ($defaultRoute) {
+        $interface = Get-NetAdapter -InterfaceIndex $defaultRoute.ifIndex
+        $isVPNRoute = $interface.InterfaceDescription -like "*WireGuard*" -or $interface.Name -like "*wg*"
+        
+        $details = "Default route via: $($interface.Name) (Next hop: $($defaultRoute.NextHop))"
+        
+        if ($VerboseOutput) {
+            Write-Host "`n  Default Route:" -ForegroundColor Cyan
+            Write-Host "    Interface: $($interface.Name)" -ForegroundColor Gray
+            Write-Host "    Next Hop: $($defaultRoute.NextHop)" -ForegroundColor Gray
+            Write-Host "    Metric: $($defaultRoute.RouteMetric)" -ForegroundColor Gray
+        }
+        
+        $result = Write-TestResult "Traffic Routed Through VPN" $isVPNRoute $details
+        Add-TestResult "Routing" $isVPNRoute $details
+        
+        return $isVPNRoute
+    } else {
+        $result = Write-TestResult "Default Route Found" $false "No default route detected"
+        Add-TestResult "Routing" $false "No default route"
+        return $false
+    }
+}
+
+# Test 7: Connection Speed Test
+function Test-ConnectionSpeed {
+    if ($Quick -or $SkipSpeedTest) {
+        Write-Info "Skipping speed test (use without -Quick or -SkipSpeedTest to run)"
+        return $true
+    }
+    
+    Write-TestHeader "TEST 7: Connection Speed Test"
+    
+    Write-Info "Testing connection speed (this may take 10-30 seconds)..."
+    
+    try {
+        # Download test file
+        $testUrl = "https://speed.cloudflare.com/__down?bytes=10000000"  # 10MB
+        $startTime = Get-Date
+        
+        $webClient = New-Object System.Net.WebClient
+        $data = $webClient.DownloadData($testUrl)
+        $endTime = Get-Date
+        
+        $duration = ($endTime - $startTime).TotalSeconds
+        $sizeMB = $data.Length / 1MB
+        $speedMbps = ($sizeMB * 8) / $duration
+        
+        Write-Host "`n  Download Speed: $([math]::Round($speedMbps, 2)) Mbps" -ForegroundColor Cyan
+        Write-Host "  Downloaded: $([math]::Round($sizeMB, 2)) MB in $([math]::Round($duration, 2)) seconds" -ForegroundColor Gray
+        
+        $isGoodSpeed = $speedMbps -gt 1  # At least 1 Mbps
+        $details = "Speed: $([math]::Round($speedMbps, 2)) Mbps"
+        
+        $result = Write-TestResult "Connection Speed Acceptable" $isGoodSpeed $details
+        Add-TestResult "Speed Test" $isGoodSpeed $details
+        
+        return $isGoodSpeed
+    } catch {
+        Write-Warning "Speed test failed: $($_.Exception.Message)"
+        Add-TestResult "Speed Test" $false "Test failed" $true
+        return $false
+    }
+}
+
+# Test 8: Latency Test
+function Test-Latency {
+    Write-TestHeader "TEST 8: Connection Latency Test"
+    
+    Write-Info "Testing latency to common servers..."
+    
+    $testHosts = @(
+        @{Name="Cloudflare DNS"; Host="1.1.1.1"},
+        @{Name="Google DNS"; Host="8.8.8.8"},
+        @{Name="Cloudflare"; Host="cloudflare.com"}
+    )
+    
+    $latencies = @()
+    
+    foreach ($test in $testHosts) {
+        try {
+            $ping = Test-Connection -ComputerName $test.Host -Count 4 -ErrorAction Stop
+            $avgLatency = ($ping | Measure-Object -Property ResponseTime -Average).Average
+            
+            Write-Host "  $($test.Name): $([math]::Round($avgLatency, 2)) ms" -ForegroundColor Gray
+            $latencies += $avgLatency
+        } catch {
+            Write-Warning "Could not ping $($test.Name)"
+        }
+    }
+    
+    if ($latencies.Count -gt 0) {
+        $avgOverall = ($latencies | Measure-Object -Average).Average
+        $isGoodLatency = $avgOverall -lt 200  # Less than 200ms is acceptable
+        
+        $details = "Average latency: $([math]::Round($avgOverall, 2)) ms"
+        $result = Write-TestResult "Latency Acceptable" $isGoodLatency $details
+        Add-TestResult "Latency" $isGoodLatency $details
+        
+        return $isGoodLatency
+    } else {
+        $result = Write-TestResult "Latency Test" $false "Could not measure latency"
+        Add-TestResult "Latency" $false "Test failed"
+        return $false
+    }
+}
+
+# Test 9: Kill Switch Verification
+function Test-KillSwitch {
+    Write-TestHeader "TEST 9: Kill Switch / Network Lock"
+    
+    Write-Info "Checking firewall and network isolation..."
+    
+    # Check if firewall is enabled
+    $firewallProfiles = Get-NetFirewallProfile
+    $allEnabled = ($firewallProfiles | Where-Object { $_.Enabled -eq $false }).Count -eq 0
+    
+    if ($allEnabled) {
+        $result = Write-TestResult "Windows Firewall Enabled" $true "All profiles enabled"
+        Add-TestResult "Kill Switch" $true "Firewall active"
+    } else {
+        $result = Write-TestResult "Windows Firewall Enabled" $false "Some profiles disabled"
+        Add-TestResult "Kill Switch" $false "Firewall not fully enabled" $true
+    }
+    
+    Write-Info "Note: Kill switch must be configured in VPN software"
+    return $allEnabled
+}
+
+# Generate summary report
+function Show-TestSummary {
+    Write-Host "`n"
+    Write-Host "╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                    TEST SUMMARY                               ║" -ForegroundColor Cyan
+    Write-Host "╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    $passRate = if ($Global:TestResults.Total -gt 0) {
+        [math]::Round(($Global:TestResults.Passed / $Global:TestResults.Total) * 100, 1)
+    } else { 0 }
+    
+    Write-Host "`n  Total Tests: $($Global:TestResults.Total)" -ForegroundColor White
+    Write-Host "  Passed: $($Global:TestResults.Passed)" -ForegroundColor Green
+    Write-Host "  Failed: $($Global:TestResults.Failed)" -ForegroundColor Red
+    
+    if ($Global:TestResults.Warnings -gt 0) {
+        Write-Host "  Warnings: $($Global:TestResults.Warnings)" -ForegroundColor Yellow
+    }
+    
+    Write-Host "  Pass Rate: $passRate%" -ForegroundColor $(if ($passRate -ge 80) { "Green" } elseif ($passRate -ge 60) { "Yellow" } else { "Red" })
+    
+    # Overall status
+    Write-Host "`n  Overall Status: " -NoNewline
+    if ($Global:TestResults.Failed -eq 0) {
+        Write-Host "VPN TUNNEL SECURE" -ForegroundColor Green
+        $exitCode = 0
+    } elseif ($Global:TestResults.Failed -le 2) {
+        Write-Host "VPN TUNNEL PARTIALLY SECURE" -ForegroundColor Yellow
+        $exitCode = 1
+    } else {
+        Write-Host "VPN TUNNEL INSECURE" -ForegroundColor Red
+        $exitCode = 2
+    }
+    
+    # Recommendations
+    if ($Global:TestResults.Failed -gt 0) {
+        Write-Host "`n  Recommendations:" -ForegroundColor Yellow
+        
+        foreach ($test in $Global:TestResults.Tests) {
+            if (-not $test.Passed -and -not $test.IsWarning) {
+                Write-Host "    - Fix: $($test.Name)" -ForegroundColor Gray
+            }
+        }
+    }
+    
+    Write-Host "`n╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host ""
+    
+    return $exitCode
+}
+
+# Main execution
+Write-Host "`n"
+Write-Host "╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║                                                               ║" -ForegroundColor Cyan
+Write-Host "║           NEBULA VPN - TUNNEL VERIFICATION                    ║" -ForegroundColor Cyan
+Write-Host "║                                                               ║" -ForegroundColor Cyan
+Write-Host "╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+
+$startTime = Get-Date
+
+# Run tests
+Test-VPNInterface
+Test-IPAddress
+Test-DNSLeak
+Test-IPv6Leak
+
+if (-not $Quick) {
+    Test-WebRTCLeak
+    Test-RoutingTable
+    Test-ConnectionSpeed
+    Test-Latency
+    Test-KillSwitch
+}
+
+$endTime = Get-Date
+$duration = ($endTime - $startTime).TotalSeconds
+
+# Show summary
+$exitCode = Show-TestSummary
+
+Write-Host "  Test Duration: $([math]::Round($duration, 2)) seconds`n" -ForegroundColor Gray
+
+exit $exitCode

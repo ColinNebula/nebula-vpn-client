@@ -1,0 +1,188 @@
+.wc-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 8px;
+  font-family: inherit;
+}
+
+/* ── Spinner ── */
+.wc-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary, #888);
+  font-size: 15px;
+}
+@keyframes wc-spin { to { transform: rotate(360deg); } }
+.wc-spin {
+  display: inline-block;
+  animation: wc-spin 1s linear infinite;
+  font-size: 20px;
+  margin-right: 6px;
+}
+
+/* ── Status banner ── */
+.wc-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 22px;
+  border: 1px solid;
+}
+.wc-banner.wc-green {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #065f46;
+}
+.wc-banner.wc-red   {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #991b1b;
+}
+[data-theme="dark"] .wc-banner.wc-green { color: #6ee7b7; }
+[data-theme="dark"] .wc-banner.wc-red   { color: #fca5a5; }
+
+.wc-banner-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+.wc-banner strong { display: block; font-size: 15px; margin-bottom: 4px; }
+.wc-banner p  { margin: 0; font-size: 13px; opacity: 0.9; }
+
+/* ── Header ── */
+.wc-header { margin-bottom: 28px; }
+.wc-title-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.wc-icon { font-size: 44px; }
+.wc-title { margin: 0 0 4px; font-size: 1.6rem; font-weight: 700; color: var(--text-primary, #222); }
+.wc-subtitle { margin: 0; font-size: 13px; color: var(--text-secondary, #777); }
+.wc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+}
+.wc-meta-sep { margin: 0 8px; opacity: 0.4; }
+.wc-meta strong { color: var(--text-primary, #333); }
+
+/* ── Section ── */
+.wc-section { margin-bottom: 28px; }
+.wc-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #333);
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color, #eee);
+}
+
+/* ── Statements ── */
+.wc-statements { display: flex; flex-direction: column; gap: 10px; }
+.wc-stmt {
+  display: grid;
+  grid-template-columns: 32px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-card, #fafafa);
+  border: 1px solid var(--border-color, #eee);
+  border-radius: 10px;
+}
+.wc-stmt-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-color, #4caf50);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wc-stmt-text { margin: 0; font-size: 14px; color: var(--text-primary, #333); line-height: 1.45; }
+.wc-stmt-check { font-size: 16px; text-align: center; }
+
+/* ── Transparency stats ── */
+.wc-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.wc-stat-card {
+  padding: 16px;
+  background: var(--bg-card, #fafafa);
+  border: 1px solid var(--border-color, #eee);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.wc-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #10b981;
+  line-height: 1;
+}
+.wc-stat-label {
+  font-size: 11px;
+  color: var(--text-secondary, #888);
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* ── PGP ── */
+.wc-pgp { }
+.wc-pgp-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+}
+.wc-pgp-link {
+  font-size: 12px;
+  color: var(--accent-color, #4caf50);
+  text-decoration: none;
+}
+.wc-pgp-link:hover { text-decoration: underline; }
+.wc-pgp-pre, .wc-raw {
+  background: var(--bg-card, #f5f5f5);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 11.5px;
+  font-family: 'Courier New', monospace;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: var(--text-primary, #333);
+  margin: 0;
+}
+.wc-note {
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── Toggle ── */
+.wc-toggle-btn {
+  background: none;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: background 0.2s;
+}
+.wc-toggle-btn:hover { background: var(--bg-card, #f5f5f5); }

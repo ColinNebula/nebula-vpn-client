@@ -1,0 +1,16 @@
+{
+  "name": "nebula-outline-integration",
+  "version": "1.0.0",
+  "description": "Outline VPN integration for Nebula VPN",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test-connection.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0",
+    "ws": "^8.14.2"
+  },
+  "keywords": ["outline", "vpn", "shadowsocks"],
+  "author": "ColinNebula",
+  "license": "MIT"
+}

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+  <msapplication>
+    <tile>
+      <square70x70logo src="logo.svg"/>
+      <square150x150logo src="logo.svg"/>
+      <wide310x150logo src="logo.svg"/>
+      <square310x310logo src="logo.svg"/>
+      <TileColor>#667eea</TileColor>
+    </tile>
+    <notification>
+      <polling-uri src="https://colinnebula.github.io/nebula-vpn-client/notifications/feed1.xml"/>
+      <frequency>30</frequency>
+      <cycle>1</cycle>
+    </notification>
+  </msapplication>
+</browserconfig>

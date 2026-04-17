@@ -1,0 +1,103 @@
+{
+  "_version": "1",
+  "_generated": "2026-03-07T00:00:00Z",
+  "_comment": "This file is public. Hash-chain it with your PGP key for authenticity.",
+  "provider": "Nebula VPN",
+  "pgpFingerprint": "TBD — publish at nebula-vpn.com/pgp.asc",
+  "audits": [
+    {
+      "id": "2026-q2-pentest",
+      "type": "penetration-test",
+      "status": "scheduled",
+      "title": "Q2 2026 External Penetration Test",
+      "firm": "TBD",
+      "scope": [
+        "application-security",
+        "network-layer",
+        "cryptographic-implementations",
+        "electron-ipc-surface",
+        "api-endpoints"
+      ],
+      "scheduledStart": "2026-05-01",
+      "publishedAt": null,
+      "summary": null,
+      "reportUrl": null,
+      "criticalFindings": null,
+      "highFindings": null,
+      "mediumFindings": null,
+      "remediatedWithin30Days": null
+    },
+    {
+      "id": "2026-q1-code-review",
+      "type": "code-review",
+      "status": "in-progress",
+      "title": "Q1 2026 Cryptographic Code Review",
+      "firm": "TBD",
+      "scope": [
+        "aes-gcm-secure-storage",
+        "wireguard-tunnel-management",
+        "pqc-ml-kem-768-integration",
+        "ipc-channel-whitelist",
+        "key-derivation-functions"
+      ],
+      "scheduledStart": "2026-02-15",
+      "publishedAt": null,
+      "summary": "Independent review of cryptographic implementations including AES-256-GCM secure storage rewrite, WireGuard tunnel manager, PQC ML-KEM-768 hybrid PSK, and Electron IPC security. Reviewers granted read-only access to the full codebase.",
+      "reportUrl": null,
+      "criticalFindings": null,
+      "highFindings": null,
+      "mediumFindings": null,
+      "remediatedWithin30Days": null
+    }
+  ],
+  "certifications": [
+    {
+      "name": "No-Logs Policy",
+      "verified": true,
+      "verifier": "Internal — independent verification scheduled Q2 2026",
+      "since": "2025-01-01",
+      "description": "No VPN connection logs, timestamps, DNS queries, or IP metadata are retained on any Nebula VPN infrastructure.",
+      "icon": "no-logs"
+    },
+    {
+      "name": "Open-Source Client",
+      "verified": true,
+      "verifier": "GitHub (github.com/nebula-vpn-client)",
+      "since": "2025-01-01",
+      "description": "The full Electron + React client code is publicly auditable and verifiable.",
+      "icon": "open-source"
+    },
+    {
+      "name": "AES-256-GCM Local Encryption",
+      "verified": true,
+      "verifier": "Internal — code review in progress",
+      "since": "2026-01-15",
+      "description": "All locally-cached credentials use AES-256-GCM via WebCrypto SubtleCrypto with PBKDF2-SHA-256 key derivation (100 000 iterations).",
+      "icon": "crypto"
+    },
+    {
+      "name": "FIPS 203 ML-KEM-768 PQC Key Exchange",
+      "verified": true,
+      "verifier": "Internal — using @noble/post-quantum (audited library)",
+      "since": "2026-03-07",
+      "description": "WireGuard PSK layer uses a hybrid ML-KEM-768 + X25519 key exchange, providing 128-bit post-quantum security against harvest-now-decrypt-later attacks.",
+      "icon": "quantum"
+    },
+    {
+      "name": "DNS-over-HTTPS / DNS-over-TLS",
+      "verified": true,
+      "verifier": "Internal",
+      "since": "2026-03-07",
+      "description": "All DNS queries can be routed through an encrypted DoH or DoT proxy (127.0.0.53) to prevent DNS leaks.",
+      "icon": "dns"
+    }
+  ],
+  "securityContact": {
+    "email": "security@nebula-vpn.com",
+    "pgpKey": "https://nebula-vpn.com/pgp.asc",
+    "disclosurePolicy": "https://nebula-vpn.com/security",
+    "bugBounty": "https://nebula-vpn.com/bug-bounty",
+    "responseTime": "48 hours for critical, 7 days for all others"
+  },
+  "responsibleDisclosureHistory": []
+}
